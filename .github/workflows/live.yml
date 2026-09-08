@@ -1,0 +1,57 @@
+name: Live sandbox tests
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: true
+      - name: Install Bubblewrap 0.12.0 for integration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y apparmor bubblewrap meson ninja-build pkg-config libcap-dev libselinux1-dev xsltproc docbook-xsl docbook-xml
+          git clone --depth 1 --branch v0.12.0 https://github.com/containers/bubblewrap.git "$RUNNER_TEMP/bubblewrap"
+          meson setup "$RUNNER_TEMP/bubblewrap-build" "$RUNNER_TEMP/bubblewrap" --prefix=/usr
+          meson compile -C "$RUNNER_TEMP/bubblewrap-build"
+          sudo install -o root -g root -m 0755 "$RUNNER_TEMP/bubblewrap-build/bwrap" /usr/bin/bwrap
+          /usr/bin/bwrap --version
+      - name: Permit Bubblewrap user namespaces with AppArmor
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This is a disposable GitHub-hosted runner. Keep the global
+          # restriction enabled and grant the installed sandbox launcher access.
+          if [ "$(cat /sys/module/apparmor/parameters/enabled)" = Y ]; then
+            if [ ! -f /etc/apparmor.d/bwrap ]; then
+              sudo tee /etc/apparmor.d/bwrap > /dev/null <<'PROFILE'
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile bwrap /usr/bin/bwrap flags=(unconfined) {
+            userns,
+          }
+          PROFILE
+            fi
+            sudo apparmor_parser -r /etc/apparmor.d/bwrap
+          fi
+      - name: Run live suite as the regular runner account
+        run: |
+          test "$(id -u)" -ne 0
+          make live
+      - name: Diagnose sandbox startup failure
+        if: failure()
+        shell: bash
+        run: |
+          id
+          /usr/bin/bwrap --version
+          sysctl kernel.apparmor_restrict_unprivileged_userns user.max_user_namespaces || true
+          sudo aa-status || true
+          sudo journalctl -k -n 100 --no-pager || true

@@ -1,0 +1,29 @@
+name: Release artifacts
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+  live:
+    uses: ./.github/workflows/live.yml
+  artifacts:
+    needs: [check, live]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: true
+      - name: Package tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bash scripts/package.sh "$RELEASE_TAG"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: abx-${{ github.ref_name }}
+          path: dist/*
+          if-no-files-found: error

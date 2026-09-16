@@ -79,3 +79,32 @@ func TestAllowed(t *testing.T) {
 		}
 	}
 }
+
+func TestSessionKeepsStorageAndIdentityInsideSandbox(t *testing.T) {
+	want := map[string]string{
+		"USER": "tester", "LOGNAME": "tester", "TMPDIR": "/tmp",
+		"XDG_CONFIG_HOME": "/home/agent/.config",
+		"XDG_DATA_HOME":   "/home/agent/.local/share",
+		"XDG_CACHE_HOME":  "/home/agent/.cache",
+		"XDG_STATE_HOME":  "/home/agent/.local/state",
+		"XDG_RUNTIME_DIR": "/run/user",
+	}
+	var host []string
+	for key := range want {
+		host = append(host, key+"=/host/private")
+	}
+	for _, cwd := range []string{"/workspace", "/home/agent"} {
+		t.Run(cwd, func(t *testing.T) {
+			entries, err := Session("tester", "/bin/sh", cwd, host)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := toMap(entries)
+			for key, value := range want {
+				if got[key] != value {
+					t.Errorf("%s = %q, want %q", key, got[key], value)
+				}
+			}
+		})
+	}
+}

@@ -124,13 +124,15 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 	}()
 	components := strings.Split(strings.TrimPrefix(paths.Root, "/"), "/")
 	components = append(components, "profiles", name)
+	current := "/"
 	for i, part := range components {
+		current = filepath.Join(current, part)
 		private := i >= len(components)-3
 		exclusive := i == len(components)-1
 		next, made, err := createDirectoryAt(parent, part, account.UID, private, exclusive)
 		created = created || made
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("prepare profile directory %q: %w", current, err)
 		}
 		closeErr := parent.Close()
 		parent = next

@@ -63,6 +63,8 @@ env ABX_LIVE=1 go test -count=1 -v ./internal/app -run '^TestLiveVerify$'
 
 Run live tests after changes to mounts, namespaces, retained descriptors, project/profile path policy, Bubblewrap translation/execution, or verification behavior.
 
+For diagnosis with disposable profiles, use the [optional manual checks](manual-checks.md) when useful. They are not required before every release and do not replace the automated or live tests above.
+
 ## Development rules
 
 - Start from the intended user-visible behavior and its security boundary.

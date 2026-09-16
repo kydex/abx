@@ -46,13 +46,19 @@ func runProfiles(c cli.Command, account host.Account, paths host.Paths, out io.W
 		if len(statuses) == 0 {
 			break
 		}
-		text.WriteString("PROFILE  COMMAND  SKILLS\n")
+		width := len("PROFILE")
+		for _, status := range statuses {
+			if len(status.Name) > width {
+				width = len(status.Name)
+			}
+		}
+		fmt.Fprintf(&text, "%-*s  %-11s  SKILLS\n", width, "PROFILE", "COMMAND")
 		for _, status := range statuses {
 			command := "available"
 			if status.AgentError != nil {
 				command = "unavailable"
 			}
-			fmt.Fprintf(&text, "%s  %s  %s\n", Escape(status.Name), command, status.Skills)
+			fmt.Fprintf(&text, "%-*s  %-11s  %s\n", width, Escape(status.Name), command, status.Skills)
 		}
 	default:
 		return 1, fmt.Errorf("unsupported profile operation %q", c.Kind)

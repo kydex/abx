@@ -34,6 +34,8 @@ ABX uses the home directory from `/etc/passwd`, not the host `HOME` environment 
 
 `profile create` creates a new empty profile and refuses to overwrite an existing one. `profile show` reports the actual path and whether the matching entry-point executable and optional shared skills are usable. `profile list` lists all profiles.
 
+`profile show` reports a missing profile as `State: absent` and returns status `0`; it is not an existence check by exit code. Command availability is a host-side file check, not proof that the tool or sandbox can start. Mandatory layout errors still fail the command.
+
 ABX does not automatically rename, migrate, or delete profiles.
 
 ## Install agents and tools in a profile
@@ -142,6 +144,25 @@ The current host directory becomes writable `/workspace` and the agent starts wi
 
 ABX rejects projects that would expose sensitive or system locations, including the filesystem root, the account home itself, ABX storage, protected system trees, and selected sensitive directories such as `.ssh`, `.gnupg`, and `.config`. Use a dedicated project directory such as `~/code/project`.
 
+### Executable symlinks
+
+`run` and `inspect` check the profile entry point using host paths before starting a sandbox. The command status in `profile show` and `profile list` uses the same check. ABX does not translate symlink targets between host paths and sandbox paths.
+
+An absolute link such as `.local/bin/demo -> /home/agent/.local/lib/demo` can work inside the sandbox but be reported as unavailable on the host. Conversely, a link to the profile's absolute host path can pass this check and then fail inside the sandbox, where that path is normally hidden. A candidate rejected by the host check is skipped in favour of the next usable entry in the search order.
+
+For links between files within a profile, use relative targets that stay within the profile, such as `.local/bin/demo -> ../lib/demo`. The entire link chain must remain valid. Avoid links to the profile's absolute host path.
+
+If an installed tool works inside the sandbox but fails this host check, open `abx work <profile>` and launch it there; use `abx shell <profile>` when project access is not needed. Neither command requires a matching profile executable.
+
+For direct `run`, another option is a regular executable wrapper named after the profile in one of the searched directories. It can call the actual tool by its sandbox path and forward arguments, for example:
+
+```sh
+#!/bin/sh
+exec /home/agent/tools/demo/bin/demo "$@"
+```
+
+Replace the example path with the tool's actual path inside the sandbox. The wrapper must have execute permission and call the tool itself, not the wrapper again.
+
 ### Pass arguments to the agent
 
 Arguments after `--` are passed directly to the agent:
@@ -192,7 +213,7 @@ The output contains:
 - an isolation summary;
 - writable and private sandbox paths.
 
-`inspect` is useful for understanding what ABX intends to launch. It is not a runtime verification of the sandbox.
+`inspect` is useful for understanding what ABX intends to launch. It is not a runtime verification of the sandbox. Mount modes are shown only when explicitly set; omitted modes do not mean `0000` permissions.
 
 ## Verify the sandbox
 
@@ -210,7 +231,9 @@ Successful verification ends with:
 Verification passed; temporary probe files removed.
 ```
 
-Individual checks use `PASS`, `FAIL`, `UNAVAILABLE`, and `N/A`. `N/A` is expected when shared skills are not configured. A failed or incomplete mandatory check makes `verify` fail.
+Individual checks use `PASS`, `FAIL`, `UNAVAILABLE`, and `N/A`. `N/A` is expected when shared skills are not configured. A failed or incomplete mandatory check makes `verify` fail. Failure details describe the expected and observed state where available. Environment mismatches list only differing variable names, without their values.
+
+The read-only checks inspect mount flags at the selected mountpoints; they do not independently check every nested mount. Read-only enforcement is delegated to Bubblewrap. See the [verification scope](security.md#verification).
 
 Verification temporarily creates probe files in the real home and project and removes them before reporting final success. A forced process kill or host crash can leave such temporary files behind.
 

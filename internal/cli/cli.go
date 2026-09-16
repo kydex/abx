@@ -86,7 +86,10 @@ func Parse(args []string) (Command, error) {
 		}
 		c := Command{Kind: k, Profile: args[1]}
 		if len(args) > 2 {
-			if k != Run || args[2] != "--" {
+			if k == Run && args[2] != "--" {
+				return Command{}, fmt.Errorf("run arguments must follow --: abx run <profile> -- <argument>...")
+			}
+			if k != Run {
 				return Command{}, fmt.Errorf("unexpected arguments to %s", k)
 			}
 			c.Args = append([]string(nil), args[3:]...)

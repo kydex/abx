@@ -43,7 +43,7 @@ func TestResolveRejectsHomeAndSensitiveOverlaps(t *testing.T) {
 		t.Fatal(err)
 	}
 	candidates := []string{filepath.Dir(home), home, data, filepath.Dir(data), filepath.Join(data, "profiles")}
-	for _, relative := range sensitiveHomeTrees {
+	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles"} {
 		sensitive := filepath.Join(home, relative)
 		candidates = append(candidates, sensitive, filepath.Join(sensitive, "child"))
 	}
@@ -78,7 +78,7 @@ func TestResolveRejectsCanonicalSensitiveSymlinkTarget(t *testing.T) {
 }
 
 func TestResolveRejectsDanglingSensitiveSymlinkTargetAncestors(t *testing.T) {
-	for _, relative := range sensitiveHomeTrees {
+	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles"} {
 		for _, targetSuffix := range []string{"future", filepath.Join("missing", "future")} {
 			t.Run(relative+"-"+targetSuffix, func(t *testing.T) {
 				root := t.TempDir()

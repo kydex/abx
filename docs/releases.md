@@ -25,6 +25,8 @@ make live
 
 `make live` should be run on a representative supported host when runtime/isolation behavior has changed.
 
+The [optional manual checks](manual-checks.md) are available for diagnosis or targeted investigation. They are not a requirement before every release and add no release gate.
+
 Then verify packaging locally:
 
 ```sh

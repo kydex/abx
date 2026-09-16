@@ -98,3 +98,42 @@ func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
 		t.Fatal("skills target prepared before tool check", err)
 	}
 }
+
+func TestVerificationCleanupAggregatesFailuresAndContinues(t *testing.T) {
+	home, project := t.TempDir(), t.TempDir()
+	files := &probeFiles{}
+	first, firstLink, err := files.create(home, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, secondLink, err := files.create(home, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(first); err != nil {
+		t.Fatal(err)
+	}
+	replaced := filepath.Join(project, filepath.Base(secondLink))
+	// Keep the old object alive to avoid depending on inode reuse.
+	if err := os.Rename(replaced, replaced+"-saved"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(replaced, []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	err = files.Close()
+	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "replaced") || !strings.Contains(err.Error(), first) || !strings.Contains(err.Error(), replaced) {
+		t.Fatalf("lost cleanup failure: %v", err)
+	}
+	for _, path := range []string{second, filepath.Join(project, filepath.Base(firstLink))} {
+		if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("cleanup abandoned %s: %v", path, err)
+		}
+	}
+	if raw, err := os.ReadFile(replaced); err != nil || string(raw) != "keep" {
+		t.Fatalf("replacement damaged: %q %v", raw, err)
+	}
+	if err := files.Close(); err != nil {
+		t.Fatalf("second close retried failed cleanup: %v", err)
+	}
+}

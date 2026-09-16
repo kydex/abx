@@ -269,6 +269,10 @@ func TestInspectDoesNotPreparePersistentRuntimeState(t *testing.T) {
 	if err = os.WriteFile(filepath.Join(bin, "demo"), []byte("#!/bin/sh\nexit 0\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
+	// Configured skills would make Prepare create persistent mountpoints.
+	if err = os.MkdirAll(paths.SharedSkills, 0700); err != nil {
+		t.Fatal(err)
+	}
 	project := t.TempDir()
 	t.Chdir(project)
 	marker := filepath.Join(home, ".agents")
@@ -288,6 +292,9 @@ func TestInspectDoesNotPreparePersistentRuntimeState(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), `cwd: "/workspace"`) || !strings.Contains(out.String(), `mount: read-write`) {
 		t.Fatalf("unexpected inspect output: %q", out.String())
+	}
+	if !strings.Contains(out.String(), ` -> "/home/agent/.agents/skills"`) {
+		t.Fatalf("inspect omitted configured skills: %q", out.String())
 	}
 	if _, err = os.Lstat(marker); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("inspect prepared persistent runtime state")

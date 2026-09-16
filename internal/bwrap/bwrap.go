@@ -97,25 +97,30 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	if err = cmd.Run(); err != nil {
 		return nil, fmt.Errorf("Bubblewrap version: %w", err)
 	}
-	if !versionOK(output.text) {
-		return nil, fmt.Errorf("Bubblewrap requires >= %s", MinimumVersion)
+	if err := validateVersion(output.text); err != nil {
+		return nil, err
 	}
 	return t, nil
 }
-func versionOK(s string) bool {
+func versionOK(s string) bool { return validateVersion(s) == nil }
+
+func validateVersion(s string) error {
 	m := regexp.MustCompile(`^bubblewrap ([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`).FindStringSubmatch(s)
 	if m == nil {
-		return false
+		return fmt.Errorf("could not parse Bubblewrap version from %q", s)
 	}
 	nums := [3]uint64{}
 	for i := range nums {
 		n, e := strconv.ParseUint(m[i+1], 10, 64)
 		if e != nil {
-			return false
+			return fmt.Errorf("could not parse Bubblewrap version from %q", s)
 		}
 		nums[i] = n
 	}
-	return nums[0] > 0 || nums[1] >= 12
+	if nums[0] == 0 && nums[1] < 12 {
+		return fmt.Errorf("Bubblewrap %s.%s.%s is too old; requires >= %s", m[1], m[2], m[3], MinimumVersion)
+	}
+	return nil
 }
 
 type limitedBuffer struct {

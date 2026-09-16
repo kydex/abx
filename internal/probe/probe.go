@@ -42,14 +42,14 @@ type Expected struct {
 
 type Check struct{ Name, State, Detail string }
 
-func observation(name string, ok bool, err error) Check {
+func observation(name string, ok bool, err error, detail string) Check {
 	c := Check{Name: name, State: "PASS"}
 	if err != nil {
 		c.State = "UNAVAILABLE"
 		c.Detail = err.Error()
 	} else if !ok {
 		c.State = "FAIL"
-		c.Detail = "unexpected sandbox state"
+		c.Detail = detail
 	}
 	return c
 }
@@ -93,7 +93,11 @@ func report(out io.Writer, checks []Check) error {
 		if c.State != "PASS" && !(c.State == "N/A" && c.Name == "shared skills") {
 			failed = true
 		}
-		if _, err := fmt.Fprintf(out, "%s %q: %q\n", c.State, c.Name, c.Detail); err != nil {
+		line := fmt.Sprintf("%s %q", c.State, c.Name)
+		if c.Detail != "" {
+			line += fmt.Sprintf(": %q", c.Detail)
+		}
+		if _, err := fmt.Fprintln(out, line); err != nil {
 			return err
 		}
 	}
@@ -104,22 +108,20 @@ func report(out io.Writer, checks []Check) error {
 }
 func check(e Expected) []Check {
 	var checks []Check
-	add := func(name string, ok bool, err error) { checks = append(checks, observation(name, ok, err)) }
+	add := func(name string, ok bool, err error, detail string) {
+		checks = append(checks, observation(name, ok, err, detail))
+	}
 	cwd, err := os.Getwd()
-	add("working directory", cwd == "/workspace", err)
+	add("working directory", cwd == "/workspace", err, fmt.Sprintf("expected %q; observed %q", "/workspace", cwd))
 	hostname, err := os.Hostname()
-	add("hostname", hostname == "abx", err)
-	actual := os.Environ()
-	want := slices.Clone(e.Environment)
-	slices.Sort(actual)
-	slices.Sort(want)
-	add("exact environment", slices.Equal(actual, want), nil)
+	add("hostname", hostname == "abx", err, fmt.Sprintf("expected %q; observed %q", "abx", hostname))
+	checks = append(checks, checkEnvironment(os.Environ(), e.Environment))
 	for _, p := range []string{e.Sentinel, e.Link, "/etc/shadow"} {
 		_, err := os.Stat(p)
 		if errors.Is(err, os.ErrNotExist) {
-			add("hidden "+p, true, nil)
+			add("hidden "+p, true, nil, "")
 		} else {
-			add("hidden "+p, false, err)
+			add("hidden "+p, false, err, "expected path to be absent; path is accessible")
 		}
 	}
 	for _, target := range []struct {
@@ -127,45 +129,51 @@ func check(e Expected) []Check {
 		id   Identity
 	}{{"/home/agent", e.Profile}, {"/workspace", e.Project}} {
 		id, err := Identify(target.path)
-		add("selected "+target.path, id == target.id, err)
+		add("selected "+target.path, id == target.id, err, fmt.Sprintf("expected device=%d inode=%d; observed device=%d inode=%d", target.id.Device, target.id.Inode, id.Device, id.Inode))
 	}
 	id, err := Identify(e.Home)
 	if errors.Is(err, os.ErrNotExist) {
-		add("host home hidden", true, nil)
+		add("host home hidden", true, nil, "")
 	} else {
-		add("host home hidden", id != e.Objects[e.Home], err)
+		add("host home hidden", id != e.Objects[e.Home], err, "expected host home to be hidden; observed the host home filesystem object")
 	}
 	checks = append(checks, checkNamespaces(e.Namespaces, os.Readlink)...)
 	for _, p := range []string{"/tmp", "/var/tmp", "/run", "/dev"} {
 		id, err := Identify(p)
-		add("private "+p, id != e.Objects[p], err)
+		add("private "+p, id != e.Objects[p], err, "expected a private filesystem object; observed the host object")
 	}
 	for _, p := range []string{"/tmp", "/var/tmp", "/run"} {
 		var fs unix.Statfs_t
 		err := unix.Statfs(p, &fs)
-		add("tmpfs "+p, fs.Type == unix.TMPFS_MAGIC, err)
+		add("tmpfs "+p, fs.Type == unix.TMPFS_MAGIC, err, fmt.Sprintf("expected tmpfs type=%#x; observed type=%#x", unix.TMPFS_MAGIC, fs.Type))
 	}
 	info, err := os.Stat("/run/user")
 	ok := err == nil && info.IsDir() && info.Mode().Perm() == 0700 && info.Mode()&(os.ModeSticky|os.ModeSetuid|os.ModeSetgid) == 0
-	add("runtime directory mode", ok, err)
+	detail := ""
+	if err == nil {
+		detail = fmt.Sprintf("expected directory with mode 0700 and no special bits; observed %s (permissions %04o)", info.Mode(), info.Mode().Perm())
+	}
+	add("runtime directory mode", ok, err, detail)
 	var st unix.Stat_t
 	err = unix.Stat("/dev/null", &st)
-	add("null device", st.Mode&unix.S_IFMT == unix.S_IFCHR && unix.Major(st.Rdev) == 1 && unix.Minor(st.Rdev) == 3, err)
+	add("null device", st.Mode&unix.S_IFMT == unix.S_IFCHR && unix.Major(st.Rdev) == 1 && unix.Minor(st.Rdev) == 3, err, fmt.Sprintf("expected character device 1:3; observed file type=%#o device=%d:%d", st.Mode&unix.S_IFMT, unix.Major(st.Rdev), unix.Minor(st.Rdev)))
 	raw, err := os.ReadFile("/proc/self/mountinfo")
 	for _, target := range e.ReadOnly {
-		ok := readOnly(string(raw), target)
-		add("read-only "+target, ok, err)
+		detail := readOnlyDetail(string(raw), target)
+		add("read-only "+target, detail == "", err, detail)
 	}
 	if !e.Skills {
 		checks = append(checks, Check{Name: "shared skills", State: "N/A", Detail: "not configured"})
 	}
 	for _, p := range []string{"/home/agent", "/workspace"} {
 		err := writeAndRemove(p)
-		add("write and cleanup "+p, err == nil, err)
+		add("write and cleanup "+p, err == nil, err, "")
 	}
 	return checks
 }
-func readOnly(raw, target string) bool {
+func readOnly(raw, target string) bool { return readOnlyDetail(raw, target) == "" }
+
+func readOnlyDetail(raw, target string) string {
 	found := false
 	for _, line := range strings.Split(raw, "\n") {
 		f := strings.Fields(line)
@@ -174,10 +182,13 @@ func readOnly(raw, target string) bool {
 		}
 		found = true
 		if !strings.Contains(","+f[5]+",", ",ro,") {
-			return false
+			return fmt.Sprintf("expected ro mount flag; observed flags %q", f[5])
 		}
 	}
-	return found
+	if !found {
+		return "expected read-only mountpoint; no matching mountinfo entry"
+	}
+	return ""
 }
 func writeAndRemove(dir string) error {
 	f, err := os.CreateTemp(dir, ".abx-write-*")
@@ -195,7 +206,42 @@ func checkNamespaces(host map[string]string, readlink func(string) (string, erro
 	var checks []Check
 	for _, name := range NamespaceNames() {
 		ns, err := readlink("/proc/self/ns/" + name)
-		checks = append(checks, observation(name+" namespace", host[name] != "" && ns != "" && ns != host[name], err))
+		checks = append(checks, observation(name+" namespace", host[name] != "" && ns != "" && ns != host[name], err, fmt.Sprintf("expected nonempty namespace identities to differ; host=%q sandbox=%q", host[name], ns)))
 	}
 	return checks
+}
+
+// Compare full assignments, including duplicates, but disclose only variable names.
+func checkEnvironment(actual, expected []string) Check {
+	actual, expected = slices.Clone(actual), slices.Clone(expected)
+	slices.Sort(actual)
+	slices.Sort(expected)
+	if slices.Equal(actual, expected) {
+		return observation("exact environment", true, nil, "")
+	}
+	group := func(entries []string) map[string][]string {
+		out := make(map[string][]string)
+		for _, entry := range entries {
+			name, _, ok := strings.Cut(entry, "=")
+			if !ok || name == "" {
+				name = "<malformed assignment>"
+			}
+			out[name] = append(out[name], entry)
+		}
+		return out
+	}
+	got, want := group(actual), group(expected)
+	var names []string
+	for name, entries := range got {
+		if !slices.Equal(entries, want[name]) {
+			names = append(names, name)
+		}
+	}
+	for name := range want {
+		if _, exists := got[name]; !exists {
+			names = append(names, name)
+		}
+	}
+	slices.Sort(names)
+	return observation("exact environment", false, nil, fmt.Sprintf("differing variable names: %q", names))
 }

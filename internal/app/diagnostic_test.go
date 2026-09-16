@@ -107,3 +107,20 @@ func TestIsolationSummaryMatchesBubblewrapNamespacePolicy(t *testing.T) {
 		}
 	}
 }
+
+func TestInspectOmitsUnspecifiedMountFields(t *testing.T) {
+	got := formatPlan(diagnosticPlan(t, sandbox.Run))
+	for _, unwanted := range []string{"mode=0000", `directory ""`, `private-tmpfs ""`} {
+		if strings.Contains(got, unwanted) {
+			t.Errorf("misleading mount field %q in output", unwanted)
+		}
+	}
+	if !strings.Contains(got, "mount: directory \"/run/user\" mode=0700\n") {
+		t.Fatal("explicit runtime directory permissions omitted")
+	}
+	for _, line := range strings.Split(got, "\n") {
+		if strings.TrimRight(line, " \t") != line {
+			t.Fatalf("trailing whitespace: %q", line)
+		}
+	}
+}

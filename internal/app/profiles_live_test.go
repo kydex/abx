@@ -38,7 +38,7 @@ func TestLiveProfilesCLI(t *testing.T) {
 		{[]string{"profile", "create", "demo"}, 0, "Created profile demo"},
 		{[]string{"profile", "create", "demo"}, 1, "profile already exists"},
 		{[]string{"profile", "show", "demo"}, 0, "Command: unavailable"},
-		{[]string{"profile", "list"}, 0, "demo  unavailable  not-configured"},
+		{[]string{"profile", "list"}, 0, "PROFILE  COMMAND      SKILLS\ndemo     unavailable  not-configured\n"},
 		{[]string{"profile", "create", "../bad"}, 2, "invalid profile name"},
 	} {
 		cmd := exec.CommandContext(ctx, binary, tc.args...)

@@ -52,6 +52,8 @@ The shared path is optional. ABX checks the relevant directories and rejects uns
 
 `abx verify <profile>` launches the same sandbox backend used for normal execution, with one additional fixed read-only probe executable. It checks observed namespaces, cwd, hostname, environment, private mounts/views, read-only resources, writable profile/project access, and selected access boundaries.
 
+For read-only resources, the probe checks the mount flags at each selected mountpoint in `/proc/self/mountinfo`. It does not independently inspect every nested mount or attempt writes to those resources. Read-only enforcement is delegated to Bubblewrap; a `PASS` for a parent mountpoint is not a separate verification of all its nested mounts.
+
 A successful `verify` is evidence about that invocation and host state. It is not a permanent guarantee about later runs.
 
 ## Remaining risks

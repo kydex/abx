@@ -92,7 +92,10 @@ func (in *Inputs) private(path string) error {
 	return privateInfo(path, in.objects[path].info, in.account.UID)
 }
 func privateInfo(path string, info os.FileInfo, uid int) error {
-	if !info.IsDir() || info.Mode().Perm() != 0700 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+	if !info.IsDir() {
+		return fmt.Errorf("private path %q is not a directory", path)
+	}
+	if info.Mode().Perm() != 0700 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
 		return fmt.Errorf("private directory %q must have exact mode 0700", path)
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
@@ -181,9 +184,19 @@ func resolveAgent(home, name string) (string, error) {
 			}
 			continue
 		}
-		if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 || unix.Access(p, unix.X_OK) != nil {
+		switch {
+		case !info.Mode().IsRegular():
+			err = fmt.Errorf("profile executable %q is not a regular file", p)
+		case info.Mode().Perm()&0111 == 0:
+			err = fmt.Errorf("profile executable %q has no execute permission bits", p)
+		default:
+			if accessErr := unix.Access(p, unix.X_OK); accessErr != nil {
+				err = fmt.Errorf("access profile executable %q: %w", p, accessErr)
+			}
+		}
+		if err != nil {
 			if invalid == nil {
-				invalid = fmt.Errorf("unusable profile executable %q", p)
+				invalid = err
 			}
 			continue
 		}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"golang.org/x/sys/unix"
@@ -334,5 +335,38 @@ func TestWorkRejectsUnsafeProjectAndArguments(t *testing.T) {
 		if err == nil {
 			t.Fatalf("accepted mode/arguments: %v", mode)
 		}
+	}
+}
+
+func TestDiagnosticReasonsForInvalidProfileObjects(t *testing.T) {
+	home := t.TempDir()
+	path := filepath.Join(home, "bin", "demo")
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, nil, 0700); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := privateInfo(path, info, os.Getuid()); err == nil || !strings.Contains(err.Error(), "is not a directory") {
+		t.Fatalf("file misdiagnosed as a permissions error: %v", err)
+	}
+	if err := os.Chmod(path, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := resolveAgent(home, "demo"); err == nil || !strings.Contains(err.Error(), "no execute permission bits") {
+		t.Fatalf("missing execute permissions: %v", err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := resolveAgent(home, "demo"); err == nil || !strings.Contains(err.Error(), "not a regular file") {
+		t.Fatalf("directory executable: %v", err)
 	}
 }

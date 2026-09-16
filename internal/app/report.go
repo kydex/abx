@@ -20,7 +20,15 @@ func formatPlan(plan sandbox.Plan) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "cwd: %q\ncommand: %q\n", plan.WorkingDirectory(), plan.Command())
 	for _, m := range plan.Mounts() {
-		fmt.Fprintf(&b, "mount: %s %q -> %q mode=%04o\n", mountName(m.Kind), m.Source, m.Target, m.Mode)
+		fmt.Fprintf(&b, "mount: %s", mountName(m.Kind))
+		if m.Source != "" {
+			fmt.Fprintf(&b, " %q ->", m.Source)
+		}
+		fmt.Fprintf(&b, " %q", m.Target)
+		if m.Mode != 0 {
+			fmt.Fprintf(&b, " mode=%04o", m.Mode)
+		}
+		b.WriteByte('\n')
 	}
 	for _, e := range plan.Environment() {
 		fmt.Fprintf(&b, "env: %s=%q\n", e.Name, e.Value)

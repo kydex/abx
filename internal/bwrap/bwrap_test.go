@@ -34,15 +34,23 @@ func plan(t *testing.T, mode sandbox.Mode) sandbox.Plan {
 	return p
 }
 func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
-	f, e := os.CreateTemp(t.TempDir(), "source")
-	if e != nil {
-		t.Fatal(e)
+	byPath := make(map[string]*os.File)
+	for _, path := range []string{"/system", "/profile", "/skills", "/project"} {
+		f, err := os.CreateTemp(t.TempDir(), "source")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := f.Close(); err != nil {
+				t.Error(err)
+			}
+		})
+		byPath[path] = f
 	}
-	defer f.Close()
 	for _, mode := range []sandbox.Mode{sandbox.Run, sandbox.Shell, sandbox.Work} {
 		var sources []string
 		p := plan(t, mode)
-		args, files, e := Translate(p, func(path string) (*os.File, error) { sources = append(sources, path); return f, nil })
+		args, files, e := Translate(p, func(path string) (*os.File, error) { sources = append(sources, path); return byPath[path], nil })
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -56,6 +64,11 @@ func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 		}
 		if !reflect.DeepEqual(sources, want) || len(files) != len(want) {
 			t.Fatal(sources)
+		}
+		for i, path := range want {
+			if files[i] != byPath[path] {
+				t.Fatalf("mode %v: child FD %d does not refer to %s", mode, 3+i, path)
+			}
 		}
 		joined := strings.Join(args, " ")
 		for _, s := range []string{"--ro-bind-fd 3 /usr", "--bind-fd 4 /home/agent", "--ro-bind-fd 5 /home/agent/.agents/skills", "--perms 0700 --dir /run/user"} {
@@ -329,9 +342,24 @@ exit 23`)
 		t.Fatal(err)
 	}
 	defer source.Close()
+	replaced := false
 	status, err := Execute(context.Background(), tool, plan(t, sandbox.Shell), func(string) (*os.File, error) {
+		// Execute has revalidated the tool before borrowing mount sources.
+		// Replace its pathname here, without a timing-dependent goroutine.
+		if !replaced {
+			if err := os.Rename(path, path+"-original"); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 42\n"), 0700); err != nil {
+				t.Fatal(err)
+			}
+			replaced = true
+		}
 		return source, nil
 	}, Stdio{Out: io.Discard, Err: io.Discard})
+	if !replaced {
+		t.Fatal("tool pathname was not replaced")
+	}
 	if status != 23 || err != nil {
 		t.Fatalf("retained tool execution = status %d, err %v", status, err)
 	}
@@ -345,5 +373,62 @@ func TestTranslateRejectsInvalidPlanBeforeSourceLookup(t *testing.T) {
 	})
 	if err == nil || called {
 		t.Fatalf("err=%v sourceCalled=%v", err, called)
+	}
+}
+
+func TestTranslateSourceFailurePreservesBorrowedFiles(t *testing.T) {
+	for _, nilSource := range []bool{false, true} {
+		name := "lookup error"
+		if nilSource {
+			name = "nil source"
+		}
+		t.Run(name, func(t *testing.T) {
+			f, err := os.CreateTemp(t.TempDir(), "source")
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := f.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			lookupErr := errors.New("source unavailable")
+			var requested []string
+			args, files, err := Translate(plan(t, sandbox.Shell), func(path string) (*os.File, error) {
+				requested = append(requested, path)
+				if path == "/system" {
+					return f, nil
+				}
+				if nilSource {
+					return nil, nil
+				}
+				return nil, lookupErr
+			})
+			if err == nil || (!nilSource && !errors.Is(err, lookupErr)) {
+				t.Fatalf("source failure was lost: %v", err)
+			}
+			if len(args) != 0 || len(files) != 0 {
+				t.Fatal("returned a partial launch after source failure")
+			}
+			if !reflect.DeepEqual(requested, []string{"/system", "/profile"}) {
+				t.Fatalf("continued looking up sources after failure: %v", requested)
+			}
+			if _, err := f.Stat(); err != nil {
+				t.Fatalf("closed a descriptor owned by the caller: %v", err)
+			}
+		})
+	}
+}
+
+func TestVersionDiagnosticsDistinguishOldAndMalformed(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"bubblewrap 0.11.0\n", "too old; requires >= 0.12.0"},
+		{"", "could not parse Bubblewrap version"},
+		{"unexpected output\n", "could not parse Bubblewrap version"},
+		{"bubblewrap 9999999999999999999999999.0.0", "could not parse Bubblewrap version"},
+	} {
+		if err := validateVersion(tc.input); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("version %q: %v", tc.input, err)
+		}
 	}
 }

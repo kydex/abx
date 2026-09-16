@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.8.5
+
+- Explain verification mismatches with expected and observed state; report differing environment variable names without their values. Preserve verification criteria and status handling.
+
+- Add regression tests for incomplete probe inputs, report and profile-output failures, and aggregation of cleanup failures without deleting replacement files.
+- Update the live profile-list expectation for aligned columns.
+
+- Clarify directory-type, profile-executable, profile-name, argument-separator, and Bubblewrap-version errors; include full directory paths in profile-creation failures.
+- Align profile-list columns, omit unspecified mount modes and empty sources from inspect output, and omit empty verification details.
+- Strengthen retained-descriptor, protected-path, non-mutating inspect, environment, and source-error regression tests.
+
+- Document profile executable symlink limitations and workarounds, and clarify the scope of read-only verification in English and Russian. No runtime changes.
+
+- Add optional bilingual manual checks using disposable profiles, with explicit host/sandbox locations and separate shell-transition commands; clarify profile status semantics. The walkthrough is not required before every release. No runtime changes.
+
 ## 0.8.4
 
 - Add `abx work <profile>`: open the login shell with the current project writable at `/workspace`, without requiring a matching profile executable. Preserve project-free `shell`, run-only `inspect`, retained-FD execution, and shared isolation policy.

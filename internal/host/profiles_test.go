@@ -253,3 +253,14 @@ func TestAgentLookupSkipsUnresolvableEarlierCandidate(t *testing.T) {
 		t.Fatalf("fallback: %q %v", got, err)
 	}
 }
+
+func TestCreateErrorIncludesFullDirectoryPath(t *testing.T) {
+	a, paths := profileStorage(t)
+	if _, err := CreateProfile(a, paths, "demo"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := CreateProfile(a, paths, "demo")
+	if !errors.Is(err, ErrProfileExists) || !strings.Contains(err.Error(), filepath.Join(paths.Profiles, "demo")) {
+		t.Fatalf("missing full path or error classification: %v", err)
+	}
+}

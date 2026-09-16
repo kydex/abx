@@ -45,7 +45,7 @@ func TestProfileCommandsReportWithoutRuntime(t *testing.T) {
 	if code, err := invoke(cli.ProfileShow, "demo"); code != 0 || err != nil || !strings.Contains(out.String(), "Command: unavailable") || !strings.Contains(out.String(), "Skills: not-configured") {
 		t.Fatal(code, err, out.String())
 	}
-	if code, err := invoke(cli.ProfileList, ""); code != 0 || err != nil || !strings.Contains(out.String(), "demo  unavailable  not-configured") {
+	if code, err := invoke(cli.ProfileList, ""); code != 0 || err != nil || !strings.Contains(out.String(), "demo     unavailable  not-configured") {
 		t.Fatal(code, err, out.String())
 	}
 }
@@ -67,5 +67,67 @@ func TestProfileOutputFailureDoesNotDeleteCreatedProfile(t *testing.T) {
 	}
 	if _, err = os.Stat(filepath.Join(p.Profiles, "demo")); err != nil {
 		t.Fatal("lost created profile", err)
+	}
+}
+
+func TestProfileListAlignsDifferentNameAndCommandLengths(t *testing.T) {
+	base := t.TempDir()
+	a := host.Account{UID: os.Getuid(), Home: base}
+	paths, err := host.ResolvePaths(a, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"a", "long-profile-name"} {
+		home, err := host.CreateProfile(a, paths, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if name == "a" {
+			if err := os.MkdirAll(filepath.Join(home, "bin"), 0700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(home, "bin", name), []byte("#!/bin/sh\n"), 0700); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	var out bytes.Buffer
+	code, err := runProfiles(cli.Command{Kind: cli.ProfileList}, a, paths, &out)
+	if code != 0 || err != nil {
+		t.Fatal(code, err)
+	}
+	lines := strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatal(out.String())
+	}
+	commandColumn, skillsColumn := strings.Index(lines[0], "COMMAND"), strings.Index(lines[0], "SKILLS")
+	for i, command := range []string{"available", "unavailable"} {
+		line := lines[i+1]
+		if strings.Index(line, command) != commandColumn || strings.Index(line, "not-configured") != skillsColumn || strings.TrimRight(line, " \t") != line {
+			t.Fatalf("misaligned row: %q", line)
+		}
+	}
+}
+
+func TestProfileReadCommandsPropagateOutputFailure(t *testing.T) {
+	base := t.TempDir()
+	a := host.Account{UID: os.Getuid(), Home: base}
+	paths, err := host.ResolvePaths(a, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, err := host.CreateProfile(a, paths, "demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []cli.Kind{cli.ProfileShow, cli.ProfileList} {
+		code, err := runProfiles(cli.Command{Kind: kind, Profile: "demo"}, a, paths, brokenWriter{})
+		if code != 1 || err == nil || !strings.Contains(err.Error(), "output failed") {
+			t.Fatalf("%s lost output failure: code=%d err=%v", kind, code, err)
+		}
+		entries, err := os.ReadDir(home)
+		if err != nil || len(entries) != 0 {
+			t.Fatalf("%s changed profile: %v %v", kind, entries, err)
+		}
 	}
 }

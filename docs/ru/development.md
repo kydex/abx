@@ -63,6 +63,8 @@ env ABX_LIVE=1 go test -count=1 -v ./internal/app -run '^TestLiveVerify$'
 
 Live tests нужны после изменений mounts, namespaces, retained descriptors, project/profile path policy, Bubblewrap translation/execution или verify.
 
+Для диагностики с временными профилями при необходимости используйте [необязательные ручные проверки](manual-checks.md). Они не нужны перед каждым релизом и не заменяют описанные выше автоматические или live-тесты.
+
 ## Правила разработки
 
 - Начинайте с ожидаемого пользовательского поведения и его security boundary.

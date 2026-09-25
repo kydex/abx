@@ -9,12 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/kydex/abx/internal/sandbox"
+	"golang.org/x/sys/unix"
 )
 
 func plan(t *testing.T, mode sandbox.Mode) sandbox.Plan {
@@ -97,7 +99,7 @@ func TestBadSourcesAndVersion(t *testing.T) {
 			t.Fatal(v)
 		}
 	}
-	for _, v := range []string{"bubblewrap 0.9.0", "noise 0.12.0", "bubblewrap 0.12", "bubblewrap 9999999999999999999999999.0.0"} {
+	for _, v := range []string{"bubblewrap 0.0.99", "bubblewrap 0.9.0", "noise 0.12.0", "bubblewrap 0.12", "bubblewrap 9999999999999999999999999.0.0"} {
 		if versionOK(v) {
 			t.Fatal(v)
 		}
@@ -117,6 +119,58 @@ func TestChildStreamsExitAndCleanHostEnvironment(t *testing.T) {
 		t.Fatalf("%d %v %q %q", status, e, out.String(), stderr.String())
 	}
 }
+func TestMarkInheritedFDsKeepsExplicitFiles(t *testing.T) {
+	keep, err := os.CreateTemp(t.TempDir(), "keep")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer keep.Close()
+	unknown, err := os.CreateTemp(t.TempDir(), "unknown")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unknown.Close()
+	for _, file := range []*os.File{keep, unknown} {
+		if _, err := unix.FcntlInt(file.Fd(), unix.F_SETFD, 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := markInheritedFDsCloseOnExec([]*os.File{keep}); err != nil {
+		t.Fatal(err)
+	}
+	keepFlags, err := unix.FcntlInt(keep.Fd(), unix.F_GETFD, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknownFlags, err := unix.FcntlInt(unknown.Fd(), unix.F_GETFD, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keepFlags&unix.FD_CLOEXEC != 0 {
+		t.Fatal("explicit ExtraFiles descriptor was marked close-on-exec")
+	}
+	if unknownFlags&unix.FD_CLOEXEC == 0 {
+		t.Fatal("inherited descriptor remained open across exec")
+	}
+}
+
+func TestExecuteDropsInheritedFileDescriptors(t *testing.T) {
+	secret, err := os.CreateTemp(t.TempDir(), "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer secret.Close()
+	fd := int(secret.Fd())
+	if _, err := unix.FcntlInt(secret.Fd(), unix.F_SETFD, 0); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("/bin/sh", "-c", "test ! -e /proc/self/fd/"+strconv.Itoa(fd))
+	status, err := execute(context.Background(), cmd, Stdio{})
+	if err != nil || status != 0 {
+		t.Fatalf("inherited descriptor reached child: status=%d error=%v", status, err)
+	}
+}
+
 func TestChildCancellationAndSignalExit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()

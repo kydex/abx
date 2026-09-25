@@ -94,6 +94,9 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	output := &limitedBuffer{limit: 4096}
 	cmd.Stdout = output
 	cmd.Stderr = output
+	if err = markInheritedFDsCloseOnExec(cmd.ExtraFiles); err != nil {
+		return nil, err
+	}
 	if err = cmd.Run(); err != nil {
 		return nil, fmt.Errorf("Bubblewrap version: %w", err)
 	}
@@ -103,6 +106,32 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	return t, nil
 }
 func versionOK(s string) bool { return validateVersion(s) == nil }
+
+func markInheritedFDsCloseOnExec(extra []*os.File) error {
+	keep := map[int]bool{0: true, 1: true, 2: true}
+	for _, file := range extra {
+		if file != nil {
+			keep[int(file.Fd())] = true
+		}
+	}
+	entries, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		return fmt.Errorf("read inherited file descriptors: %w", err)
+	}
+	for _, entry := range entries {
+		fd, parseErr := strconv.Atoi(entry.Name())
+		if parseErr != nil || fd < 3 || keep[fd] {
+			continue
+		}
+		if _, err = unix.FcntlInt(uintptr(fd), unix.F_SETFD, unix.FD_CLOEXEC); err != nil {
+			if errors.Is(err, unix.EBADF) {
+				continue
+			}
+			return fmt.Errorf("mark file descriptor %d close-on-exec: %w", fd, err)
+		}
+	}
+	return nil
+}
 
 func validateVersion(s string) error {
 	m := regexp.MustCompile(`^bubblewrap ([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`).FindStringSubmatch(s)
@@ -117,8 +146,14 @@ func validateVersion(s string) error {
 		}
 		nums[i] = n
 	}
-	if nums[0] == 0 && nums[1] < 12 {
-		return fmt.Errorf("Bubblewrap %s.%s.%s is too old; requires >= %s", m[1], m[2], m[3], MinimumVersion)
+	minimum := [3]uint64{0, 12, 0}
+	for i := range nums {
+		if nums[i] > minimum[i] {
+			break
+		}
+		if nums[i] < minimum[i] {
+			return fmt.Errorf("Bubblewrap %s.%s.%s is too old; requires >= %s", m[1], m[2], m[3], MinimumVersion)
+		}
 	}
 	return nil
 }
@@ -213,6 +248,9 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	signals := make(chan os.Signal, 4)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(signals)
+	if err := markInheritedFDsCloseOnExec(cmd.ExtraFiles); err != nil {
+		return 1, err
+	}
 	if err := cmd.Start(); err != nil {
 		return 1, fmt.Errorf("start Bubblewrap: %w", err)
 	}

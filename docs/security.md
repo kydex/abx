@@ -66,4 +66,13 @@ A successful `verify` is evidence about that invocation and host state. It is no
 - A hostile process running concurrently as the same host UID may still race changes in data that the user can modify. Retained descriptors and revalidation reduce important pathname-replacement windows but are not a complete same-UID adversary model.
 - Some failed operations may leave directories or verification probe files behind. ABX avoids recursive automatic rollback that could delete unrelated user data.
 
+## Accepted trade-offs
+
+The following are deliberate current boundaries rather than pending implementation work:
+
+- **Runtime isolation:** networking is shared, the caller terminal is used directly without terminal-session isolation, no seccomp policy or resource quotas are defined, and project contents and nested mounts are not recursively sanitized.
+- **Path assumptions:** an exact `/tmp` project remains allowed; intermediate project-symlink replacement and the early-start signal race are not fully closed; system symlink aliases rely on trusted host configuration; and the sensitive-home denylist is intentionally finite.
+- **Verification and diagnostics:** `verify` is a smoke test rather than a complete security attestation; probe metadata travels through argv; cleanup races and residue remain best-effort; Bubblewrap setup errors and payload exit code `1` are not distinguished; and the retained Bubblewrap FD is accepted.
+- **Release and CI:** source packaging assumes a clean checkout, CI action and tool versions float, live tests gate release tags rather than pull requests, and archives are not byte-for-byte reproducible or signed/attested.
+
 Back up important project and profile data according to your normal workflow; writable access is intentional.

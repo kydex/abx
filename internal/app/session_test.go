@@ -71,7 +71,7 @@ func TestSessionToolFailureNeverPreparesMountpoint(t *testing.T) {
 	}
 }
 func TestRootRejectedBeforeHelpAndErrorsEscaped(t *testing.T) {
-	if os.Getuid() != 0 {
+	if os.Getuid() != 0 && os.Geteuid() != 0 {
 		t.Skip("root ordering regression requires root fixture")
 	}
 	for _, args := range [][]string{{"help"}, {"__probe", "{}"}, {"verify", "demo"}} {
@@ -85,15 +85,58 @@ func TestSessionWithoutXDGReachesCommandValidation(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("requires a non-root passwd account")
 	}
-	// An invalid name stops before opening storage, so this test never uses profiles in the real home.
-	status, err := runSession(context.Background(), cli.Command{Kind: cli.ProfileShow, Profile: "../invalid"}, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard})
+	status, err := runSessionForAccount(
+		context.Background(),
+		cli.Command{Kind: cli.ProfileShow, Profile: "../invalid"},
+		nil,
+		bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+		host.Account{UID: os.Getuid(), Username: "tester", Home: t.TempDir()},
+	)
 	if status != 1 || err == nil || !strings.Contains(err.Error(), "invalid profile name") {
 		t.Fatalf("session without XDG did not reach name validation: %d, %v", status, err)
 	}
 }
 
+func TestValidateEffectiveUID(t *testing.T) {
+	for _, tc := range []struct {
+		name              string
+		real, effective   int
+		wantErrorContains string
+	}{
+		{"root", 1000, 0, "must not run as root"},
+		{"different effective uid", 1000, 1001, "effective privileges"},
+		{"normal user", 1000, 1000, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateEffectiveUID(tc.real, tc.effective)
+			if tc.wantErrorContains == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErrorContains) {
+				t.Fatalf("error = %v, want %q", err, tc.wantErrorContains)
+			}
+		})
+	}
+}
+
+func TestUnknownCommandKindFailsClosed(t *testing.T) {
+	status, err := runSessionForAccount(
+		context.Background(),
+		cli.Command{Kind: cli.Kind("future-command")},
+		nil,
+		bwrap.Stdio{},
+		host.Account{},
+	)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "unsupported command") {
+		t.Fatalf("unknown command = status %d, error %v", status, err)
+	}
+}
+
 func TestVersionCommand(t *testing.T) {
-	if os.Getuid() == 0 {
+	if os.Getuid() == 0 || os.Geteuid() == 0 || os.Geteuid() != os.Getuid() {
 		t.Skip("public CLI requires a non-root user")
 	}
 	var out, stderr bytes.Buffer

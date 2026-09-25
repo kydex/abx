@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.8.6
+
+- Prevent unneeded inherited file descriptors from reaching sandbox subprocesses.
+- Reject effective UID mismatches, make profile-name validation tests independent of host passwd state, and fail closed for unknown internal command kinds.
+- Reject Bubblewrap versions below 0.12.0 across all version components.
+- Document accepted runtime, verification, path, and release trade-offs in the synchronized security model.
 
 ## 0.8.5
 

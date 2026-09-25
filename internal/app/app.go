@@ -28,8 +28,8 @@ func Run(ctx context.Context, args []string, stdio bwrap.Stdio) int {
 		_, _ = fmt.Fprintf(stdio.Err, "abx: %s\n", Escape(err.Error()))
 		return code
 	}
-	if os.Getuid() == 0 {
-		return fail(1, errors.New("must not run as root"))
+	if err := validateEffectiveUID(os.Getuid(), os.Geteuid()); err != nil {
+		return fail(1, err)
 	}
 	if len(args) > 0 && args[0] == "__probe" {
 		if len(args) != 2 {
@@ -66,6 +66,17 @@ func Run(ctx context.Context, args []string, stdio bwrap.Stdio) int {
 	}
 	return 0
 }
+
+func validateEffectiveUID(realUID, effectiveUID int) error {
+	if effectiveUID == 0 {
+		return errors.New("must not run as root")
+	}
+	if effectiveUID != realUID {
+		return errors.New("must not run with effective privileges")
+	}
+	return nil
+}
+
 func value(env []string, key string) string {
 	prefix := key + "="
 	for i := len(env) - 1; i >= 0; i-- {
@@ -85,13 +96,20 @@ func runSession(ctx context.Context, c cli.Command, env []string, stdio bwrap.St
 
 // runSessionForAccount runs one session after the invoking account has been resolved.
 func runSessionForAccount(ctx context.Context, c cli.Command, env []string, stdio bwrap.Stdio, account host.Account) (status int, result error) {
+	switch c.Kind {
+	case cli.ProfileCreate, cli.ProfileShow, cli.ProfileList:
+		paths, err := host.ResolvePaths(account, value(env, "XDG_DATA_HOME"))
+		if err != nil {
+			return 1, err
+		}
+		return runProfiles(c, account, paths, stdio.Out)
+	case cli.Run, cli.Shell, cli.Work, cli.Inspect, cli.Verify:
+	default:
+		return 1, fmt.Errorf("unsupported command %q", c.Kind)
+	}
 	paths, err := host.ResolvePaths(account, value(env, "XDG_DATA_HOME"))
 	if err != nil {
 		return 1, err
-	}
-	switch c.Kind {
-	case cli.ProfileCreate, cli.ProfileShow, cli.ProfileList:
-		return runProfiles(c, account, paths, stdio.Out)
 	}
 	mode := host.Run
 	switch c.Kind {

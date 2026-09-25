@@ -122,6 +122,27 @@ func TestWithinBoundaries(t *testing.T) {
 	}
 }
 
+func TestCurrentUsesWorkingDirectory(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	project := filepath.Join(home, "code", "project")
+	if err := os.MkdirAll(project, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(project); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+	got, err := Current(home, filepath.Join(home, ".local", "share", "abx"))
+	if err != nil || got != project {
+		t.Fatalf("Current = %q, %v", got, err)
+	}
+}
+
 // A relocated system tree must not become an allowed writable project.
 func TestProjectRejectsRelocatedSystemTree(t *testing.T) {
 	base := t.TempDir()

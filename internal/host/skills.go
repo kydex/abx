@@ -64,7 +64,7 @@ func (in *Inputs) Prepare() error {
 		return fmt.Errorf("create skills parent: %w", err)
 	}
 	if err == nil {
-		fd, e := unix.Openat2(home, ".agents", &unix.OpenHow{Flags: unix.O_PATH | unix.O_CLOEXEC | unix.O_DIRECTORY, Resolve: unix.RESOLVE_BENEATH | unix.RESOLVE_NO_SYMLINKS})
+		fd, e := unix.Openat2(home, ".agents", &unix.OpenHow{Flags: unix.O_PATH | unix.O_CLOEXEC | unix.O_DIRECTORY, Resolve: unix.RESOLVE_BENEATH | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_MAGICLINKS})
 		if e != nil {
 			return fmt.Errorf("open created skills parent (partial state remains): %w", e)
 		}

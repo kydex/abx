@@ -122,6 +122,30 @@ func TestValidateEffectiveUID(t *testing.T) {
 	}
 }
 
+func TestValidateEffectiveGID(t *testing.T) {
+	for _, tc := range []struct {
+		name              string
+		real, effective   int
+		wantErrorContains string
+	}{
+		{"different effective gid", 1000, 1001, "effective group privileges"},
+		{"normal group", 1000, 1000, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateEffectiveGID(tc.real, tc.effective)
+			if tc.wantErrorContains == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErrorContains) {
+				t.Fatalf("error = %v, want %q", err, tc.wantErrorContains)
+			}
+		})
+	}
+}
+
 func TestUnknownCommandKindFailsClosed(t *testing.T) {
 	status, err := runSessionForAccount(
 		context.Background(),

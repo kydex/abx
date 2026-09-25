@@ -13,10 +13,28 @@ import (
 var systemRoots = []string{
 	"/bin", "/boot", "/dev", "/etc", "/lib", "/lib64", "/opt", "/proc",
 	"/root", "/run", "/sbin", "/sys", "/usr", "/var",
+	"/srv", "/mnt", "/media", "/snap",
 }
 
 var sensitiveHomeTrees = []string{
 	".config", ".ssh", ".gnupg", "dotfiles",
+	".aws", ".docker", ".kube", ".pki", ".cache",
+}
+
+// exactProtectedRoots rejects exact matches without blocking subdirectories.
+// Overlap checks above would reject every TempDir-based test project if /tmp
+// were listed in systemRoots, so keep world-writable roots exact-only here.
+var exactProtectedRoots = []string{
+	"/tmp", "/var/tmp", "/dev/shm",
+}
+
+// Current resolves os.Getwd through the canonical validation path.
+func Current(realHome, dataRoot string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get current directory: %w", err)
+	}
+	return ResolveProject(cwd, realHome, dataRoot)
 }
 
 // ResolveProject canonicalizes and validates a candidate project directory.
@@ -43,6 +61,11 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 	if project == string(filepath.Separator) {
 		return "", fmt.Errorf("project %q is the filesystem root", project)
 	}
+	for _, exact := range exactProtectedRoots {
+		if project == exact {
+			return "", fmt.Errorf("project %q is a protected system path", project)
+		}
+	}
 	for _, root := range protectedRoots {
 		resolved, err := canonicalProtectedTree(root)
 		if err != nil {
@@ -55,6 +78,12 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 	realHome = filepath.Clean(realHome)
 	if project == realHome || within(realHome, project) {
 		return "", fmt.Errorf("project %q is the real home or its ancestor", project)
+	}
+	// Reject another user's home such as /home/bob/proj when realHome is
+	// /home/alice. Projects inside the own home remain allowed. Scoped to
+	// /home so isolated test directories under /tmp keep working.
+	if within(realHome, "/home") && within(project, "/home") && !within(project, realHome) && project != realHome {
+		return "", fmt.Errorf("project %q is outside the real home %q", project, realHome)
 	}
 	for _, relative := range sensitiveHomeTrees {
 		sensitive, err := canonicalProtectedTree(filepath.Join(realHome, relative))

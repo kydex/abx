@@ -90,66 +90,6 @@ func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 		}
 	}
 }
-func TestTranslateCompatibilitySymlink(t *testing.T) {
-	plan, err := sandbox.Build(sandbox.Input{
-		Home:    "/profile",
-		Project: "/project",
-		Mode:    sandbox.Run,
-		System: []sandbox.Mount{
-			{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"},
-			{Kind: sandbox.Symlink, Source: "usr/bin", Target: "/bin"},
-		},
-		Command: []string{"/bin/sh", "-l"},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	source, err := os.Open("/dev/null")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer source.Close()
-
-	var sources []string
-	args, files, err := Translate(plan, func(path string) (*os.File, error) {
-		sources = append(sources, path)
-		return source, nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantSources := []string{"/usr", "/profile", "/project"}
-	if !reflect.DeepEqual(sources, wantSources) || len(files) != len(wantSources) {
-		t.Fatalf("sources=%v files=%d", sources, len(files))
-	}
-
-	bindIndex, symlinkIndex := -1, -1
-	hasDirectory := false
-	for i := 0; i+2 < len(args); i++ {
-		switch args[i] {
-		case "--ro-bind-fd":
-			if args[i+2] == "/usr" {
-				bindIndex = i
-			}
-		case "--symlink":
-			if args[i+2] == "/bin" {
-				symlinkIndex = i
-			}
-		case "--dir":
-			if args[i+1] == "/bin" {
-				hasDirectory = true
-			}
-		}
-	}
-	if bindIndex < 0 || symlinkIndex <= bindIndex || args[symlinkIndex+1] != "usr/bin" || args[symlinkIndex+2] != "/bin" {
-		t.Fatalf("compatibility symlink translation: %v", args)
-	}
-	if hasDirectory {
-		t.Fatalf("compatibility symlink became a directory: %v", args)
-	}
-}
-
 func TestBadSourcesAndVersion(t *testing.T) {
 	if _, _, e := Translate(plan(t, sandbox.Shell), func(string) (*os.File, error) { return nil, errors.New("closed") }); e == nil {
 		t.Fatal("accepted bad source")

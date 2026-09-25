@@ -31,6 +31,9 @@ func Run(ctx context.Context, args []string, stdio bwrap.Stdio) int {
 	if err := validateEffectiveUID(os.Getuid(), os.Geteuid()); err != nil {
 		return fail(1, err)
 	}
+	if err := validateEffectiveGID(os.Getgid(), os.Getegid()); err != nil {
+		return fail(1, err)
+	}
 	if len(args) > 0 && args[0] == "__probe" {
 		if len(args) != 2 {
 			return fail(2, errors.New("invalid private probe invocation"))
@@ -73,6 +76,13 @@ func validateEffectiveUID(realUID, effectiveUID int) error {
 	}
 	if effectiveUID != realUID {
 		return errors.New("must not run with effective privileges")
+	}
+	return nil
+}
+
+func validateEffectiveGID(realGID, effectiveGID int) error {
+	if effectiveGID != realGID {
+		return errors.New("must not run with effective group privileges")
 	}
 	return nil
 }

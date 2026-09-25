@@ -228,8 +228,12 @@ func TestProfileInvalidNamesAndOwners(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(p.Profiles, "bad\nname"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ListProfiles(a, p); err == nil {
-		t.Fatal("invalid entry omitted")
+	list, err := ListProfiles(a, p)
+	if err != nil {
+		t.Fatalf("invalid entry broke listing: %v", err)
+	}
+	if len(list) != 1 || list[0].Name != "demo" {
+		t.Fatalf("invalid entry not skipped: %+v", list)
 	}
 }
 

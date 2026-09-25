@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"syscall"
 )
 
 // Account is the invoking user's trusted passwd identity.
@@ -96,6 +97,23 @@ func ResolvePaths(account Account, xdgDataHome string) (Paths, error) {
 	if err != nil {
 		return Paths{}, fmt.Errorf("canonicalize data base: %w", err)
 	}
+	if canonicalBase == string(filepath.Separator) {
+		return Paths{}, fmt.Errorf("data base %q is the filesystem root", canonicalBase)
+	}
+	for _, relative := range sensitiveHomeTrees {
+		sensitive, err := canonicalProtectedTree(filepath.Join(filepath.Clean(account.Home), relative))
+		if err != nil {
+			return Paths{}, err
+		}
+		if within(canonicalBase, sensitive) {
+			return Paths{}, fmt.Errorf("data base %q overlaps sensitive home tree %q", canonicalBase, sensitive)
+		}
+	}
+	if account.UID > 0 {
+		if err := checkDataBaseOwner(canonicalBase, account.UID); err != nil {
+			return Paths{}, err
+		}
+	}
 	// Keep the launcher-owned final component lexical. Existing ancestor
 	// symlinks are resolved above, but an existing data root must still be
 	// inspected and rejected as a symlink by the layout validators.
@@ -132,6 +150,39 @@ func canonicalizeExisting(path string) (string, error) {
 			return "", fmt.Errorf("no existing ancestor for %q", path)
 		}
 		missing = append(missing, filepath.Base(current))
+		current = parent
+	}
+}
+
+// checkDataBaseOwner requires the longest existing ancestor of the data base
+// to be a directory owned by the invoking user. This rejects roots under
+// another user's directory or under root-owned world-writable parents
+// without requiring an exact 0700 mode on shared ancestors such as
+// ~/.local/share or test TempDirs.
+func checkDataBaseOwner(canonicalBase string, uid int) error {
+	current := canonicalBase
+	for {
+		info, err := os.Stat(current)
+		if err == nil {
+			if !info.IsDir() {
+				return fmt.Errorf("data base ancestor %q is not a directory", current)
+			}
+			st, ok := info.Sys().(*syscall.Stat_t)
+			if !ok {
+				return fmt.Errorf("data base ancestor %q has unknown owner", current)
+			}
+			if int(st.Uid) != uid {
+				return fmt.Errorf("data base ancestor %q is not owned by the invoking user", current)
+			}
+			return nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("inspect data base ancestor %q: %w", current, err)
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return fmt.Errorf("no existing ancestor for data base %q", canonicalBase)
+		}
 		current = parent
 	}
 }

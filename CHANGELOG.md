@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.8.8
+
+- Reject sensitive home trees `.aws`, `.docker`, `.kube`, `.pki`, and `.cache` as projects, and reject sibling homes outside the real home under `/home`.
+- Reject exact `/tmp`, `/var/tmp`, and `/dev/shm` as projects, and add `/srv`, `/mnt`, `/media`, and `/snap` to protected system trees.
+- Reject data bases at the filesystem root, inside sensitive home trees, or with an existing ancestor not owned by the invoking user.
+- Reject Bubblewrap executables with setuid, setgid, or sticky bits in open and revalidation.
+- Reject effective GID mismatches in addition to effective UID mismatches.
+- Skip stray profile entries with invalid names in `profile list` instead of failing the whole listing; valid names with unsafe layout still error.
+- Use `RESOLVE_NO_MAGICLINKS` consistently for skills parent handling.
+- Document the path policy: rejected exact `/tmp`, `/var/tmp`, and `/dev/shm` projects, protected `/srv`, `/mnt`, `/media`, and `/snap` subtrees, `/home`-scoped sibling-home rejection, and the user-owned ancestor requirement for custom `XDG_DATA_HOME` locations.
+- Resolve symlinked sensitive home trees when validating custom data base locations.
+
 ## 0.8.7
 
 - Add `staticcheck` and `actionlint` to local and CI checks, and document the required tools.

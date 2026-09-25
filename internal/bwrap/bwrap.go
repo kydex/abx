@@ -50,7 +50,7 @@ func (t *Tool) Revalidate() error {
 	if err != nil {
 		return err
 	}
-	if !os.SameFile(t.info, info) || info.Mode().Perm()&0022 != 0 || info.Mode().Perm()&0111 == 0 {
+	if !os.SameFile(t.info, info) || info.Mode().Perm()&0022 != 0 || info.Mode().Perm()&0111 == 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
 		return errors.New("bubblewrap changed")
 	}
 	return nil
@@ -76,7 +76,7 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		return nil, err
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 || info.Mode().Perm()&0022 != 0 || !ok || system && st.Uid != 0 {
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 || info.Mode().Perm()&0022 != 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 || !ok || system && st.Uid != 0 {
 		return nil, errors.New("unsafe Bubblewrap executable")
 	}
 	if err = unix.Access(resolved, unix.X_OK); err != nil {

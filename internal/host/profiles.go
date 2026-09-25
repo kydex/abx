@@ -90,6 +90,11 @@ func ListProfiles(account Account, paths Paths) (statuses []ProfileStatus, resul
 	slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 	for _, entry := range entries {
 		name := entry.Name()
+		// Skip stray files with invalid profile names instead of failing
+		// the whole listing. Valid names with unsafe layout still error.
+		if err := profile.ValidateName(name); err != nil {
+			continue
+		}
 		status, err := ShowProfile(account, paths, name)
 		if err != nil {
 			return nil, fmt.Errorf("profile entry %q: %w", name, err)

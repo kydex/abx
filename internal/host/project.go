@@ -1,4 +1,4 @@
-// Project policy adapted from abx 0.7.9; see docs/development.md.
+// Package host contains project policy adapted from abx 0.7.9; see docs/development.md.
 package host
 
 import (
@@ -19,16 +19,7 @@ var sensitiveHomeTrees = []string{
 	".config", ".ssh", ".gnupg", "dotfiles",
 }
 
-// Current resolves os.Getwd through the canonical validation path.
-func Current(realHome, dataRoot string) (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("get current directory: %w", err)
-	}
-	return ResolveProject(cwd, realHome, dataRoot)
-}
-
-// Resolve canonicalizes and validates a candidate project directory.
+// ResolveProject canonicalizes and validates a candidate project directory.
 func ResolveProject(cwd, realHome, dataRoot string) (string, error) {
 	return resolveProject(cwd, realHome, dataRoot, systemRoots)
 }

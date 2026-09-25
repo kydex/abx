@@ -1,4 +1,4 @@
-// Account and path resolution adapted from abx 0.7.9.
+// Package host contains account and path resolution adapted from abx 0.7.9.
 package host
 
 import (

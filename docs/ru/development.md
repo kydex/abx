@@ -27,10 +27,12 @@ make build
 make check
 ```
 
-Для `make check` команды `shellcheck`, `govulncheck` и `gosec` должны быть доступны в PATH. Сейчас проверка включает:
+Для `make check` команды `shellcheck`, `staticcheck`, `actionlint`, `govulncheck` и `gosec` должны быть доступны в PATH. Сейчас проверка включает:
 
 - проверку `gofmt`;
 - ShellCheck для `scripts/*.sh`;
+- `staticcheck` для Go-пакетов;
+- `actionlint` для GitHub Actions workflows;
 - `govulncheck`;
 - `gosec`;
 - проверку статической production-сборки;

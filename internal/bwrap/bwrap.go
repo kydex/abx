@@ -51,7 +51,7 @@ func (t *Tool) Revalidate() error {
 		return err
 	}
 	if !os.SameFile(t.info, info) || info.Mode().Perm()&0022 != 0 || info.Mode().Perm()&0111 == 0 {
-		return errors.New("Bubblewrap changed")
+		return errors.New("bubblewrap changed")
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		return nil, err
 	}
 	if err = cmd.Run(); err != nil {
-		return nil, fmt.Errorf("Bubblewrap version: %w", err)
+		return nil, fmt.Errorf("bubblewrap version: %w", err)
 	}
 	if err := validateVersion(output.text); err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ func validateVersion(s string) error {
 			break
 		}
 		if nums[i] < minimum[i] {
-			return fmt.Errorf("Bubblewrap %s.%s.%s is too old; requires >= %s", m[1], m[2], m[3], MinimumVersion)
+			return fmt.Errorf("bubblewrap %s.%s.%s is too old; requires >= %s", m[1], m[2], m[3], MinimumVersion)
 		}
 	}
 	return nil

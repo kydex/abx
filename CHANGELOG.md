@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+## 0.8.7
+
+- Add `staticcheck` and `actionlint` to local and CI checks, and document the required tools.
+- Resolve staticcheck style diagnostics in error strings and package/exported comments.
+- Keep plural run-argument guidance in the CLI separator diagnostic.
+- Add a `make package` convenience target that reads `internal/app/VERSION` and delegates to the release script.
+
 ## 0.8.6
 
 - Prevent unneeded inherited file descriptors from reaching sandbox subprocesses.

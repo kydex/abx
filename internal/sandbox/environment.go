@@ -1,4 +1,4 @@
-// Environment policy adapted from abx 0.7.9.
+// Package sandbox contains environment policy adapted from abx 0.7.9.
 package sandbox
 
 import (

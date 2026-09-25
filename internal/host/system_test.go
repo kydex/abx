@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kydex/abx/internal/sandbox"
 )
 
 func TestSystemSourcesKeepArchTrustAndRejectProtectedOverlap(t *testing.T) {
@@ -47,6 +49,64 @@ func TestSystemSourcesKeepArchTrustAndRejectProtectedOverlap(t *testing.T) {
 		if err := other.discoverSystem(root); err == nil {
 			t.Fatalf("exported %s through /usr", protected)
 		}
+	}
+}
+
+func TestDiscoveredSystemSourcesBuildSandboxPlans(t *testing.T) {
+	root := t.TempDir()
+	for _, path := range []string{"usr", "usr/bin", "etc"} {
+		if err := os.MkdirAll(filepath.Join(root, path), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "etc/hosts"), []byte("127.0.0.1 localhost\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("usr/bin", filepath.Join(root, "bin")); err != nil {
+		t.Fatal(err)
+	}
+	in := fixture(t)
+	if err := in.discoverSystem(root); err != nil {
+		t.Fatal(err)
+	}
+
+	system := make([]sandbox.Mount, 0, len(in.System()))
+	for _, source := range in.System() {
+		mount := sandbox.Mount{Kind: sandbox.ReadOnly, Source: source.Path, Target: source.Target}
+		if source.Link != "" {
+			mount.Kind = sandbox.Symlink
+			mount.Source = source.Link
+		}
+		system = append(system, mount)
+	}
+	project := t.TempDir()
+	for _, mode := range []sandbox.Mode{sandbox.Run, sandbox.Shell, sandbox.Work} {
+		t.Run(fmt.Sprint(mode), func(t *testing.T) {
+			input := sandbox.Input{
+				Home:    in.home,
+				Mode:    mode,
+				System:  system,
+				Command: []string{"/home/agent/bin/demo"},
+			}
+			if mode == sandbox.Shell {
+				input.Command = []string{"/bin/sh", "-l"}
+			} else {
+				input.Project = project
+			}
+			plan, err := sandbox.Build(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			foundLink := false
+			for _, mount := range plan.Mounts() {
+				if mount.Kind == sandbox.Symlink && mount.Source == "usr/bin" && mount.Target == "/bin" {
+					foundLink = true
+				}
+			}
+			if !foundLink {
+				t.Fatalf("compatibility symlink missing from plan: %#v", plan.Mounts())
+			}
+		})
 	}
 }
 

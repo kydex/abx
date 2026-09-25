@@ -1,4 +1,4 @@
-// Login-shell selection adapted from abx 0.7.9.
+// Package host contains login-shell selection adapted from abx 0.7.9.
 package host
 
 import (
@@ -21,7 +21,7 @@ type Selection struct {
 	Reason string
 }
 
-// Resolve reads /etc/passwd and validates the selected shell.
+// ResolveShell reads /etc/passwd and validates the selected shell.
 func ResolveShell(uid int) Selection { return resolveShellFrom(uid, "/etc/passwd") }
 
 // ResolveFrom is the deterministic passwd-file test seam.

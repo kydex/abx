@@ -94,7 +94,7 @@ abx version
 
 If you received the source archive with an `abx-X.Y.Z-SHA256SUMS` manifest, verify it before extracting it in the same way as the binary archive.
 
-`make check`, `make live`, and `scripts/package.sh` are development/release commands; they are not required to install or use ABX. See [Development](development.md) if you are working on the project.
+`make check`, `make live`, and `make package` are development/release commands; they are not required to install or use ABX. See [Development](development.md) if you are working on the project.
 
 ## First use
 

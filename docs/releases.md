@@ -31,13 +31,11 @@ Then verify packaging locally:
 
 ```sh
 version=$(cat internal/app/VERSION)
-tag="v$version"
-bash scripts/package.sh "$tag"
-cd dist
-sha256sum -c "abx-$version-SHA256SUMS"
+make package
+(cd dist && sha256sum -c "abx-$version-SHA256SUMS")
 ```
 
-The packaging script does not run tests and does not create a git tag. It rejects a tag that does not match `internal/app/VERSION`.
+`make package` reads `internal/app/VERSION` and delegates to `scripts/package.sh`. The packaging script does not run tests and does not create a git tag. It rejects a tag that does not match `internal/app/VERSION`.
 
 It creates:
 

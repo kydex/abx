@@ -31,13 +31,11 @@ make live
 
 ```sh
 version=$(cat internal/app/VERSION)
-tag="v$version"
-bash scripts/package.sh "$tag"
-cd dist
-sha256sum -c "abx-$version-SHA256SUMS"
+make package
+(cd dist && sha256sum -c "abx-$version-SHA256SUMS")
 ```
 
-Packaging script не запускает тесты и не создаёт git tag. Тег, не совпадающий с `internal/app/VERSION`, отклоняется.
+`make package` читает `internal/app/VERSION` и передаёт работу `scripts/package.sh`. Packaging script не запускает тесты и не создаёт git tag. Тег, не совпадающий с `internal/app/VERSION`, отклоняется.
 
 Скрипт создаёт:
 

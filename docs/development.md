@@ -27,10 +27,12 @@ Run the full local check suite:
 make check
 ```
 
-`make check` expects `shellcheck`, `govulncheck`, and `gosec` to be available in PATH. It currently includes:
+`make check` expects `shellcheck`, `staticcheck`, `actionlint`, `govulncheck`, and `gosec` to be available in PATH. It currently includes:
 
 - `gofmt` check;
 - ShellCheck for `scripts/*.sh`;
+- `staticcheck` for Go packages;
+- `actionlint` for GitHub Actions workflows;
 - `govulncheck`;
 - `gosec`;
 - static production build check;

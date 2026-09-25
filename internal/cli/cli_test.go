@@ -53,3 +53,10 @@ func TestWorkCommand(t *testing.T) {
 		t.Fatalf("work: %+v %v", c, err)
 	}
 }
+
+func TestRunArgumentsRequireSeparator(t *testing.T) {
+	_, err := Parse([]string{"run", "demo", "argument"})
+	if err == nil || err.Error() != "run arguments must follow --: abx run <profile> -- <argument> [additional arguments]" {
+		t.Fatalf("error = %v", err)
+	}
+}

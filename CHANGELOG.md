@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.13
+
+- Drop stale `adapted from abx 0.7.9` notes from package and test comments; the documented behavior is defined by the current implementation and guides. No behavior change.
+
 ## 0.8.12
 
 - Name the clean sandbox environment `entries` in session assembly instead of reusing the path-check vocabulary; no behavior change.

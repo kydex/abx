@@ -1,4 +1,4 @@
-// Package host contains project policy adapted from abx 0.7.9; see docs/development.md.
+// Package host contains project policy; see docs/development.md.
 package host
 
 import (

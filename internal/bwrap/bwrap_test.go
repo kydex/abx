@@ -197,7 +197,7 @@ func TestCancellationAfterSuccessfulWaitDoesNotOverrideSuccess(t *testing.T) {
 	}
 }
 
-// Signal regression adapted from abx 0.7.9; these are real helper processes.
+// Signal regression test; these are real helper processes.
 func TestForwardsSignals(t *testing.T) {
 	if os.Getenv("ABX_SIGNAL_HELPER") == "1" {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -1,4 +1,4 @@
-// Package host contains login-shell selection adapted from abx 0.7.9.
+// Package host contains login-shell selection.
 package host
 
 import (

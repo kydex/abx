@@ -1,4 +1,4 @@
-// Account regressions adapted from abx 0.7.9.
+// Account regressions.
 package host
 
 import (

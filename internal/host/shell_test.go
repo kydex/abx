@@ -1,4 +1,4 @@
-// Login-shell regressions adapted from abx 0.7.9.
+// Login-shell regressions.
 package host
 
 import (

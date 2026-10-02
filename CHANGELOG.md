@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Find `run` profile executables in the mise shims directory (`.local/share/mise/shims`) as a last resort and include it in the sandbox PATH, so mise-installed tools work with `run` without manual symlinks. Explicit installs keep priority. (English and Russian.)
+- Find `run` profile executables in the mise shims directory (`.local/share/mise/shims`) right after `.local/bin` and include it in the sandbox PATH in the same order, so mise-installed tools work with `run` without manual symlinks. (English and Russian.)
 
 ## 0.8.17
 

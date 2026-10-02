@@ -35,7 +35,7 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 		"XDG_RUNTIME_DIR":   "/run/user",
 		"BUN_INSTALL":       "/home/agent/.bun",
 		"NPM_CONFIG_PREFIX": "/home/agent/.local",
-		"PATH":              "/home/agent/.local/bin:/home/agent/.bun/bin:/home/agent/bin:/home/agent/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin",
+		"PATH":              "/home/agent/.local/bin:/home/agent/.local/share/mise/shims:/home/agent/.bun/bin:/home/agent/bin:/usr/local/bin:/usr/bin:/bin",
 	}
 	for key, value := range fixed {
 		values[key] = value

@@ -168,6 +168,17 @@ func TestAgentLookupFallsBackToMiseShims(t *testing.T) {
 	if e != nil || got != "/home/agent/.local/share/mise/shims/demo" {
 		t.Fatalf("lookup=%q %v", got, e)
 	}
+	managed := filepath.Join(in.home, ".bun/bin/demo")
+	if e := os.MkdirAll(filepath.Dir(managed), 0o700); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(managed, []byte("#!/bin/sh\n"), 0o700); e != nil {
+		t.Fatal(e)
+	}
+	got, e = resolveAgent(in.home, "demo")
+	if e != nil || got != "/home/agent/.local/share/mise/shims/demo" {
+		t.Fatalf("shims lost to .bun/bin: %q %v", got, e)
+	}
 	explicit := filepath.Join(in.home, ".local/bin/demo")
 	if e := os.MkdirAll(filepath.Dir(explicit), 0o700); e != nil {
 		t.Fatal(e)

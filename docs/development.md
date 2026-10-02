@@ -32,6 +32,7 @@ make check
 - `golangci-lint fmt` and `golangci-lint run` for Go packages (gofumpt/goimports formatting, vet, staticcheck, gosec);
 - ShellCheck for `scripts/*.sh`;
 - `actionlint` for GitHub Actions workflows;
+- whitespace check for uncommitted changes (`git diff --check`);
 - `govulncheck`;
 - static production build check;
 - race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`.

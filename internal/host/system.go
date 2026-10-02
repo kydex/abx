@@ -9,6 +9,8 @@ import (
 )
 
 func (in *Inputs) discoverSystem(root string) error {
+	// Discovered targets must stay within sandbox.allowedSystemTarget;
+	// anything else fails closed in plan.Build instead of widening the sandbox.
 	physical := func(p string) string { return filepath.Join(root, strings.TrimPrefix(p, "/")) }
 	add := func(path, target string) error {
 		resolved, err := filepath.EvalSymlinks(path)

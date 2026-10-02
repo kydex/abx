@@ -123,7 +123,7 @@ For a direct launch without an outer shell, run `abx run herdr` on the host inst
 | `abx run <name> [-- <argument>...]` | Run the matching profile entry point with the current directory as `/workspace` |
 | `abx inspect <name>` | Show the `run` plan without starting Bubblewrap; requires the matching profile executable |
 | `abx verify <name>` | Start a test sandbox and verify the main isolation properties |
-| `abx help` | Show CLI help |
+| `abx help`, `-h`, `--help` | Show CLI help |
 | `abx version` | Show the ABX version |
 
 Profiles are stored under `~/.local/share/abx/profiles` by default. An absolute `XDG_DATA_HOME` changes the storage base. Use `abx profile show <name>` when you need the exact profile path.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Mention `-h`/`--help` in the README command table, link system-source discovery to the sandbox policy, and check uncommitted changes for whitespace errors (`git diff --check`). (English and Russian.)
+
 ## 0.8.16
 
 - Run Go checks through golangci-lint (`golangci-lint fmt` with gofumpt/goimports and `golangci-lint run` with vet, staticcheck, gosec, and errcheck) instead of separate gofmt, staticcheck, gosec, and vet steps; errcheck and gosec skip test files, and the De Morgan quickfix stays disabled by design. Run unit tests uncached (`-count=1`).

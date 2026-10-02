@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.8.15
+
 - Reject host-side `abx __probe ...` invocations: the private probe now requires `/abx-probe` to be a read-only mount of the running binary with matching device and inode, so it only runs inside the sandbox. Document `__probe` as private in English and Russian. No behavior change for legitimate sessions.
 - Report the child's own exit status when it orphans output pipes past WaitDelay instead of failing the launch; this only affects API use with non-file streams, the `abx` binary always passes real files.
 - Name the failing system candidate in discovery errors instead of returning the bare filesystem error.

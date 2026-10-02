@@ -35,7 +35,8 @@ make check
 - whitespace check for uncommitted changes (`git diff --check`);
 - `govulncheck`;
 - static production build check;
-- race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`.
+- race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`;
+- independent `go vet` pass besides the golangci govet check.
 
 The race detector requires a supported Go platform and a working C toolchain. `make test` is the faster option while iterating.
 

@@ -134,7 +134,7 @@ The profile name used by `run` must match the executable name. ABX searches the 
 /home/agent/bin/<name>
 ```
 
-Tools installed via mise are found through its shims directory, without any manual linking.
+Tools installed via mise are found through its shims directory, without any manual linking. The `mise` binary itself must also be reachable inside the sandbox: the default `~/.local/bin` install and system locations under `/usr` work, while custom locations outside the mounted paths fail loudly when a shim runs.
 
 From the project directory on the host:
 

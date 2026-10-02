@@ -33,6 +33,7 @@ coverage-check:
 	awk -v got="$$total" -v min="$(COVERAGE_MIN)" 'BEGIN { if (got + 0 < min + 0) { printf "coverage %.1f%% is below minimum %.1f%%\n", got, min; exit 1 } printf "coverage %.1f%% (minimum %.1f%%)\n", got, min }'
 
 check: lint shellcheck actionlint diff-check security build-check coverage-check
+	go vet ./...
 
 build:
 	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o abx ./cmd/abx

@@ -35,7 +35,8 @@ make check
 - проверка пробелов в незакоммиченных изменениях (`git diff --check`);
 - `govulncheck`;
 - проверку статической production-сборки;
-- Go-тесты с race detector без кэша и общим coverage floor из `Makefile`.
+- Go-тесты с race detector без кэша и общим coverage floor из `Makefile`;
+- независимый прогон `go vet` в дополнение к проверке govet внутри golangci.
 
 Race detector требует поддерживаемую Go-платформу и рабочий C toolchain. Во время обычной разработки `make test` быстрее.
 

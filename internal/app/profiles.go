@@ -46,13 +46,14 @@ func runProfiles(c cli.Command, account host.Account, paths host.Paths, out io.W
 		if len(statuses) == 0 {
 			break
 		}
-		width := len("PROFILE")
+		const header = "PROFILE"
+		width := len(header)
 		for _, status := range statuses {
 			if len(status.Name) > width {
 				width = len(status.Name)
 			}
 		}
-		fmt.Fprintf(&text, "%-*s  %-11s  SKILLS\n", width, "PROFILE", "COMMAND")
+		fmt.Fprintf(&text, "%-*s  %-11s  SKILLS\n", width, header, "COMMAND")
 		for _, status := range statuses {
 			command := "available"
 			if status.AgentError != nil {

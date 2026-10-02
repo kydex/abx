@@ -304,6 +304,7 @@ Arbitrary host environment variables, including proxy or credential variables, a
 | Sandbox cannot start | Check that the host permits unprivileged user namespaces |
 | Profile not found | Check `abx profile show <name>` and the `XDG_DATA_HOME` used for that command |
 | `Command: unavailable` / agent not found | For `run` and `inspect`, install an executable matching the profile name. This status alone does not prevent `shell` or `work` |
+| Agent installed via mise not found | Check `.local/share/mise/shims/<name>` in the profile and that the `mise` binary itself is reachable inside the sandbox |
 | Shell unavailable | Check the login shell in `/etc/passwd` and that it is system-installed and executable |
 | Project rejected | Use a dedicated project directory outside protected paths |
 | Host tool missing inside `abx shell` | It may exist only in the host home; install it in the profile or system-wide |

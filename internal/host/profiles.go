@@ -113,7 +113,11 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 	if err := profile.ValidateName(name); err != nil {
 		return "", err
 	}
-	if !filepath.IsAbs(paths.Root) || filepath.Clean(paths.Root) != paths.Root || filepath.Base(paths.Root) != "abx" || paths.Profiles != filepath.Join(paths.Root, "profiles") {
+	root := filepath.Clean(paths.Root)
+	if !filepath.IsAbs(paths.Root) ||
+		root != paths.Root ||
+		filepath.Base(root) != "abx" ||
+		paths.Profiles != filepath.Join(root, "profiles") {
 		return "", errors.New("invalid profile storage paths")
 	}
 	parent, err := openDirectoryAt(unix.AT_FDCWD, "/")
@@ -130,9 +134,12 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 	components := strings.Split(strings.TrimPrefix(paths.Root, "/"), "/")
 	components = append(components, "profiles", name)
 	current := "/"
+	// The last three components (data root, profiles, profile home) must be
+	// private; shared ancestors only need to exist.
+	const privateTail = 3
 	for i, part := range components {
 		current = filepath.Join(current, part)
-		private := i >= len(components)-3
+		private := i >= len(components)-privateTail
 		exclusive := i == len(components)-1
 		next, made, err := createDirectoryAt(parent, part, account.UID, private, exclusive)
 		created = created || made

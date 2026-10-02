@@ -33,7 +33,14 @@ func (in *Inputs) observeSkills() error {
 
 func (in *Inputs) checkTargets() error {
 	for _, relative := range []string{".agents", ".agents/skills"} {
-		fd, err := unix.Openat2(int(in.objects[in.home].file.Fd()), relative, &unix.OpenHow{Flags: unix.O_PATH | unix.O_CLOEXEC | unix.O_DIRECTORY, Resolve: unix.RESOLVE_BENEATH | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_MAGICLINKS})
+		fd, err := unix.Openat2(
+			int(in.objects[in.home].file.Fd()),
+			relative,
+			&unix.OpenHow{
+				Flags:   unix.O_PATH | unix.O_CLOEXEC | unix.O_DIRECTORY,
+				Resolve: unix.RESOLVE_BENEATH | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_MAGICLINKS,
+			},
+		)
 		if errors.Is(err, unix.ENOENT) {
 			continue
 		}
@@ -65,7 +72,14 @@ func (in *Inputs) Prepare() error {
 		return fmt.Errorf("create skills parent: %w", err)
 	}
 	if err == nil {
-		fd, e := unix.Openat2(home, ".agents", &unix.OpenHow{Flags: unix.O_PATH | unix.O_CLOEXEC | unix.O_DIRECTORY, Resolve: unix.RESOLVE_BENEATH | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_MAGICLINKS})
+		fd, e := unix.Openat2(
+			home,
+			".agents",
+			&unix.OpenHow{
+				Flags:   unix.O_PATH | unix.O_CLOEXEC | unix.O_DIRECTORY,
+				Resolve: unix.RESOLVE_BENEATH | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_MAGICLINKS,
+			},
+		)
 		if e != nil {
 			return fmt.Errorf("open created skills parent (partial state remains): %w", e)
 		}

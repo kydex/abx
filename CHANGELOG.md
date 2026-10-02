@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.8.17
+
 - Mention `-h`/`--help` in the README command table, link system-source discovery to the sandbox policy, and check uncommitted changes for whitespace errors (`git diff --check`). (English and Russian.)
 
 ## 0.8.16

@@ -27,11 +27,11 @@ func inputs(t *testing.T, mode host.Mode) *host.Inputs {
 		t.Fatal(e)
 	}
 	for _, p := range []string{project, filepath.Join(paths.Profiles, "demo/.local/bin"), paths.SharedSkills} {
-		if e = os.MkdirAll(p, 0700); e != nil {
+		if e = os.MkdirAll(p, 0o700); e != nil {
 			t.Fatal(e)
 		}
 	}
-	if e = os.WriteFile(filepath.Join(paths.Profiles, "demo/.local/bin/demo"), []byte("#!/bin/sh\nexit 0\n"), 0700); e != nil {
+	if e = os.WriteFile(filepath.Join(paths.Profiles, "demo/.local/bin/demo"), []byte("#!/bin/sh\nexit 0\n"), 0o700); e != nil {
 		t.Fatal(e)
 	}
 	in, e := host.Resolve(host.Account{UID: os.Getuid(), Username: "tester", Home: home}, paths, "demo", project, mode, nil)
@@ -45,6 +45,7 @@ func inputs(t *testing.T, mode host.Mode) *host.Inputs {
 	})
 	return in
 }
+
 func TestSessionToolFailureNeverPreparesMountpoint(t *testing.T) {
 	for _, mode := range []host.Mode{host.Run, host.Shell, host.Work} {
 		in := inputs(t, mode)
@@ -70,6 +71,7 @@ func TestSessionToolFailureNeverPreparesMountpoint(t *testing.T) {
 		}
 	}
 }
+
 func TestRootRejectedBeforeHelpAndErrorsEscaped(t *testing.T) {
 	if os.Getuid() != 0 && os.Geteuid() != 0 {
 		t.Skip("root ordering regression requires root fixture")
@@ -81,6 +83,7 @@ func TestRootRejectedBeforeHelpAndErrorsEscaped(t *testing.T) {
 		}
 	}
 }
+
 func TestSessionWithoutXDGReachesCommandValidation(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("requires a non-root passwd account")
@@ -187,7 +190,7 @@ func TestExecuteSessionPreparesRetainedInputsBeforeExecution(t *testing.T) {
 				t.Fatal("execution did not receive the resolved plan snapshot")
 			}
 			info, err := os.Stat(marker)
-			if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
+			if err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 {
 				t.Fatalf("skills parent was not prepared before execution: %v, mode=%v", err, info)
 			}
 			f, err := source(in.Home())
@@ -220,7 +223,7 @@ func TestExecuteSessionChangedInputNeverExecutes(t *testing.T) {
 	status, err := executeSession(
 		context.Background(), in, plan, bwrap.Stdio{Out: io.Discard, Err: io.Discard},
 		func(context.Context) (*bwrap.Tool, error) {
-			if err := os.Chmod(in.Home(), 0755); err != nil {
+			if err := os.Chmod(in.Home(), 0o755); err != nil {
 				t.Fatal(err)
 			}
 			return nil, nil
@@ -330,14 +333,14 @@ func TestInspectDoesNotPreparePersistentRuntimeState(t *testing.T) {
 		t.Fatal(err)
 	}
 	bin := filepath.Join(home, ".local/bin")
-	if err = os.MkdirAll(bin, 0700); err != nil {
+	if err = os.MkdirAll(bin, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(filepath.Join(bin, "demo"), []byte("#!/bin/sh\nexit 0\n"), 0700); err != nil {
+	if err = os.WriteFile(filepath.Join(bin, "demo"), []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	// Configured skills would make Prepare create persistent mountpoints.
-	if err = os.MkdirAll(paths.SharedSkills, 0700); err != nil {
+	if err = os.MkdirAll(paths.SharedSkills, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	project := t.TempDir()
@@ -430,7 +433,7 @@ func TestWorkProjectReplacementNeverExecutes(t *testing.T) {
 			if err := os.Rename(in.Project(), in.Project()+"-old"); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.Mkdir(in.Project(), 0700); err != nil {
+			if err := os.Mkdir(in.Project(), 0o700); err != nil {
 				t.Fatal(err)
 			}
 			return nil, nil

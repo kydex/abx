@@ -83,7 +83,7 @@ func TestResolvePathsRejectsUnsafeDataBase(t *testing.T) {
 	mkhome := func(t *testing.T) string {
 		t.Helper()
 		home := filepath.Join(t.TempDir(), "passwd-home")
-		if err := os.Mkdir(home, 0700); err != nil {
+		if err := os.Mkdir(home, 0o700); err != nil {
 			t.Fatal(err)
 		}
 		return home
@@ -96,7 +96,7 @@ func TestResolvePathsRejectsUnsafeDataBase(t *testing.T) {
 	})
 	t.Run("sensitive home tree", func(t *testing.T) {
 		home := mkhome(t)
-		if err := os.Mkdir(filepath.Join(home, ".config"), 0700); err != nil {
+		if err := os.Mkdir(filepath.Join(home, ".config"), 0o700); err != nil {
 			t.Fatal(err)
 		}
 		account := Account{UID: uid, Username: "tester", Home: home}
@@ -118,7 +118,7 @@ func TestProfileStorageSelection(t *testing.T) {
 			base := t.TempDir()
 			home := filepath.Join(base, "passwd-home")
 			fakeHome := filepath.Join(base, "environment-home")
-			if err := os.Mkdir(home, 0700); err != nil {
+			if err := os.Mkdir(home, 0o700); err != nil {
 				t.Fatal(err)
 			}
 			t.Setenv("HOME", fakeHome)

@@ -50,6 +50,7 @@ func TestVerificationFilesCleanUpAfterSuccessOrLaterFailure(t *testing.T) {
 		t.Fatal("sentinel left after link failure", err)
 	}
 }
+
 func TestVerificationCleanupDoesNotDeleteReplacement(t *testing.T) {
 	home, project := t.TempDir(), t.TempDir()
 	files := &probeFiles{}
@@ -62,7 +63,7 @@ func TestVerificationCleanupDoesNotDeleteReplacement(t *testing.T) {
 	if err = os.Rename(path, path+"-saved"); err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(path, []byte("keep"), 0600); err != nil {
+	if err = os.WriteFile(path, []byte("keep"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err = files.Close(); err == nil || !strings.Contains(err.Error(), "replaced") {
@@ -118,7 +119,7 @@ func TestVerificationCleanupAggregatesFailuresAndContinues(t *testing.T) {
 	if err := os.Rename(replaced, replaced+"-saved"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(replaced, []byte("keep"), 0600); err != nil {
+	if err := os.WriteFile(replaced, []byte("keep"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	err = files.Close()

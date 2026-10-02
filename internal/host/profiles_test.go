@@ -38,7 +38,7 @@ func TestProfileReadDoesNotCreateStorage(t *testing.T) {
 }
 
 func TestCreateProfileExactModesAndExclusive(t *testing.T) {
-	for _, mask := range []int{0, 0022, 0777} {
+	for _, mask := range []int{0, 0o022, 0o777} {
 		t.Run(strings.ReplaceAll(os.FileMode(mask).String(), "/", "_"), func(t *testing.T) {
 			a, p := profileStorage(t)
 			old := unix.Umask(mask)
@@ -61,7 +61,7 @@ func TestCreateProfileExactModesAndExclusive(t *testing.T) {
 				t.Fatal("new profile is not empty", err)
 			}
 			marker := filepath.Join(home, "keep")
-			if err = os.WriteFile(marker, []byte("preserve"), 0600); err != nil {
+			if err = os.WriteFile(marker, []byte("preserve"), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			if _, err = CreateProfile(a, p, "run"); !errors.Is(err, ErrProfileExists) {
@@ -90,9 +90,9 @@ func TestProfilesRejectUnsafeLayoutWithoutRepair(t *testing.T) {
 				path := map[string]string{"root": p.Root, "profiles": p.Profiles, "profile": home}[level]
 				switch kind {
 				case "mode", "sticky":
-					mode := os.FileMode(0755)
+					mode := os.FileMode(0o755)
 					if kind == "sticky" {
-						mode = 0700 | os.ModeSticky
+						mode = 0o700 | os.ModeSticky
 					}
 					if err = os.Chmod(path, mode); err != nil {
 						t.Fatal(err)
@@ -104,7 +104,7 @@ func TestProfilesRejectUnsafeLayoutWithoutRepair(t *testing.T) {
 					if kind == "symlink" {
 						err = os.Symlink(path+"-saved", path)
 					} else {
-						err = os.WriteFile(path, []byte("keep"), 0600)
+						err = os.WriteFile(path, []byte("keep"), 0o600)
 					}
 					if err != nil {
 						t.Fatal(err)
@@ -169,10 +169,10 @@ func TestProfileListAndStatus(t *testing.T) {
 		}
 	}
 	home := filepath.Join(p.Profiles, "alpha")
-	if err := os.MkdirAll(filepath.Join(home, ".bun/bin"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(home, ".bun/bin"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(home, ".bun/bin/alpha"), nil, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(home, ".bun/bin/alpha"), nil, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	list, err := ListProfiles(a, p)
@@ -185,7 +185,7 @@ func TestProfileListAndStatus(t *testing.T) {
 	if list[0].Skills != "not-configured" {
 		t.Fatal("missing skills misreported")
 	}
-	if err = os.MkdirAll(p.SharedSkills, 0700); err != nil {
+	if err = os.MkdirAll(p.SharedSkills, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	s, err := ShowProfile(a, p, "alpha")
@@ -195,7 +195,7 @@ func TestProfileListAndStatus(t *testing.T) {
 	if _, err = os.Lstat(filepath.Join(home, ".agents")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("show prepared a mount target", err)
 	}
-	if err = os.Chmod(p.Shared, 0755); err != nil {
+	if err = os.Chmod(p.Shared, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	s, err = ShowProfile(a, p, "alpha")
@@ -225,7 +225,7 @@ func TestProfileInvalidNamesAndOwners(t *testing.T) {
 	if _, err := CreateProfile(wrong, p, "other"); err == nil {
 		t.Fatal("create ignored storage owner")
 	}
-	if err := os.Mkdir(filepath.Join(p.Profiles, "bad\nname"), 0700); err != nil {
+	if err := os.Mkdir(filepath.Join(p.Profiles, "bad\nname"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	list, err := ListProfiles(a, p)
@@ -242,14 +242,14 @@ func TestAgentLookupSkipsUnresolvableEarlierCandidate(t *testing.T) {
 	bad := filepath.Join(in.home, ".local/bin/demo")
 	good := filepath.Join(in.home, ".bun/bin/demo")
 	for _, p := range []string{bad, good} {
-		if err := os.MkdirAll(filepath.Dir(p), 0700); err != nil {
+		if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 			t.Fatal(err)
 		}
 	}
 	if err := os.Symlink("demo", bad); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(good, nil, 0700); err != nil {
+	if err := os.WriteFile(good, nil, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	got, err := resolveAgent(in.home, "demo")

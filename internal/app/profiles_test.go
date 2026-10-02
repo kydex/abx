@@ -83,10 +83,10 @@ func TestProfileListAlignsDifferentNameAndCommandLengths(t *testing.T) {
 			t.Fatal(err)
 		}
 		if name == "a" {
-			if err := os.MkdirAll(filepath.Join(home, "bin"), 0700); err != nil {
+			if err := os.MkdirAll(filepath.Join(home, "bin"), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(home, "bin", name), []byte("#!/bin/sh\n"), 0700); err != nil {
+			if err := os.WriteFile(filepath.Join(home, "bin", name), []byte("#!/bin/sh\n"), 0o700); err != nil {
 				t.Fatal(err)
 			}
 		}

@@ -11,12 +11,12 @@ import (
 func TestSystemSourcesKeepArchTrustAndRejectProtectedOverlap(t *testing.T) {
 	root := t.TempDir()
 	for _, p := range []string{"usr", "etc/ssl/certs", "etc/ca-certificates/extracted"} {
-		if err := os.MkdirAll(filepath.Join(root, p), 0700); err != nil {
+		if err := os.MkdirAll(filepath.Join(root, p), 0o700); err != nil {
 			t.Fatal(err)
 		}
 	}
 	bundle := filepath.Join(root, "etc/ca-certificates/extracted/tls-ca-bundle.pem")
-	if err := os.WriteFile(bundle, []byte("fixture"), 0600); err != nil {
+	if err := os.WriteFile(bundle, []byte("fixture"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink("../../ca-certificates/extracted/tls-ca-bundle.pem", filepath.Join(root, "etc/ssl/certs/ca-certificates.crt")); err != nil {
@@ -53,7 +53,7 @@ func TestSystemSourcesKeepArchTrustAndRejectProtectedOverlap(t *testing.T) {
 
 func TestCompatSymlinkRevalidationDetectsSwap(t *testing.T) {
 	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "usr", "bin"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "usr", "bin"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink("usr/bin", filepath.Join(root, "bin")); err != nil {
@@ -85,7 +85,7 @@ func TestCompatSymlinkRevalidationDetectsSwap(t *testing.T) {
 func TestDiscoverSystemReportsFailingCandidate(t *testing.T) {
 	root := t.TempDir()
 	for _, p := range []string{"usr", "etc"} {
-		if err := os.MkdirAll(filepath.Join(root, p), 0700); err != nil {
+		if err := os.MkdirAll(filepath.Join(root, p), 0o700); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -126,7 +126,7 @@ func TestAlternativesRetainedAndProtectedTargetsRejected(t *testing.T) {
 		t.Run(fmt.Sprint(protected), func(t *testing.T) {
 			root := t.TempDir()
 			for _, p := range []string{"usr", "etc"} {
-				if err := os.Mkdir(filepath.Join(root, p), 0700); err != nil {
+				if err := os.Mkdir(filepath.Join(root, p), 0o700); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -141,7 +141,7 @@ func TestAlternativesRetainedAndProtectedTargetsRejected(t *testing.T) {
 				}
 				return
 			}
-			if err := os.Mkdir(path, 0700); err != nil {
+			if err := os.Mkdir(path, 0o700); err != nil {
 				t.Fatal(err)
 			}
 			if err := in.discoverSystem(root); err != nil {

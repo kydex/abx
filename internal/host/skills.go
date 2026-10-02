@@ -30,6 +30,7 @@ func (in *Inputs) observeSkills() error {
 	in.skills = p
 	return in.checkTargets()
 }
+
 func (in *Inputs) checkTargets() error {
 	for _, relative := range []string{".agents", ".agents/skills"} {
 		fd, err := unix.Openat2(int(in.objects[in.home].file.Fd()), relative, &unix.OpenHow{Flags: unix.O_PATH | unix.O_CLOEXEC | unix.O_DIRECTORY, Resolve: unix.RESOLVE_BENEATH | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_MAGICLINKS})
@@ -59,7 +60,7 @@ func (in *Inputs) Prepare() error {
 		return err
 	}
 	home := int(in.objects[in.home].file.Fd())
-	err := unix.Mkdirat(home, ".agents", 0700)
+	err := unix.Mkdirat(home, ".agents", 0o700)
 	if err != nil && !errors.Is(err, unix.EEXIST) {
 		return fmt.Errorf("create skills parent: %w", err)
 	}
@@ -68,7 +69,7 @@ func (in *Inputs) Prepare() error {
 		if e != nil {
 			return fmt.Errorf("open created skills parent (partial state remains): %w", e)
 		}
-		e = unix.Fchmodat(fd, "", 0700, unix.AT_EMPTY_PATH)
+		e = unix.Fchmodat(fd, "", 0o700, unix.AT_EMPTY_PATH)
 		if e = errors.Join(e, unix.Close(fd)); e != nil {
 			return fmt.Errorf("set created skills parent mode (partial state remains): %w", e)
 		}

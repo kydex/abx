@@ -172,7 +172,7 @@ func TestProjectRejectsRelocatedSystemTree(t *testing.T) {
 	alias := filepath.Join(base, "opt")
 	sibling := filepath.Join(base, "storage", "system-project")
 	for _, p := range []string{home, filepath.Join(target, "child"), sibling} {
-		if err := os.MkdirAll(p, 0700); err != nil {
+		if err := os.MkdirAll(p, 0o700); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -194,7 +194,7 @@ func TestProjectSystemTreeResolutionFailures(t *testing.T) {
 	base := t.TempDir()
 	home, project := filepath.Join(base, "home"), filepath.Join(base, "project")
 	for _, p := range []string{home, project} {
-		if err := os.Mkdir(p, 0700); err != nil {
+		if err := os.Mkdir(p, 0o700); err != nil {
 			t.Fatal(err)
 		}
 	}

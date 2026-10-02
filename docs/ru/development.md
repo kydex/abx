@@ -27,17 +27,14 @@ make build
 make check
 ```
 
-Для `make check` команды `shellcheck`, `staticcheck`, `actionlint`, `govulncheck` и `gosec` должны быть доступны в PATH. Сейчас проверка включает:
+Для `make check` команды `shellcheck`, `actionlint`, `govulncheck` и `golangci-lint` должны быть доступны в PATH. Сейчас проверка включает:
 
-- проверку `gofmt`;
+- `golangci-lint fmt` и `golangci-lint run` для Go-пакетов (форматирование gofumpt/goimports, vet, staticcheck, gosec);
 - ShellCheck для `scripts/*.sh`;
-- `staticcheck` для Go-пакетов;
 - `actionlint` для GitHub Actions workflows;
 - `govulncheck`;
-- `gosec`;
 - проверку статической production-сборки;
-- Go-тесты с race detector и общим coverage floor из `Makefile`;
-- `go vet`.
+- Go-тесты с race detector без кэша и общим coverage floor из `Makefile`.
 
 Race detector требует поддерживаемую Go-платформу и рабочий C toolchain. Во время обычной разработки `make test` быстрее.
 

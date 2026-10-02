@@ -78,6 +78,7 @@ func runVerify(ctx context.Context, in *host.Inputs, home string, env []string, 
 	// Final success is printed only after outer resource and temporary-file cleanup.
 	return 0, nil
 }
+
 func observeHost(home string, input sandbox.Input) (probe.Expected, error) {
 	e := probe.Expected{Home: home, Objects: map[string]probe.Identity{}, Skills: input.Skills != ""}
 	for _, p := range []string{home, "/tmp", "/var/tmp", "/run", "/dev"} {
@@ -148,6 +149,7 @@ func (p *probeFiles) create(home, project string) (string, string, error) {
 	p.files = append(p.files, probeFile{target, info})
 	return f.Name(), filepath.Join("/workspace", filepath.Base(target)), nil
 }
+
 func (p *probeFiles) Close() error {
 	var result error
 	for i := len(p.files) - 1; i >= 0; i-- {

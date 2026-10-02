@@ -96,6 +96,7 @@ func gate() error {
 	}
 	return nil
 }
+
 func decode(raw string) (Expected, error) {
 	var e Expected
 	if len(raw) > 65536 {
@@ -130,6 +131,7 @@ func cleanPath(p string) bool {
 func cleanLink(p string) bool {
 	return cleanPath(p) && filepath.Dir(p) == "/workspace" && strings.HasPrefix(filepath.Base(p), ".abx-verify-")
 }
+
 func report(out io.Writer, checks []Check) error {
 	if len(checks) == 0 {
 		return errors.New("no verification results")
@@ -152,6 +154,7 @@ func report(out io.Writer, checks []Check) error {
 	}
 	return nil
 }
+
 func check(e Expected) []Check {
 	var checks []Check
 	add := func(name string, ok bool, err error, detail string) {
@@ -194,7 +197,7 @@ func check(e Expected) []Check {
 		add("tmpfs "+p, fs.Type == unix.TMPFS_MAGIC, err, fmt.Sprintf("expected tmpfs type=%#x; observed type=%#x", unix.TMPFS_MAGIC, fs.Type))
 	}
 	info, err := os.Stat("/run/user")
-	ok := err == nil && info.IsDir() && info.Mode().Perm() == 0700 && info.Mode()&(os.ModeSticky|os.ModeSetuid|os.ModeSetgid) == 0
+	ok := err == nil && info.IsDir() && info.Mode().Perm() == 0o700 && info.Mode()&(os.ModeSticky|os.ModeSetuid|os.ModeSetgid) == 0
 	detail := ""
 	if err == nil {
 		detail = fmt.Sprintf("expected directory with mode 0700 and no special bits; observed %s (permissions %04o)", info.Mode(), info.Mode().Perm())
@@ -217,6 +220,7 @@ func check(e Expected) []Check {
 	}
 	return checks
 }
+
 func readOnlyDetail(raw, target string) string {
 	found := false
 	for _, line := range strings.Split(raw, "\n") {
@@ -234,6 +238,7 @@ func readOnlyDetail(raw, target string) string {
 	}
 	return ""
 }
+
 func writeAndRemove(dir string) error {
 	f, err := os.CreateTemp(dir, ".abx-write-*")
 	if err != nil {

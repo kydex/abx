@@ -90,7 +90,7 @@ func privateMounts() []Mount {
 		{Kind: Tmpfs, Target: "/tmp"},
 		{Kind: Tmpfs, Target: "/var/tmp"},
 		{Kind: Tmpfs, Target: "/run"},
-		{Kind: Directory, Target: "/run/user", Mode: 0700},
+		{Kind: Directory, Target: "/run/user", Mode: 0o700},
 		{Kind: Proc, Target: "/proc"},
 		{Kind: Dev, Target: "/dev"},
 	}

@@ -28,7 +28,7 @@ func TestLiveVerify(t *testing.T) {
 	}
 	data := filepath.Join(base, "data")
 	project := filepath.Join(base, "project")
-	if err := os.Mkdir(project, 0700); err != nil {
+	if err := os.Mkdir(project, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	run := func(args ...string) (string, error) {
@@ -43,7 +43,7 @@ func TestLiveVerify(t *testing.T) {
 	}
 	for _, skills := range []bool{false, true} {
 		if skills {
-			if err := os.MkdirAll(filepath.Join(data, "abx/shared/agents/skills"), 0700); err != nil {
+			if err := os.MkdirAll(filepath.Join(data, "abx/shared/agents/skills"), 0o700); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -82,7 +82,7 @@ func TestLiveVerify(t *testing.T) {
 		t.Fatalf("create negative fixture: %v %s", err, raw)
 	}
 	target := filepath.Join(data, "abx/profiles/unsafe/.agents/skills")
-	if err := os.Mkdir(filepath.Dir(target), 0700); err != nil {
+	if err := os.Mkdir(filepath.Dir(target), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(project, target); err != nil {

@@ -19,13 +19,15 @@ func TestReadOnlyRequiresObservedMountFlags(t *testing.T) {
 		{"23 1 0:2 / /usr rw,nosuid - ext4 /dev/x ro\n", false},
 		{"23 1 0:2 / /usr ro,nosuid - ext4 /dev/x rw\n24 1 0:2 / /usr rw - ext4 /dev/x rw", false},
 		{"23 1 0:2 / /usrx ro - ext4 /dev/x ro\n", false},
-		{"malformed", false}, {"", false},
+		{"malformed", false},
+		{"", false},
 	} {
 		if got := readOnlyDetail(tc.raw, "/usr") == ""; got != tc.ok {
 			t.Fatalf("%q: %v", tc.raw, got)
 		}
 	}
 }
+
 func TestIncompleteResultsNeverPass(t *testing.T) {
 	for _, state := range []string{"FAIL", "UNAVAILABLE", "unknown", "N/A"} {
 		if err := report(&bytes.Buffer{}, []Check{{Name: "required", State: state}}); err == nil {
@@ -46,6 +48,7 @@ func TestIncompleteResultsNeverPass(t *testing.T) {
 		t.Fatalf("unsafe output %q", out.String())
 	}
 }
+
 func TestPrivateProbeRejectsMissingObservations(t *testing.T) {
 	for _, raw := range []string{"", "{}", "null", "[]", strings.Repeat("x", 65537)} {
 		var out bytes.Buffer
@@ -54,6 +57,7 @@ func TestPrivateProbeRejectsMissingObservations(t *testing.T) {
 		}
 	}
 }
+
 func TestPrivateProbeRejectsHostExecution(t *testing.T) {
 	// Well-formed input that passes decode must still not run on the host:
 	// /abx-probe is a read-only mount of this binary only inside the sandbox.
@@ -65,10 +69,11 @@ func TestPrivateProbeRejectsHostExecution(t *testing.T) {
 		t.Fatalf("host probe execution = %q, %v", out.String(), err)
 	}
 }
+
 func TestWriteProbeRemovesOnlyItsTemporaryFile(t *testing.T) {
 	dir := t.TempDir()
 	marker := filepath.Join(dir, "keep")
-	if err := os.WriteFile(marker, []byte("keep"), 0600); err != nil {
+	if err := os.WriteFile(marker, []byte("keep"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := writeAndRemove(dir); err != nil {

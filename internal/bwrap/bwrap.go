@@ -19,8 +19,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const Path = "/usr/bin/bwrap"
-const MinimumVersion = "0.12.0"
+const (
+	Path           = "/usr/bin/bwrap"
+	MinimumVersion = "0.12.0"
+)
 
 type Stdio struct {
 	In       io.Reader
@@ -42,6 +44,7 @@ func (t *Tool) Close() error {
 	t.file = nil
 	return f.Close()
 }
+
 func (t *Tool) Revalidate() error {
 	if t == nil || t.file == nil {
 		return errors.New("tool closed")
@@ -50,7 +53,7 @@ func (t *Tool) Revalidate() error {
 	if err != nil {
 		return err
 	}
-	if !os.SameFile(t.info, info) || info.Mode().Perm()&0022 != 0 || info.Mode().Perm()&0111 == 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+	if !os.SameFile(t.info, info) || info.Mode().Perm()&0o022 != 0 || info.Mode().Perm()&0o111 == 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
 		return errors.New("bubblewrap changed")
 	}
 	return nil
@@ -76,7 +79,7 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		return nil, err
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 || info.Mode().Perm()&0022 != 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 || !ok || system && st.Uid != 0 {
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 || info.Mode().Perm()&0o022 != 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 || !ok || system && st.Uid != 0 {
 		return nil, errors.New("unsafe Bubblewrap executable")
 	}
 	if err = unix.Access(resolved, unix.X_OK); err != nil {
@@ -105,6 +108,7 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	}
 	return t, nil
 }
+
 func markInheritedFDsCloseOnExec(extra []*os.File) error {
 	keep := map[int]bool{0: true, 1: true, 2: true}
 	for _, file := range extra {
@@ -222,6 +226,7 @@ func Translate(plan sandbox.Plan, source func(string) (*os.File, error)) ([]stri
 	args = append(args, plan.Command()...)
 	return args, files, nil
 }
+
 func Execute(ctx context.Context, t *Tool, plan sandbox.Plan, source func(string) (*os.File, error), stdio Stdio) (int, error) {
 	if err := t.Revalidate(); err != nil {
 		return 1, err
@@ -237,6 +242,7 @@ func Execute(ctx context.Context, t *Tool, plan sandbox.Plan, source func(string
 	cmd.ExtraFiles = append(files, t.file)
 	return execute(ctx, cmd, stdio)
 }
+
 func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 1, err

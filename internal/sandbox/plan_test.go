@@ -80,13 +80,14 @@ func TestShellAndAgentHaveIdenticalIsolation(t *testing.T) {
 		}
 	}
 }
+
 func TestIndependentPrivateMountExpectation(t *testing.T) {
 	for _, mode := range []Mode{Run, Shell, Work} {
 		p, e := Build(testInput(t, mode))
 		if e != nil {
 			t.Fatal(e)
 		}
-		expected := []Mount{{Kind: Tmpfs, Target: "/tmp"}, {Kind: Tmpfs, Target: "/var/tmp"}, {Kind: Tmpfs, Target: "/run"}, {Kind: Directory, Target: "/run/user", Mode: 0700}, {Kind: Proc, Target: "/proc"}, {Kind: Dev, Target: "/dev"}}
+		expected := []Mount{{Kind: Tmpfs, Target: "/tmp"}, {Kind: Tmpfs, Target: "/var/tmp"}, {Kind: Tmpfs, Target: "/run"}, {Kind: Directory, Target: "/run/user", Mode: 0o700}, {Kind: Proc, Target: "/proc"}, {Kind: Dev, Target: "/dev"}}
 		var actual []Mount
 		for _, m := range p.Mounts() {
 			if m.Kind == Tmpfs || m.Kind == Proc || m.Kind == Dev || m.Target == "/run/user" {
@@ -98,6 +99,7 @@ func TestIndependentPrivateMountExpectation(t *testing.T) {
 		}
 	}
 }
+
 func TestRejectSystemPolicyEscape(t *testing.T) {
 	for _, m := range []Mount{{Kind: Writable, Source: "/usr", Target: "/usr"}, {Kind: ReadOnly, Source: "/", Target: "/"}, {Kind: ReadOnly, Source: "/run", Target: "/run"}, {Kind: ReadOnly, Source: "/etc", Target: "/etc"}, {Kind: Symlink, Source: "/host", Target: "/usr"}} {
 		in := testInput(t, Shell)
@@ -112,6 +114,7 @@ func TestRejectSystemPolicyEscape(t *testing.T) {
 		t.Fatal("shell accepted project")
 	}
 }
+
 func TestPlanCopiesInputsAndOutputs(t *testing.T) {
 	in := testInput(t, Run)
 	p, e := Build(in)
@@ -128,6 +131,7 @@ func TestPlanCopiesInputsAndOutputs(t *testing.T) {
 		t.Fatal("mutable plan")
 	}
 }
+
 func TestEnvironmentLastAllowedValueWins(t *testing.T) {
 	e, err := Session("u", "/bin/sh", "/home/agent", []string{"TERM=old", "TERM=new", "HOME=/host"})
 	if err != nil {
@@ -255,7 +259,7 @@ func TestValidateRejectsPolicyMutations(t *testing.T) {
 			p.mounts[mountIndex(t, *p, Tmpfs, "/tmp")].Target = "/tmp-other"
 		}},
 		{name: "run user permissions", mutate: func(t *testing.T, p *Plan) {
-			p.mounts[mountIndex(t, *p, Directory, "/run/user")].Mode = 0755
+			p.mounts[mountIndex(t, *p, Directory, "/run/user")].Mode = 0o755
 		}},
 		{name: "readonly home", mutate: func(t *testing.T, p *Plan) {
 			p.mounts[mountIndex(t, *p, Writable, "/home/agent")].Kind = ReadOnly

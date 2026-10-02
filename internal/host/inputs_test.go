@@ -17,7 +17,7 @@ func fixture(t *testing.T) *Inputs {
 	paths := Paths{Root: filepath.Join(base, "abx"), Profiles: filepath.Join(base, "abx/profiles"), Shared: filepath.Join(base, "abx/shared"), SharedSkills: filepath.Join(base, "abx/shared/agents/skills")}
 	in := &Inputs{account: Account{UID: os.Getuid(), Username: "tester", Home: filepath.Join(base, "realhome")}, paths: paths, home: filepath.Join(paths.Profiles, "demo"), objects: map[string]object{}, links: map[string]string{}}
 	for _, p := range []string{in.account.Home, in.home, paths.SharedSkills} {
-		if e := os.MkdirAll(p, 0700); e != nil {
+		if e := os.MkdirAll(p, 0o700); e != nil {
 			t.Fatal(e)
 		}
 	}
@@ -33,6 +33,7 @@ func fixture(t *testing.T) *Inputs {
 	})
 	return in
 }
+
 func TestSourcesRemainBoundToOpenedObject(t *testing.T) {
 	in := fixture(t)
 	f, e := in.SourceFile(in.home)
@@ -46,7 +47,7 @@ func TestSourcesRemainBoundToOpenedObject(t *testing.T) {
 	if e = os.Rename(in.home, in.home+"-original"); e != nil {
 		t.Fatal(e)
 	}
-	if e = os.Mkdir(in.home, 0700); e != nil {
+	if e = os.Mkdir(in.home, 0o700); e != nil {
 		t.Fatal(e)
 	}
 	after, e := f.Stat()
@@ -66,12 +67,13 @@ func TestSourcesRemainBoundToOpenedObject(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
 func TestSkillsTargetsRejectSymlinksBeforeMutation(t *testing.T) {
 	for _, target := range []string{".agents", ".agents/skills"} {
 		t.Run(target, func(t *testing.T) {
 			in := fixture(t)
 			if target != ".agents" {
-				if e := os.Mkdir(filepath.Join(in.home, ".agents"), 0700); e != nil {
+				if e := os.Mkdir(filepath.Join(in.home, ".agents"), 0o700); e != nil {
 					t.Fatal(e)
 				}
 			}
@@ -89,19 +91,20 @@ func TestSkillsTargetsRejectSymlinksBeforeMutation(t *testing.T) {
 		})
 	}
 }
+
 func TestPrepareSkillsExactModeAndClosedOwner(t *testing.T) {
 	in := fixture(t)
 	if e := in.observeSkills(); e != nil {
 		t.Fatal(e)
 	}
-	old := unix.Umask(0777)
+	old := unix.Umask(0o777)
 	e := in.Prepare()
 	unix.Umask(old)
 	if e != nil {
 		t.Fatal(e)
 	}
 	info, e := os.Stat(filepath.Join(in.home, ".agents"))
-	if e != nil || info.Mode().Perm() != 0700 {
+	if e != nil || info.Mode().Perm() != 0o700 {
 		t.Fatal("incorrect preparation mode")
 	}
 	if e = in.Close(); e != nil {
@@ -111,6 +114,7 @@ func TestPrepareSkillsExactModeAndClosedOwner(t *testing.T) {
 		t.Fatal("closed owner prepared files")
 	}
 }
+
 func TestSkillsSourceSymlinksRejected(t *testing.T) {
 	in := fixture(t)
 	if e := os.Remove(in.paths.SharedSkills); e != nil {
@@ -123,9 +127,10 @@ func TestSkillsSourceSymlinksRejected(t *testing.T) {
 		t.Fatal("accepted linked source")
 	}
 }
+
 func TestPermissionAndAgentLookup(t *testing.T) {
 	in := fixture(t)
-	if e := os.Chmod(in.home, 0755); e != nil {
+	if e := os.Chmod(in.home, 0o755); e != nil {
 		t.Fatal(e)
 	}
 	if e := in.Revalidate(); e == nil {
@@ -133,12 +138,12 @@ func TestPermissionAndAgentLookup(t *testing.T) {
 	}
 	for _, dir := range []string{".local/bin", ".bun/bin"} {
 		p := filepath.Join(in.home, dir, "demo")
-		if e := os.MkdirAll(filepath.Dir(p), 0700); e != nil {
+		if e := os.MkdirAll(filepath.Dir(p), 0o700); e != nil {
 			t.Fatal(e)
 		}
-		mode := os.FileMode(0600)
+		mode := os.FileMode(0o600)
 		if dir == ".bun/bin" {
-			mode = 0700
+			mode = 0o700
 		}
 		if e := os.WriteFile(p, []byte("#!/bin/sh\n"), mode); e != nil {
 			t.Fatal(e)
@@ -149,6 +154,7 @@ func TestPermissionAndAgentLookup(t *testing.T) {
 		t.Fatalf("lookup=%q %v", got, e)
 	}
 }
+
 func TestDataRootLinkDoesNotModifyTarget(t *testing.T) {
 	base := t.TempDir()
 	target := t.TempDir()
@@ -171,6 +177,7 @@ func TestDataRootLinkDoesNotModifyTarget(t *testing.T) {
 		t.Fatal("changed target")
 	}
 }
+
 func TestResolveFailureDoesNotReturnOwner(t *testing.T) {
 	in := fixture(t)
 	result, e := Resolve(in.account, in.paths, "missing", "", Shell, nil)
@@ -181,6 +188,7 @@ func TestResolveFailureDoesNotReturnOwner(t *testing.T) {
 		t.Fatal("created missing profile")
 	}
 }
+
 func TestShellResolutionDoesNotRequireProjectOrAgent(t *testing.T) {
 	in := fixture(t)
 	got, e := Resolve(in.account, in.paths, "demo", "/definitely/missing/project", Shell, nil)
@@ -202,7 +210,7 @@ func TestPrivateOwnerAndSpecialModes(t *testing.T) {
 	if e = privateInfo(in.home, info, os.Getuid()+1); e == nil {
 		t.Fatal("wrong expected owner accepted")
 	}
-	for _, mode := range []os.FileMode{0700 | os.ModeSetgid, 0700 | os.ModeSticky, 0700 | os.ModeSetuid} {
+	for _, mode := range []os.FileMode{0o700 | os.ModeSetgid, 0o700 | os.ModeSticky, 0o700 | os.ModeSetuid} {
 		if e = os.Chmod(in.home, mode); e != nil {
 			t.Fatal(e)
 		}
@@ -219,16 +227,17 @@ func TestPrivateOwnerAndSpecialModes(t *testing.T) {
 		}
 	}
 }
+
 func TestAgentXOKAsInvokingUser(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("requires non-root permission semantics")
 	}
 	in := fixture(t)
 	p := filepath.Join(in.home, "bin/demo")
-	if e := os.MkdirAll(filepath.Dir(p), 0700); e != nil {
+	if e := os.MkdirAll(filepath.Dir(p), 0o700); e != nil {
 		t.Fatal(e)
 	}
-	if e := os.WriteFile(p, nil, 0001); e != nil {
+	if e := os.WriteFile(p, nil, 0o001); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := resolveAgent(in.home, "demo"); e == nil {
@@ -282,7 +291,7 @@ func TestCloseReportsDescriptorFailureAndReleasesOwnership(t *testing.T) {
 func TestWorkResolvesProjectWithoutAgentAndRetainsSource(t *testing.T) {
 	in := fixture(t)
 	project := filepath.Join(in.account.Home, "project")
-	if err := os.Mkdir(project, 0700); err != nil {
+	if err := os.Mkdir(project, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	got, err := Resolve(in.account, in.paths, "demo", project, Work, nil)
@@ -305,7 +314,7 @@ func TestWorkResolvesProjectWithoutAgentAndRetainsSource(t *testing.T) {
 	if err := os.Rename(project, project+"-old"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(project, 0700); err != nil {
+	if err := os.Mkdir(project, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	after, err := f.Stat()
@@ -342,10 +351,10 @@ func TestWorkRejectsUnsafeProjectAndArguments(t *testing.T) {
 func TestDiagnosticReasonsForInvalidProfileObjects(t *testing.T) {
 	home := t.TempDir()
 	path := filepath.Join(home, "bin", "demo")
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, nil, 0700); err != nil {
+	if err := os.WriteFile(path, nil, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(path)
@@ -355,7 +364,7 @@ func TestDiagnosticReasonsForInvalidProfileObjects(t *testing.T) {
 	if err := privateInfo(path, info, os.Getuid()); err == nil || !strings.Contains(err.Error(), "is not a directory") {
 		t.Fatalf("file misdiagnosed as a permissions error: %v", err)
 	}
-	if err := os.Chmod(path, 0600); err != nil {
+	if err := os.Chmod(path, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := resolveAgent(home, "demo"); err == nil || !strings.Contains(err.Error(), "no execute permission bits") {
@@ -364,7 +373,7 @@ func TestDiagnosticReasonsForInvalidProfileObjects(t *testing.T) {
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(path, 0700); err != nil {
+	if err := os.Mkdir(path, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := resolveAgent(home, "demo"); err == nil || !strings.Contains(err.Error(), "not a regular file") {

@@ -1,25 +1,22 @@
-.PHONY: test check fmt-check shellcheck staticcheck actionlint security build-check coverage-check build package live
+.PHONY: test check lint shellcheck actionlint security build-check coverage-check build package live
 
 COVERAGE_MIN ?= 74.0
 
 test:
-	go test ./...
+	go test -count=1 ./...
 
-fmt-check:
-	@files=$$(gofmt -l cmd internal) || exit 1; test -z "$$files" || { echo "Run gofmt on:"; echo "$$files"; exit 1; }
+lint:
+	golangci-lint fmt --diff ./...
+	golangci-lint run ./...
 
 shellcheck:
 	shellcheck scripts/*.sh
-
-staticcheck:
-	staticcheck ./...
 
 actionlint:
 	actionlint .github/workflows/*.yml
 
 security:
 	govulncheck ./...
-	gosec ./...
 
 build-check:
 	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./cmd/abx
@@ -28,12 +25,11 @@ coverage-check:
 	@set -eu; \
 	profile=$$(mktemp); \
 	trap 'rm -f "$$profile"' EXIT HUP INT TERM; \
-	go test -race ./... -coverprofile="$$profile"; \
+	go test -race -count=1 ./... -coverprofile="$$profile"; \
 	total=$$(go tool cover -func="$$profile" | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v got="$$total" -v min="$(COVERAGE_MIN)" 'BEGIN { if (got + 0 < min + 0) { printf "coverage %.1f%% is below minimum %.1f%%\n", got, min; exit 1 } printf "coverage %.1f%% (minimum %.1f%%)\n", got, min }'
 
-check: fmt-check shellcheck staticcheck actionlint security build-check coverage-check
-	go vet ./...
+check: lint shellcheck actionlint security build-check coverage-check
 
 build:
 	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o abx ./cmd/abx

@@ -42,15 +42,15 @@ func TestLiveShellRunAndWork(t *testing.T) {
 	skills := filepath.Join(data, "abx/shared/agents/skills")
 	project := filepath.Join(root, "project")
 	for _, p := range []string{filepath.Join(profile, ".local/bin"), skills, project} {
-		if e = os.MkdirAll(p, 0700); e != nil {
+		if e = os.MkdirAll(p, 0o700); e != nil {
 			t.Fatal(e)
 		}
 	}
-	if e = os.WriteFile(filepath.Join(skills, "marker"), []byte("shared"), 0600); e != nil {
+	if e = os.WriteFile(filepath.Join(skills, "marker"), []byte("shared"), 0o600); e != nil {
 		t.Fatal(e)
 	}
 	sentinel := filepath.Join(root, "external-sentinel")
-	if e = os.WriteFile(sentinel, []byte("outside"), 0600); e != nil {
+	if e = os.WriteFile(sentinel, []byte("outside"), 0o600); e != nil {
 		t.Fatal(e)
 	}
 	objects := map[string][2]uint64{}
@@ -83,7 +83,7 @@ func TestLiveShellRunAndWork(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if e = os.WriteFile(filepath.Join(profile, "expect.json"), raw, 0600); e != nil {
+	if e = os.WriteFile(filepath.Join(profile, "expect.json"), raw, 0o600); e != nil {
 		t.Fatal(e)
 	}
 	build := exec.CommandContext(ctx, "go", "build", "-trimpath", "-o", filepath.Join(profile, ".local/bin/demo"), "./testdata/probe.go")

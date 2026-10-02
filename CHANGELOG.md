@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Run Go checks through golangci-lint (`golangci-lint fmt` with gofumpt/goimports and `golangci-lint run` with vet, staticcheck, and gosec) instead of separate gofmt, staticcheck, gosec, and vet steps; `errcheck` and the De Morgan quickfix stay disabled by design. Run unit tests uncached (`-count=1`).
+
 ## 0.8.15
 
 - Reject host-side `abx __probe ...` invocations: the private probe now requires `/abx-probe` to be a read-only mount of the running binary with matching device and inode, so it only runs inside the sandbox. Document `__probe` as private in English and Russian. No behavior change for legitimate sessions.

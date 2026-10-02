@@ -165,7 +165,7 @@ func createDirectoryAt(parent *os.File, name string, uid int, private, exclusive
 		}
 	}
 	if dir == nil {
-		err = unix.Mkdirat(int(parent.Fd()), name, 0700)
+		err = unix.Mkdirat(int(parent.Fd()), name, 0o700)
 		switch {
 		case err == nil:
 			created = true
@@ -190,7 +190,7 @@ func createDirectoryAt(parent *os.File, name string, uid int, private, exclusive
 	if created {
 		// O_PATH can open even mode 000 under a restrictive umask. Apply mode
 		// through this descriptor, never chmod a pre-existing pathname.
-		if err = unix.Fchmodat(int(dir.Fd()), "", 0700, unix.AT_EMPTY_PATH); err != nil {
+		if err = unix.Fchmodat(int(dir.Fd()), "", 0o700, unix.AT_EMPTY_PATH); err != nil {
 			return dir, created, fmt.Errorf("set mode for new directory %q: %w", name, err)
 		}
 	}

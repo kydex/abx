@@ -13,11 +13,13 @@ import (
 )
 
 // Source is an observed system bind or compatibility symlink.
-type Source struct{ Path, Target, Link string }
-type object struct {
-	file *os.File
-	info os.FileInfo
-}
+type (
+	Source struct{ Path, Target, Link string }
+	object struct {
+		file *os.File
+		info os.FileInfo
+	}
+)
 
 // Mode selects host resources and the session command.
 type Mode uint8
@@ -58,6 +60,7 @@ func (in *Inputs) SourceFile(path string) (*os.File, error) {
 	}
 	return o.file, nil
 }
+
 func (in *Inputs) Close() error {
 	var result error
 	for path, o := range in.objects {
@@ -66,6 +69,7 @@ func (in *Inputs) Close() error {
 	}
 	return result
 }
+
 func (in *Inputs) retain(path string) error {
 	if _, ok := in.objects[path]; ok {
 		return nil
@@ -85,17 +89,19 @@ func (in *Inputs) retain(path string) error {
 	in.objects[path] = object{f, info}
 	return nil
 }
+
 func (in *Inputs) private(path string) error {
 	if err := in.retain(path); err != nil {
 		return err
 	}
 	return privateInfo(path, in.objects[path].info, in.account.UID)
 }
+
 func privateInfo(path string, info os.FileInfo, uid int) error {
 	if !info.IsDir() {
 		return fmt.Errorf("private path %q is not a directory", path)
 	}
-	if info.Mode().Perm() != 0700 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+	if info.Mode().Perm() != 0o700 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
 		return fmt.Errorf("private directory %q must have exact mode 0700", path)
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
@@ -187,7 +193,7 @@ func resolveAgent(home, name string) (string, error) {
 		switch {
 		case !info.Mode().IsRegular():
 			err = fmt.Errorf("profile executable %q is not a regular file", p)
-		case info.Mode().Perm()&0111 == 0:
+		case info.Mode().Perm()&0o111 == 0:
 			err = fmt.Errorf("profile executable %q has no execute permission bits", p)
 		default:
 			if accessErr := unix.Access(p, unix.X_OK); accessErr != nil {

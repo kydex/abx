@@ -96,6 +96,7 @@ func value(env []string, key string) string {
 	}
 	return ""
 }
+
 func runSession(ctx context.Context, c cli.Command, env []string, stdio bwrap.Stdio) (int, error) {
 	account, err := host.ResolveAccount()
 	if err != nil {

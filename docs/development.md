@@ -27,17 +27,14 @@ Run the full local check suite:
 make check
 ```
 
-`make check` expects `shellcheck`, `staticcheck`, `actionlint`, `govulncheck`, and `gosec` to be available in PATH. It currently includes:
+`make check` expects `shellcheck`, `actionlint`, `govulncheck`, and `golangci-lint` to be available in PATH. It currently includes:
 
-- `gofmt` check;
+- `golangci-lint fmt` and `golangci-lint run` for Go packages (gofumpt/goimports formatting, vet, staticcheck, gosec);
 - ShellCheck for `scripts/*.sh`;
-- `staticcheck` for Go packages;
 - `actionlint` for GitHub Actions workflows;
 - `govulncheck`;
-- `gosec`;
 - static production build check;
-- race-enabled Go tests with the aggregate coverage floor from `Makefile`;
-- `go vet`.
+- race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`.
 
 The race detector requires a supported Go platform and a working C toolchain. `make test` is the faster option while iterating.
 

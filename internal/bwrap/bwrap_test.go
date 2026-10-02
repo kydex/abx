@@ -35,6 +35,7 @@ func plan(t *testing.T, mode sandbox.Mode) sandbox.Plan {
 	}
 	return p
 }
+
 func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 	byPath := make(map[string]*os.File)
 	for _, path := range []string{"/system", "/profile", "/skills", "/project"} {
@@ -113,6 +114,7 @@ func TestBadSourcesAndVersion(t *testing.T) {
 		t.Fatal("unbounded output")
 	}
 }
+
 func TestChildStreamsExitAndCleanHostEnvironment(t *testing.T) {
 	t.Setenv("ABX_TEST_HOST_SECRET", "must-not-inherit")
 	var out, stderr bytes.Buffer
@@ -123,6 +125,7 @@ func TestChildStreamsExitAndCleanHostEnvironment(t *testing.T) {
 		t.Fatalf("%d %v %q %q", status, e, out.String(), stderr.String())
 	}
 }
+
 func TestWaitDelayReportsSuccessfulExit(t *testing.T) {
 	// The child exits at once while an orphaned descendant holds the output
 	// pipe past WaitDelay. Wait then reports ErrWaitDelay instead of nil for
@@ -136,6 +139,7 @@ func TestWaitDelayReportsSuccessfulExit(t *testing.T) {
 		t.Fatalf("WaitDelay success = status %d, err %v", status, err)
 	}
 }
+
 func TestMarkInheritedFDsKeepsExplicitFiles(t *testing.T) {
 	keep, err := os.CreateTemp(t.TempDir(), "keep")
 	if err != nil {
@@ -200,6 +204,7 @@ func TestChildCancellationAndSignalExit(t *testing.T) {
 		t.Fatalf("%d %v", status, e)
 	}
 }
+
 func TestCancellationAfterSuccessfulWaitDoesNotOverrideSuccess(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, "/bin/true")
@@ -313,10 +318,10 @@ func TestToolXOKAsInvokingUser(t *testing.T) {
 		t.Skip("requires non-root permission semantics")
 	}
 	path := filepath.Join(t.TempDir(), "bwrap")
-	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf 'bubblewrap 0.12.0\\n'\n"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf 'bubblewrap 0.12.0\\n'\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(path, 0001); err != nil {
+	if err := os.Chmod(path, 0o001); err != nil {
 		t.Fatal(err)
 	}
 	tool, err := open(context.Background(), path, false)
@@ -371,7 +376,7 @@ exit 23`)
 	if err = tool.Revalidate(); err != nil {
 		t.Fatal("unchanged tool rejected", err)
 	}
-	if err = os.Chmod(path, 0777); err != nil {
+	if err = os.Chmod(path, 0o777); err != nil {
 		t.Fatal(err)
 	}
 	if err = tool.Revalidate(); err == nil || !strings.Contains(err.Error(), "bubblewrap changed") {
@@ -402,7 +407,7 @@ exit 23`)
 		t.Fatal(err)
 	}
 	defer tool.Close()
-	if err = os.Chmod(path, 0777); err != nil {
+	if err = os.Chmod(path, 0o777); err != nil {
 		t.Fatal(err)
 	}
 	called := false
@@ -442,7 +447,7 @@ exit 23`)
 			if err := os.Rename(path, path+"-original"); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 42\n"), 0700); err != nil {
+			if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 42\n"), 0o700); err != nil {
 				t.Fatal(err)
 			}
 			replaced = true

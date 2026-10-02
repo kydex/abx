@@ -23,8 +23,10 @@ jobs:
           tools="$RUNNER_TEMP/abx-check-tools"
           mkdir -p "$tools"
           GOBIN="$tools" go install golang.org/x/vuln/cmd/govulncheck@latest
-          GOBIN="$tools" go install github.com/securego/gosec/v2/cmd/gosec@latest
-          GOBIN="$tools" go install honnef.co/go/tools/cmd/staticcheck@latest
           GOBIN="$tools" go install github.com/rhysd/actionlint/cmd/actionlint@latest
           echo "$tools" >> "$GITHUB_PATH"
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          install-only: true
       - run: make check

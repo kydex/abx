@@ -123,6 +123,19 @@ func TestChildStreamsExitAndCleanHostEnvironment(t *testing.T) {
 		t.Fatalf("%d %v %q %q", status, e, out.String(), stderr.String())
 	}
 }
+func TestWaitDelayReportsSuccessfulExit(t *testing.T) {
+	// The child exits at once while an orphaned descendant holds the output
+	// pipe past WaitDelay. Wait then reports ErrWaitDelay instead of nil for
+	// an otherwise successful exit; that is the child's status, not a
+	// launcher failure. Unreachable through the abx binary itself, which
+	// always passes *os.File streams without copying goroutines.
+	var out bytes.Buffer
+	cmd := exec.Command("/bin/sh", "-c", "sleep 5 >&1 & exit 0")
+	status, err := execute(context.Background(), cmd, Stdio{Out: &out, Err: io.Discard})
+	if err != nil || status != 0 {
+		t.Fatalf("WaitDelay success = status %d, err %v", status, err)
+	}
+}
 func TestMarkInheritedFDsKeepsExplicitFiles(t *testing.T) {
 	keep, err := os.CreateTemp(t.TempDir(), "keep")
 	if err != nil {
@@ -272,6 +285,27 @@ func writeScript(t *testing.T, body string) string {
 		t.Fatal(err)
 	}
 	return path
+}
+
+func TestToolSystemRequiresRootOwnership(t *testing.T) {
+	path := writeScript(t, `if [ "$1" = "--version" ]; then
+  printf 'bubblewrap 0.12.0\n'
+  exit 0
+fi
+exit 23`)
+	if os.Getuid() == 0 {
+		if err := os.Chown(path, 65534, 65534); err != nil {
+			t.Skipf("cannot stage non-root tool fixture: %v", err)
+		}
+	}
+	tool, err := open(context.Background(), path, false)
+	if err != nil {
+		t.Fatalf("unprivileged open rejected fixture: %v", err)
+	}
+	_ = tool.Close()
+	if _, err := open(context.Background(), path, true); err == nil || !strings.Contains(err.Error(), "unsafe Bubblewrap executable") {
+		t.Fatalf("non-root tool accepted with system=true: %v", err)
+	}
 }
 
 func TestToolXOKAsInvokingUser(t *testing.T) {

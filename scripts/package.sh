@@ -26,10 +26,16 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false \
     -o "$stage/$name/abx" ./cmd/abx
 cp LICENSE THIRD_PARTY_LICENSES README.md README.ru.md CHANGELOG.md "$stage/$name/"
 cp -R docs "$stage/$name/docs"
-tar -C "$stage" -czf "dist/$name.tar.gz" "$name"
+tar --owner=0 --group=0 --numeric-owner -C "$stage" -czf "dist/$name.tar.gz" "$name"
 source="abx-$version-source"
 mkdir "$stage/$source"
-cp -R cmd internal scripts docs .github "$stage/$source/"
+if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    # Stage exactly the tracked files so untracked clutter under the staged
+    # trees cannot leak into the source archive.
+    git -C "$root" ls-files -z -- cmd internal scripts docs .github | (cd -- "$root" && xargs -0 -r cp --parents -t "$stage/$source")
+else
+    cp -R cmd internal scripts docs .github "$stage/$source/"
+fi
 cp go.mod go.sum Makefile README.md README.ru.md AGENTS.md AGENTS.ru.md CHANGELOG.md LICENSE THIRD_PARTY_LICENSES .gitignore "$stage/$source/"
-tar -C "$stage" -czf "dist/$source.tar.gz" "$source"
+tar --owner=0 --group=0 --numeric-owner -C "$stage" -czf "dist/$source.tar.gz" "$source"
 (cd dist && sha256sum "$name.tar.gz" "$source.tar.gz" > "abx-$version-SHA256SUMS")

@@ -31,34 +31,34 @@ Login shell из `/etc/passwd` должен существовать, быть �
 
 ## Установка готового бинарника
 
-Скачайте опубликованные файлы нужной версии:
+Скачайте опубликованный бинарный архив нужной версии:
 
 ```text
 abx-X.Y.Z-linux-amd64.tar.gz
-abx-X.Y.Z-SHA256SUMS
 ```
 
-Архив и файл контрольных сумм должны относиться к одной версии. Перед распаковкой проверьте файл:
+Если вы скачали и файл `abx-X.Y.Z-SHA256SUMS`, архив можно проверить до распаковки:
 
 ```sh
 abx_version=X.Y.Z
 sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
 ```
 
-Продолжайте только если для бинарного архива показано `OK` и команда завершилась успешно.
+Проверка показывает `OK` для архивов, перечисленных в файле контрольных сумм.
 
 Установите программу в пользовательский каталог бинарников:
 
 ```sh
+abx_version=X.Y.Z
 tar -xzf "abx-$abx_version-linux-amd64.tar.gz"
+cd "abx-$abx_version-linux-amd64"
 mkdir -p "$HOME/.local/bin"
-install -m 755 "abx-$abx_version-linux-amd64/abx" "$HOME/.local/bin/abx"
-export PATH="$HOME/.local/bin:$PATH"
+install -m 755 ./abx "$HOME/.local/bin/abx"
 command -v abx
 abx version
 ```
 
-Версия из `abx version` должна совпадать со скачанной. `export` действует только в текущей оболочке; при необходимости добавьте `$HOME/.local/bin` в настройки PATH своей оболочки.
+Версия из `abx version` должна совпадать со скачанной. Убедитесь, что `$HOME/.local/bin` входит в PATH вашей оболочки (`fish_add_path "$HOME/.local/bin"` в fish, `export PATH="$HOME/.local/bin:$PATH"` в Bourne-совместимых оболочках).
 
 Установка бинарника ABX не создаёт профили. При замене бинарника существующие данные профилей не изменяются.
 
@@ -87,8 +87,7 @@ env CGO_ENABLED=0 go build -trimpath -buildvcs=false -o abx ./cmd/abx
 
 ```sh
 mkdir -p "$HOME/.local/bin"
-install -m 755 abx "$HOME/.local/bin/abx"
-export PATH="$HOME/.local/bin:$PATH"
+install -m 755 ./abx "$HOME/.local/bin/abx"
 abx version
 ```
 

@@ -22,7 +22,7 @@ func inputs(t *testing.T, mode host.Mode) *host.Inputs {
 	base := t.TempDir()
 	home := filepath.Join(base, "realhome")
 	project := filepath.Join(home, "code/project")
-	paths, e := host.ResolvePaths(host.Account{Home: home}, filepath.Join(base, "data"))
+	paths, e := host.ResolvePaths(host.Account{UID: os.Getuid(), Home: home}, filepath.Join(base, "data"))
 	if e != nil {
 		t.Fatal(e)
 	}

@@ -21,7 +21,7 @@ func TestReadOnlyRequiresObservedMountFlags(t *testing.T) {
 		{"23 1 0:2 / /usrx ro - ext4 /dev/x ro\n", false},
 		{"malformed", false}, {"", false},
 	} {
-		if got := readOnly(tc.raw, "/usr"); got != tc.ok {
+		if got := readOnlyDetail(tc.raw, "/usr") == ""; got != tc.ok {
 			t.Fatalf("%q: %v", tc.raw, got)
 		}
 	}
@@ -52,6 +52,17 @@ func TestPrivateProbeRejectsMissingObservations(t *testing.T) {
 		if err := Run(raw, &out); err == nil || out.Len() != 0 {
 			t.Fatal("accepted incomplete input")
 		}
+	}
+}
+func TestPrivateProbeRejectsHostExecution(t *testing.T) {
+	// Well-formed input that passes decode must still not run on the host:
+	// /abx-probe is a read-only mount of this binary only inside the sandbox.
+	// The positive path (inside the sandbox) is covered by live verify tests.
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Link":"/workspace/.abx-verify-test","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	var out bytes.Buffer
+	err := Run(valid, &out)
+	if err == nil || !strings.Contains(err.Error(), "only available inside the sandbox") || out.Len() != 0 {
+		t.Fatalf("host probe execution = %q, %v", out.String(), err)
 	}
 }
 func TestWriteProbeRemovesOnlyItsTemporaryFile(t *testing.T) {

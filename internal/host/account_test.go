@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -72,6 +73,43 @@ func TestResolveAccountRejectsRoot(t *testing.T) {
 	if _, err := ResolveAccount(); err == nil {
 		t.Fatal("ResolveAccount accepted root")
 	}
+}
+
+func TestResolvePathsRejectsUnsafeDataBase(t *testing.T) {
+	uid := os.Getuid()
+	if uid == 0 {
+		uid = 1000
+	}
+	mkhome := func(t *testing.T) string {
+		t.Helper()
+		home := filepath.Join(t.TempDir(), "passwd-home")
+		if err := os.Mkdir(home, 0700); err != nil {
+			t.Fatal(err)
+		}
+		return home
+	}
+	t.Run("filesystem root", func(t *testing.T) {
+		account := Account{UID: uid, Username: "tester", Home: mkhome(t)}
+		if _, err := ResolvePaths(account, "/"); err == nil || !strings.Contains(err.Error(), "filesystem root") {
+			t.Fatalf("data base at root accepted: %v", err)
+		}
+	})
+	t.Run("sensitive home tree", func(t *testing.T) {
+		home := mkhome(t)
+		if err := os.Mkdir(filepath.Join(home, ".config"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		account := Account{UID: uid, Username: "tester", Home: home}
+		if _, err := ResolvePaths(account, filepath.Join(home, ".config", "custom-data")); err == nil || !strings.Contains(err.Error(), "sensitive home tree") {
+			t.Fatalf("data base in sensitive tree accepted: %v", err)
+		}
+	})
+	t.Run("unowned ancestor", func(t *testing.T) {
+		account := Account{UID: uid, Username: "tester", Home: mkhome(t)}
+		if _, err := ResolvePaths(account, "/usr/abx-test-unowned-data"); err == nil || !strings.Contains(err.Error(), "not owned") {
+			t.Fatalf("data base under unowned ancestor accepted: %v", err)
+		}
+	})
 }
 
 func TestProfileStorageSelection(t *testing.T) {

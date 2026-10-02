@@ -16,26 +16,30 @@ When you run an agent, the current project is mounted writable at `/workspace`. 
 
 ## Install
 
-Download the binary archive and checksum manifest for the version you want:
+Download the binary archive for the version you want:
 
 ```text
 abx-X.Y.Z-linux-amd64.tar.gz
-abx-X.Y.Z-SHA256SUMS
 ```
 
-Then verify and install it:
+Unpack it and install the binary:
 
 ```sh
 abx_version=X.Y.Z
-sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
 tar -xzf "abx-$abx_version-linux-amd64.tar.gz"
+cd "abx-$abx_version-linux-amd64"
 mkdir -p "$HOME/.local/bin"
-install -m 755 "abx-$abx_version-linux-amd64/abx" "$HOME/.local/bin/abx"
-export PATH="$HOME/.local/bin:$PATH"
+install -m 755 ./abx "$HOME/.local/bin/abx"
 abx version
 ```
 
-The reported version should match the version you downloaded. Add `$HOME/.local/bin` to your shell's PATH permanently if it is not already there.
+The reported version should match the version you downloaded. Make sure `$HOME/.local/bin` is on your shell's PATH.
+
+If you also downloaded the `abx-X.Y.Z-SHA256SUMS` manifest, you can verify the archive before extracting it:
+
+```sh
+sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
+```
 
 To build instead of using the prebuilt binary, see [Installation](docs/installation.md#build-from-source).
 

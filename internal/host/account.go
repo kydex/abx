@@ -109,10 +109,8 @@ func ResolvePaths(account Account, xdgDataHome string) (Paths, error) {
 			return Paths{}, fmt.Errorf("data base %q overlaps sensitive home tree %q", canonicalBase, sensitive)
 		}
 	}
-	if account.UID > 0 {
-		if err := checkDataBaseOwner(canonicalBase, account.UID); err != nil {
-			return Paths{}, err
-		}
+	if err := checkDataBaseOwner(canonicalBase, account.UID); err != nil {
+		return Paths{}, err
 	}
 	// Keep the launcher-owned final component lexical. Existing ancestor
 	// symlinks are resolved above, but an existing data root must still be

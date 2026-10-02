@@ -28,15 +28,6 @@ var exactProtectedRoots = []string{
 	"/tmp", "/var/tmp", "/dev/shm",
 }
 
-// Current resolves os.Getwd through the canonical validation path.
-func Current(realHome, dataRoot string) (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("get current directory: %w", err)
-	}
-	return ResolveProject(cwd, realHome, dataRoot)
-}
-
 // ResolveProject canonicalizes and validates a candidate project directory.
 func ResolveProject(cwd, realHome, dataRoot string) (string, error) {
 	return resolveProject(cwd, realHome, dataRoot, systemRoots)
@@ -82,7 +73,7 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 	// Reject another user's home such as /home/bob/proj when realHome is
 	// /home/alice. Projects inside the own home remain allowed. Scoped to
 	// /home so isolated test directories under /tmp keep working.
-	if within(realHome, "/home") && within(project, "/home") && !within(project, realHome) && project != realHome {
+	if within(realHome, "/home") && within(project, "/home") && !within(project, realHome) {
 		return "", fmt.Errorf("project %q is outside the real home %q", project, realHome)
 	}
 	for _, relative := range sensitiveHomeTrees {

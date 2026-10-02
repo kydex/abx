@@ -59,7 +59,42 @@ func Run(raw string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if err := gate(); err != nil {
+		return err
+	}
 	return report(out, check(e))
+}
+
+// probePath must match sandbox.ProbePath: the fixed mountpoint of this
+// binary inside the sandbox.
+const probePath = "/abx-probe"
+
+// gate rejects host-side execution of the private probe entry point. Inside
+// the sandbox /abx-probe is a read-only mount of this binary, so
+// /proc/self/exe and /abx-probe identify the same object and the mountinfo
+// entry carries the ro flag. Anywhere else the probe must not run. This
+// guards against a non-sandboxed execution mode, not against privilege
+// escalation: the probe runs with the caller's own rights either way.
+func gate() error {
+	self, err := Identify("/proc/self/exe")
+	if err != nil {
+		return fmt.Errorf("private probe is only available inside the sandbox: %w", err)
+	}
+	mounted, err := Identify(probePath)
+	if err != nil {
+		return fmt.Errorf("private probe is only available inside the sandbox: %w", err)
+	}
+	if self != mounted {
+		return errors.New("private probe is only available inside the sandbox")
+	}
+	raw, err := os.ReadFile("/proc/self/mountinfo")
+	if err != nil {
+		return fmt.Errorf("private probe is only available inside the sandbox: %w", err)
+	}
+	if detail := readOnlyDetail(string(raw), probePath); detail != "" {
+		return fmt.Errorf("private probe is only available inside the sandbox: %s", detail)
+	}
+	return nil
 }
 func decode(raw string) (Expected, error) {
 	var e Expected
@@ -182,8 +217,6 @@ func check(e Expected) []Check {
 	}
 	return checks
 }
-func readOnly(raw, target string) bool { return readOnlyDetail(raw, target) == "" }
-
 func readOnlyDetail(raw, target string) string {
 	found := false
 	for _, line := range strings.Split(raw, "\n") {

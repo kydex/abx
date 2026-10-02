@@ -40,13 +40,12 @@ func resolveFrom(uid int, passwdPath string, visible func(string) bool) Selectio
 			err = fmt.Errorf("login shell %q resolves outside read-only system mounts to %q", path, resolved)
 		}
 	}
-	reason := "login shell could not be resolved"
 	if err != nil {
-		reason = err.Error()
-	} else if !visible(path) {
-		reason = fmt.Sprintf("login shell %q is outside read-only system mounts", path)
+		return Selection{Reason: err.Error()}
 	}
-	return Selection{Reason: reason}
+	// With err == nil the resolved shell is visible (otherwise err would be
+	// set above) while path is not (otherwise we would have returned early).
+	return Selection{Reason: fmt.Sprintf("login shell %q is outside read-only system mounts", path)}
 }
 
 func shellFromPasswd(uid int, path string) (string, error) {

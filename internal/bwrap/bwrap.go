@@ -285,6 +285,12 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	if ctx.Err() != nil {
 		return 1, fmt.Errorf("execution cancelled: %w", ctx.Err())
 	}
+	// A successful child that leaves its I/O pipes to an orphaned descendant
+	// reports ErrWaitDelay instead of nil once WaitDelay expires. That is the
+	// child's real exit, not a launcher failure.
+	if errors.Is(err, exec.ErrWaitDelay) {
+		return 0, nil
+	}
 	var exited *exec.ExitError
 	if !errors.As(err, &exited) {
 		return 1, err

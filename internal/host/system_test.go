@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -47,6 +48,55 @@ func TestSystemSourcesKeepArchTrustAndRejectProtectedOverlap(t *testing.T) {
 		if err := other.discoverSystem(root); err == nil {
 			t.Fatalf("exported %s through /usr", protected)
 		}
+	}
+}
+
+func TestCompatSymlinkRevalidationDetectsSwap(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "usr", "bin"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("usr/bin", filepath.Join(root, "bin")); err != nil {
+		t.Fatal(err)
+	}
+	in := fixture(t)
+	if err := in.discoverSystem(root); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "bin")
+	want, ok := in.links[link]
+	if !ok || want == "" {
+		t.Fatalf("compat symlink not recorded: %#v", in.links)
+	}
+	if err := in.Revalidate(); err != nil {
+		t.Fatalf("unchanged compat symlink rejected: %v", err)
+	}
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("usr", link); err != nil {
+		t.Fatal(err)
+	}
+	if err := in.Revalidate(); err == nil {
+		t.Fatal("swapped compat symlink accepted")
+	}
+}
+
+func TestDiscoverSystemReportsFailingCandidate(t *testing.T) {
+	root := t.TempDir()
+	for _, p := range []string{"usr", "etc"} {
+		if err := os.MkdirAll(filepath.Join(root, p), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	broken := filepath.Join(root, "etc", "resolv.conf")
+	if err := os.Symlink(filepath.Join(root, "missing-target"), broken); err != nil {
+		t.Fatal(err)
+	}
+	in := fixture(t)
+	err := in.discoverSystem(root)
+	if err == nil || !strings.Contains(err.Error(), broken) {
+		t.Fatalf("failing candidate unnamed: %v", err)
 	}
 }
 

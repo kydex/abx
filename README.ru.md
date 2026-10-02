@@ -16,26 +16,30 @@ ABX (Agent Box) запускает консольных агентов для р
 
 ## Установка
 
-Скачайте бинарный архив и файл контрольных сумм нужной версии:
+Скачайте бинарный архив нужной версии:
 
 ```text
 abx-X.Y.Z-linux-amd64.tar.gz
-abx-X.Y.Z-SHA256SUMS
 ```
 
-Проверьте и установите бинарник:
+Распакуйте его и установите бинарник:
 
 ```sh
 abx_version=X.Y.Z
-sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
 tar -xzf "abx-$abx_version-linux-amd64.tar.gz"
+cd "abx-$abx_version-linux-amd64"
 mkdir -p "$HOME/.local/bin"
-install -m 755 "abx-$abx_version-linux-amd64/abx" "$HOME/.local/bin/abx"
-export PATH="$HOME/.local/bin:$PATH"
+install -m 755 ./abx "$HOME/.local/bin/abx"
 abx version
 ```
 
-Показанная версия должна совпадать со скачанной. Если `$HOME/.local/bin` ещё не входит в PATH, добавьте его в настройки своей оболочки.
+Показанная версия должна совпадать со скачанной. Убедитесь, что `$HOME/.local/bin` входит в PATH вашей оболочки.
+
+Если вы скачали и файл `abx-X.Y.Z-SHA256SUMS`, архив можно проверить до распаковки:
+
+```sh
+sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
+```
 
 Если хотите собрать ABX самостоятельно, см. [Установку](docs/ru/installation.md#сборка-из-исходников).
 

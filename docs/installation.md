@@ -31,34 +31,34 @@ The login shell recorded in `/etc/passwd` must exist, be executable, and be visi
 
 ## Install the prebuilt binary
 
-Download these published files for the version you want:
+Download the published binary archive for the version you want:
 
 ```text
 abx-X.Y.Z-linux-amd64.tar.gz
-abx-X.Y.Z-SHA256SUMS
 ```
 
-Keep the archive and manifest from the same version. Verify the download before extracting it:
+If you also downloaded the `abx-X.Y.Z-SHA256SUMS` manifest, you can verify the archive before extracting it:
 
 ```sh
 abx_version=X.Y.Z
 sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
 ```
 
-Continue only if the binary archive is reported `OK` and the command succeeds.
+The check reports `OK` for archives listed in the manifest.
 
 Install it into your user-local binary directory:
 
 ```sh
+abx_version=X.Y.Z
 tar -xzf "abx-$abx_version-linux-amd64.tar.gz"
+cd "abx-$abx_version-linux-amd64"
 mkdir -p "$HOME/.local/bin"
-install -m 755 "abx-$abx_version-linux-amd64/abx" "$HOME/.local/bin/abx"
-export PATH="$HOME/.local/bin:$PATH"
+install -m 755 ./abx "$HOME/.local/bin/abx"
 command -v abx
 abx version
 ```
 
-The version reported by `abx version` should match the downloaded version. The `export` affects only the current shell; add `$HOME/.local/bin` to your shell configuration if necessary.
+The version reported by `abx version` should match the downloaded version. Make sure `$HOME/.local/bin` is on your shell's PATH (`fish_add_path "$HOME/.local/bin"` in fish, `export PATH="$HOME/.local/bin:$PATH"` in Bourne-style shells).
 
 Installing the launcher does not create profiles. Existing profile data is left untouched when the binary is replaced.
 
@@ -87,8 +87,7 @@ Install the result:
 
 ```sh
 mkdir -p "$HOME/.local/bin"
-install -m 755 abx "$HOME/.local/bin/abx"
-export PATH="$HOME/.local/bin:$PATH"
+install -m 755 ./abx "$HOME/.local/bin/abx"
 abx version
 ```
 

@@ -237,6 +237,8 @@ The read-only checks inspect mount flags at the selected mountpoints; they do no
 
 Verification temporarily creates probe files in the real home and project and removes them before reporting final success. A forced process kill or host crash can leave such temporary files behind.
 
+The `__probe` entry point is private: it runs only inside the sandbox as `/abx-probe` and host-side invocations are rejected.
+
 ## Shared skills
 
 Shared skills are optional. ABX looks for them at:

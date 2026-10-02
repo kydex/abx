@@ -155,7 +155,7 @@ func TestDataRootLinkDoesNotModifyTarget(t *testing.T) {
 	if e := os.Symlink(target, filepath.Join(base, "abx")); e != nil {
 		t.Fatal(e)
 	}
-	p, e := ResolvePaths(Account{Home: base}, base)
+	p, e := ResolvePaths(Account{UID: os.Getuid(), Home: base}, base)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -211,7 +211,8 @@ func TestPrivateOwnerAndSpecialModes(t *testing.T) {
 			t.Fatal(e)
 		}
 		if info.Mode()&(os.ModeSetgid|os.ModeSticky|os.ModeSetuid) == 0 {
-			t.Skip("filesystem did not preserve special mode")
+			t.Log("filesystem did not preserve special mode")
+			continue
 		}
 		if e = privateInfo(in.home, info, os.Getuid()); e == nil {
 			t.Fatal("special mode accepted")

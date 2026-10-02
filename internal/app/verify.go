@@ -124,7 +124,7 @@ type probeFile struct {
 }
 type probeFiles struct{ files []probeFile }
 
-func (p *probeFiles) create(home, project string) (sentinel, link string, result error) {
+func (p *probeFiles) create(home, project string) (string, string, error) {
 	f, err := os.CreateTemp(home, ".abx-verify-*")
 	if err != nil {
 		return "", "", err

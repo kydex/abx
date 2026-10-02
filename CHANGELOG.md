@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Reject host-side `abx __probe ...` invocations: the private probe now requires `/abx-probe` to be a read-only mount of the running binary with matching device and inode, so it only runs inside the sandbox. Document `__probe` as private in English and Russian. No behavior change for legitimate sessions.
+- Report the child's own exit status when it orphans output pipes past WaitDelay instead of failing the launch; this only affects API use with non-file streams, the `abx` binary always passes real files.
+- Name the failing system candidate in discovery errors instead of returning the bare filesystem error.
+- Normalize release archive file ownership to root and stage only tracked files into the source archive so untracked clutter cannot leak in.
+- Cover the Bubblewrap root-ownership check, compat-symlink revalidation, exact/sibling/data-base path rules, and WaitDelay handling with regression tests; remove dead code without behavior change.
+- Simplify the installation instructions: unpack the archive, change into its directory, and install `./abx`; PATH setup is left to the user's shell config and checksum verification is documented as optional. (English and Russian.)
+
 ## 0.8.14
 
 - Document the known residual same-UID pathname-race windows (agent-executable replacement, profile listing versus inspection, data-base canonicalization versus use, pathname-based metadata rechecks) as accepted in English and Russian, and note that mounts always use retained descriptors. No behavior change.

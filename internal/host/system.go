@@ -13,7 +13,7 @@ func (in *Inputs) discoverSystem(root string) error {
 	add := func(path, target string) error {
 		resolved, err := filepath.EvalSymlinks(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("resolve system source %q: %w", path, err)
 		}
 		if overlaps(resolved, in.account.Home) || overlaps(resolved, in.paths.Root) {
 			return fmt.Errorf("protected data overlaps system source %q", resolved)

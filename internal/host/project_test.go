@@ -35,6 +35,48 @@ func TestResolveRejectsProtectedSystemTrees(t *testing.T) {
 	}
 }
 
+func TestResolveRejectsExactWorldWritableRoots(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	data := filepath.Join(home, ".local", "share", "abx")
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, exact := range exactProtectedRoots {
+		if _, err := os.Stat(exact); err != nil {
+			t.Skipf("protected root %s is absent on this host", exact)
+		}
+		if _, err := ResolveProject(exact, home, data); err == nil {
+			t.Errorf("accepted exact protected root %s", exact)
+		}
+	}
+}
+
+func TestResolveRejectsSiblingHome(t *testing.T) {
+	// The sibling-home rule is scoped to the literal /home tree, so the
+	// fixture must live there. Use a unique base under /home and remove it.
+	base, err := os.MkdirTemp("/home", "abx-sibling-*")
+	if err != nil {
+		t.Skipf("cannot stage /home fixture: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(base) })
+	realHome := filepath.Join(base, "alice")
+	sibling := filepath.Join(base, "bob", "proj")
+	own := filepath.Join(realHome, "code", "proj")
+	for _, p := range []string{realHome, sibling, own} {
+		if err := os.MkdirAll(p, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	data := filepath.Join(realHome, ".local", "share", "abx")
+	if _, err := ResolveProject(sibling, realHome, data); err == nil {
+		t.Fatalf("accepted sibling home project %s", sibling)
+	}
+	if got, err := ResolveProject(own, realHome, data); err != nil || got != own {
+		t.Fatalf("own-home project rejected: %q, %v", got, err)
+	}
+}
+
 func TestResolveRejectsHomeAndSensitiveOverlaps(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "users", "tester")
@@ -119,27 +161,6 @@ func TestResolveRejectsRelativeAndFile(t *testing.T) {
 func TestWithinBoundaries(t *testing.T) {
 	if !within("/usr", "/usr") || !within("/usr/bin", "/usr") || within("/usrx", "/usr") || within("/us", "/usr") {
 		t.Fatal("within boundary behavior is incorrect")
-	}
-}
-
-func TestCurrentUsesWorkingDirectory(t *testing.T) {
-	root := t.TempDir()
-	home := filepath.Join(root, "home")
-	project := filepath.Join(home, "code", "project")
-	if err := os.MkdirAll(project, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	old, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(project); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(old) })
-	got, err := Current(home, filepath.Join(home, ".local", "share", "abx"))
-	if err != nil || got != project {
-		t.Fatalf("Current = %q, %v", got, err)
 	}
 }
 

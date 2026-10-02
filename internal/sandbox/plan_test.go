@@ -5,7 +5,8 @@ import (
 	"testing"
 )
 
-func testInput(mode Mode) Input {
+func testInput(t *testing.T, mode Mode) Input {
+	t.Helper()
 	cwd := "/workspace"
 	project := "/host/project"
 	cmd := []string{"/home/agent/bin/demo", "a b", "$(literal)"}
@@ -16,7 +17,10 @@ func testInput(mode Mode) Input {
 	if mode != Run {
 		cmd = []string{"/usr/bin/bash", "-l"}
 	}
-	env, _ := Session("tester", "/usr/bin/bash", cwd, []string{"LD_PRELOAD=bad", "SSH_AUTH_SOCK=/sock", "TERM=xterm"})
+	env, err := Session("tester", "/usr/bin/bash", cwd, []string{"LD_PRELOAD=bad", "SSH_AUTH_SOCK=/sock", "TERM=xterm"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	return Input{Home: "/data/profiles/demo", Project: project, Skills: "/data/shared/agents/skills", Mode: mode, System: []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}, {Kind: Symlink, Source: "usr/bin", Target: "/bin"}}, Environment: env, Command: cmd}
 }
 
@@ -32,11 +36,11 @@ func mountIndex(t *testing.T, p Plan, kind Kind, target string) int {
 }
 
 func TestShellAndAgentHaveIdenticalIsolation(t *testing.T) {
-	run, e := Build(testInput(Run))
+	run, e := Build(testInput(t, Run))
 	if e != nil {
 		t.Fatal(e)
 	}
-	shell, e := Build(testInput(Shell))
+	shell, e := Build(testInput(t, Shell))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -78,7 +82,7 @@ func TestShellAndAgentHaveIdenticalIsolation(t *testing.T) {
 }
 func TestIndependentPrivateMountExpectation(t *testing.T) {
 	for _, mode := range []Mode{Run, Shell, Work} {
-		p, e := Build(testInput(mode))
+		p, e := Build(testInput(t, mode))
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -96,20 +100,20 @@ func TestIndependentPrivateMountExpectation(t *testing.T) {
 }
 func TestRejectSystemPolicyEscape(t *testing.T) {
 	for _, m := range []Mount{{Kind: Writable, Source: "/usr", Target: "/usr"}, {Kind: ReadOnly, Source: "/", Target: "/"}, {Kind: ReadOnly, Source: "/run", Target: "/run"}, {Kind: ReadOnly, Source: "/etc", Target: "/etc"}, {Kind: Symlink, Source: "/host", Target: "/usr"}} {
-		in := testInput(Shell)
+		in := testInput(t, Shell)
 		in.System = append(in.System, m)
 		if _, e := Build(in); e == nil {
 			t.Fatalf("accepted %#v", m)
 		}
 	}
-	in := testInput(Shell)
+	in := testInput(t, Shell)
 	in.Project = "/project"
 	if _, e := Build(in); e == nil {
 		t.Fatal("shell accepted project")
 	}
 }
 func TestPlanCopiesInputsAndOutputs(t *testing.T) {
-	in := testInput(Run)
+	in := testInput(t, Run)
 	p, e := Build(in)
 	if e != nil {
 		t.Fatal(e)
@@ -168,7 +172,7 @@ func TestVerificationAddsOnlyFixedReadOnlyProbe(t *testing.T) {
 func TestAlternativesOnlyReadOnlyInAllModes(t *testing.T) {
 	for _, mode := range []Mode{Run, Shell, Work} {
 		for _, kind := range []Kind{ReadOnly, Writable, Symlink} {
-			in := testInput(mode)
+			in := testInput(t, mode)
 			mount := Mount{Kind: kind, Source: "/etc/alternatives", Target: "/etc/alternatives"}
 			in.System = append(in.System, mount)
 			plan, err := Build(in)
@@ -195,7 +199,7 @@ func TestAlternativesOnlyReadOnlyInAllModes(t *testing.T) {
 }
 
 func TestValidateAcceptsMinimalOptionalPolicy(t *testing.T) {
-	in := testInput(Shell)
+	in := testInput(t, Shell)
 	in.Skills = ""
 	in.System = []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}}
 	p, err := Build(in)
@@ -287,7 +291,7 @@ func TestValidateRejectsPolicyMutations(t *testing.T) {
 		for _, mode := range modes {
 			name := map[Mode]string{Run: "run", Shell: "shell", Work: "work"}[mode]
 			t.Run(tc.name+"/"+name, func(t *testing.T) {
-				p, err := Build(testInput(mode))
+				p, err := Build(testInput(t, mode))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -338,7 +342,7 @@ func TestValidateRejectsRoleSourceAndKindMutations(t *testing.T) {
 		for _, mode := range modes {
 			name := map[Mode]string{Run: "run", Shell: "shell", Work: "work"}[mode]
 			t.Run(tc.name+"/"+name, func(t *testing.T) {
-				p, err := Build(testInput(mode))
+				p, err := Build(testInput(t, mode))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -375,7 +379,7 @@ func TestValidateKindPreservesBuildSemantics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	shell, err := Build(testInput(Shell))
+	shell, err := Build(testInput(t, Shell))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,7 +418,7 @@ func TestValidateVerificationProbePolicy(t *testing.T) {
 		}
 	}
 
-	normal, err := Build(testInput(Run))
+	normal, err := Build(testInput(t, Run))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -425,18 +429,18 @@ func TestValidateVerificationProbePolicy(t *testing.T) {
 }
 
 func TestWorkSharesRunPolicyAndShellCommand(t *testing.T) {
-	run, err := Build(testInput(Run))
+	run, err := Build(testInput(t, Run))
 	if err != nil {
 		t.Fatal(err)
 	}
-	work, err := Build(testInput(Work))
+	work, err := Build(testInput(t, Work))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if work.expected.kind != planWork || work.WorkingDirectory() != "/workspace" ||
 		!reflect.DeepEqual(work.Mounts(), run.Mounts()) ||
 		!reflect.DeepEqual(work.Environment(), run.Environment()) ||
-		!reflect.DeepEqual(work.Command(), testInput(Shell).Command) {
+		!reflect.DeepEqual(work.Command(), testInput(t, Shell).Command) {
 		t.Fatal("work must use run visibility/environment and shell argv")
 	}
 }
@@ -455,7 +459,7 @@ func TestWorkRejectsPolicyMutations(t *testing.T) {
 		{"writable skills", func(p *Plan) { p.mounts[mountIndex(t, *p, ReadOnly, "/home/agent/.agents/skills")].Kind = Writable }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := Build(testInput(Work))
+			p, err := Build(testInput(t, Work))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -465,17 +469,17 @@ func TestWorkRejectsPolicyMutations(t *testing.T) {
 			}
 		})
 	}
-	in := testInput(Work)
+	in := testInput(t, Work)
 	in.Project = ""
 	if _, err := Build(in); err == nil {
 		t.Fatal("accepted work without project")
 	}
-	in = testInput(Work)
+	in = testInput(t, Work)
 	in.Mode = 0
 	if _, err := Build(in); err == nil {
 		t.Fatal("accepted unspecified session mode")
 	}
-	in = testInput(Work)
+	in = testInput(t, Work)
 	in.Command = []string{ProbePath, "__probe", "{}"}
 	if _, err := BuildVerification(in); err == nil {
 		t.Fatal("accepted work as verification input")

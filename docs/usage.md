@@ -51,7 +51,7 @@ Inside the sandbox:
 - `HOME=/home/agent`;
 - the working directory is `/home/agent`;
 - the host project is not mounted;
-- `/home/agent/.local/bin`, `/home/agent/.bun/bin`, and `/home/agent/bin` are at the front of PATH;
+- `/home/agent/.local/bin`, `/home/agent/.bun/bin`, and `/home/agent/bin` are at the front of PATH, followed by the mise shims directory;
 - system directories are read-only.
 
 Use a system-installed package manager that is visible inside the sandbox. For example, install OpenCode with Bun:
@@ -131,7 +131,10 @@ The profile name used by `run` must match the executable name. ABX searches the 
 /home/agent/.local/bin/<name>
 /home/agent/.bun/bin/<name>
 /home/agent/bin/<name>
+/home/agent/.local/share/mise/shims/<name>
 ```
+
+Tools installed via mise are found through its shims directory, without any manual linking.
 
 From the project directory on the host:
 

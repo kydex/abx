@@ -51,7 +51,7 @@ abx shell opencode
 - `HOME=/home/agent`;
 - рабочий каталог — `/home/agent`;
 - проект хоста не подключён;
-- `/home/agent/.local/bin`, `/home/agent/.bun/bin` и `/home/agent/bin` стоят в начале PATH;
+- `/home/agent/.local/bin`, `/home/agent/.bun/bin` и `/home/agent/bin` стоят в начале PATH, за ними — каталог шимов mise;
 - системные каталоги доступны только для чтения.
 
 Используйте системно установленный менеджер пакетов, видимый внутри песочницы. Например, OpenCode через Bun:
@@ -131,7 +131,10 @@ Detach/reattach Herdr работает обычно, пока жива сама 
 /home/agent/.local/bin/<name>
 /home/agent/.bun/bin/<name>
 /home/agent/bin/<name>
+/home/agent/.local/share/mise/shims/<name>
 ```
+
+Инструменты, установленные через mise, находятся через каталог его шимов, без ручного создания ссылок.
 
 Во внешнем терминале перейдите в проект:
 

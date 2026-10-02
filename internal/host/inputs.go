@@ -178,7 +178,8 @@ func resolve(account Account, paths Paths, name, project string, mode Mode, need
 
 func resolveAgent(home, name string) (string, error) {
 	var invalid error
-	for _, dir := range []string{".local/bin", ".bun/bin", "bin"} {
+	// Mise shims stay last: explicit installs keep priority over them.
+	for _, dir := range []string{".local/bin", ".bun/bin", "bin", ".local/share/mise/shims"} {
 		p := filepath.Join(home, dir, name)
 		info, err := os.Stat(p)
 		if errors.Is(err, os.ErrNotExist) {

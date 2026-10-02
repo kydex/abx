@@ -24,7 +24,7 @@ func TestSessionAllowlistAndFixedValues(t *testing.T) {
 	if m["HOME"] != "/home/agent" || m["SHELL"] != "/usr/bin/fish" || m["PWD"] != "/workspace" || m["TERM"] != "xterm-256color" || m["LC_ALL"] != "C.UTF-8" {
 		t.Fatalf("environment = %#v", m)
 	}
-	if m["PATH"] != "/home/agent/.local/bin:/home/agent/.bun/bin:/home/agent/bin:/usr/local/bin:/usr/bin:/bin" || m["BUN_INSTALL"] != "/home/agent/.bun" || m["NPM_CONFIG_PREFIX"] != "/home/agent/.local" {
+	if m["PATH"] != "/home/agent/.local/bin:/home/agent/.bun/bin:/home/agent/bin:/home/agent/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin" || m["BUN_INSTALL"] != "/home/agent/.bun" || m["NPM_CONFIG_PREFIX"] != "/home/agent/.local" {
 		t.Fatalf("package-manager environment = %#v", m)
 	}
 	for _, forbidden := range []string{"LD_PRELOAD", "SSH_AUTH_SOCK", "NODE_OPTIONS"} {

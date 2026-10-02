@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Find `run` profile executables in the mise shims directory (`.local/share/mise/shims`) as a last resort and include it in the sandbox PATH, so mise-installed tools work with `run` without manual symlinks. Explicit installs keep priority. (English and Russian.)
+
 ## 0.8.17
 
 - Mention `-h`/`--help` in the README command table, link system-source discovery to the sandbox policy, and check uncommitted changes for whitespace errors (`git diff --check`). (English and Russian.)

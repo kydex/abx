@@ -105,8 +105,6 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	}
 	return t, nil
 }
-func versionOK(s string) bool { return validateVersion(s) == nil }
-
 func markInheritedFDsCloseOnExec(extra []*os.File) error {
 	keep := map[int]bool{0: true, 1: true, 2: true}
 	for _, file := range extra {
@@ -135,6 +133,9 @@ func markInheritedFDsCloseOnExec(extra []*os.File) error {
 
 var versionPattern = regexp.MustCompile(`^bubblewrap ([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`)
 
+// minimumVersion matches MinimumVersion above; kept numeric for comparison.
+var minimumVersion = [3]uint64{0, 12, 0}
+
 func validateVersion(s string) error {
 	m := versionPattern.FindStringSubmatch(s)
 	if m == nil {
@@ -148,7 +149,7 @@ func validateVersion(s string) error {
 		}
 		nums[i] = n
 	}
-	minimum := [3]uint64{0, 12, 0}
+	minimum := minimumVersion
 	for i := range nums {
 		if nums[i] > minimum[i] {
 			break

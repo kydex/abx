@@ -73,7 +73,7 @@ func (p Plan) Mounts() []Mount          { return slices.Clone(p.mounts) }
 func (p Plan) Environment() []Entry     { return slices.Clone(p.environment) }
 func (p Plan) Command() []string        { return slices.Clone(p.command) }
 func (p Plan) WorkingDirectory() string { return p.cwd }
-func clean(p string) bool {
+func cleanPath(p string) bool {
 	return filepath.IsAbs(p) && filepath.Clean(p) == p && !strings.ContainsRune(p, 0)
 }
 
@@ -126,13 +126,13 @@ func Build(in Input) (Plan, error) {
 }
 
 func build(in Input) (Plan, error) {
-	if !clean(in.Home) || len(in.Command) == 0 || !clean(in.Command[0]) {
+	if !cleanPath(in.Home) || len(in.Command) == 0 || !cleanPath(in.Command[0]) {
 		return Plan{}, errors.New("invalid session inputs")
 	}
-	if (in.Mode == Shell && in.Project != "") || (in.Mode != Shell && !clean(in.Project)) {
+	if (in.Mode == Shell && in.Project != "") || (in.Mode != Shell && !cleanPath(in.Project)) {
 		return Plan{}, errors.New("project does not match session mode")
 	}
-	if in.Skills != "" && !clean(in.Skills) {
+	if in.Skills != "" && !cleanPath(in.Skills) {
 		return Plan{}, errors.New("invalid skills source")
 	}
 	var kind planKind
@@ -177,7 +177,7 @@ func build(in Input) (Plan, error) {
 		if !allowedSystemTarget(m.Target) || seen[m.Target] || m.Mode != 0 || (m.Kind != ReadOnly && !(compat && m.Kind == Symlink)) {
 			return Plan{}, fmt.Errorf("invalid system mount %q", m.Target)
 		}
-		if (m.Kind == ReadOnly && !clean(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
+		if (m.Kind == ReadOnly && !cleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
 			return Plan{}, errors.New("invalid system source")
 		}
 		seen[m.Target] = true

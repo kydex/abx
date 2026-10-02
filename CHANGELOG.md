@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.10
+
+- Refactor without behavior changes: move the test-only Bubblewrap version shorthand into the test file, give the sandbox path check a descriptive name, and name the minimum-version triple next to the version pattern.
+
 ## 0.8.9
 
 - Harden private probe-input validation: require canonical absolute home/sentinel paths without NUL bytes, and require the verification link to be a canonical path directly inside `/workspace` with the reserved `.abx-verify-` file name prefix.

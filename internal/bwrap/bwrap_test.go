@@ -90,6 +90,10 @@ func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 		}
 	}
 }
+
+// versionOK is a test-only shorthand for the production version check.
+func versionOK(s string) bool { return validateVersion(s) == nil }
+
 func TestBadSourcesAndVersion(t *testing.T) {
 	if _, _, e := Translate(plan(t, sandbox.Shell), func(string) (*os.File, error) { return nil, errors.New("closed") }); e == nil {
 		t.Fatal("accepted bad source")

@@ -2,10 +2,6 @@ version: "2"
 linters:
   # `standard` is errcheck, govet, ineffassign, staticcheck, unused.
   default: standard
-  disable:
-    # Writes to strings.Builder never fail; flagging them would add an
-    # errcheck dependency for zero benefit, so they stay unchecked by design.
-    - errcheck
   settings:
     staticcheck:
       # QF1001 (De Morgan) would rewrite negated allow-lists in validators
@@ -17,9 +13,11 @@ linters:
   exclusions:
     rules:
       # Tests intentionally do "unsafe" things: odd chmod values, exec of
-      # helper scripts and test binaries, reads of fixture paths.
+      # helper scripts and test binaries, reads of fixture paths, unchecked
+      # closes of temporary files.
       - path: _test\.go
         linters:
+          - errcheck
           - gosec
 formatters:
   enable:

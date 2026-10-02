@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.8.12
+
+- Name the clean sandbox environment `entries` in session assembly instead of reusing the path-check vocabulary; no behavior change.
+- Preallocate the system-target duplicate-detection map in plan construction, matching the other duplicate-detection maps.
+
 ## 0.8.11
 
 - Require the sandbox shell to be a canonical absolute path (same strength as the plan command check) so `Session` never accepts a value that `Build` would reject; non-canonical shells now fail fast with a precise diagnostic.

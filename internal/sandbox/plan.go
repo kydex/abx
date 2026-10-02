@@ -171,7 +171,7 @@ func build(in Input) (Plan, error) {
 		seenEnv[e.Name] = true
 	}
 	p.mounts = append(p.mounts, baseMounts()...)
-	seen := map[string]bool{}
+	seen := make(map[string]bool, len(in.System))
 	for _, m := range in.System {
 		compat := compatibilityTarget(m.Target)
 		if !allowedSystemTarget(m.Target) || seen[m.Target] || m.Mode != 0 || (m.Kind != ReadOnly && !(compat && m.Kind == Symlink)) {

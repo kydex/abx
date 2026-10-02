@@ -211,7 +211,7 @@ func sessionInput(in *host.Inputs, env []string) (sandbox.Input, error) {
 	default:
 		return sandbox.Input{}, errors.New("invalid host session mode")
 	}
-	clean, err := sandbox.Session(in.Username(), in.Shell(), cwd, env)
+	entries, err := sandbox.Session(in.Username(), in.Shell(), cwd, env)
 	if err != nil {
 		return sandbox.Input{}, err
 	}
@@ -225,5 +225,5 @@ func sessionInput(in *host.Inputs, env []string) (sandbox.Input, error) {
 		}
 		mounts = append(mounts, sandbox.Mount{Kind: kind, Source: source, Target: s.Target})
 	}
-	return sandbox.Input{Home: in.Home(), Project: in.Project(), Skills: in.Skills(), Mode: mode, System: mounts, Environment: clean, Command: in.Command()}, nil
+	return sandbox.Input{Home: in.Home(), Project: in.Project(), Skills: in.Skills(), Mode: mode, System: mounts, Environment: entries, Command: in.Command()}, nil
 }

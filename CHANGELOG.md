@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.14
+
+- Document the known residual same-UID pathname-race windows (agent-executable replacement, profile listing versus inspection, data-base canonicalization versus use, pathname-based metadata rechecks) as accepted in English and Russian, and note that mounts always use retained descriptors. No behavior change.
+
 ## 0.8.13
 
 - Drop stale `adapted from abx 0.7.9` notes from package and test comments; the documented behavior is defined by the current implementation and guides. No behavior change.

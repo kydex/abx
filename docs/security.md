@@ -63,7 +63,7 @@ A successful `verify` is evidence about that invocation and host state. It is no
 - Project contents are not recursively sanitized. Projects may contain sockets, hard links, nested mounts, or intentionally dangerous source/build files.
 - The sandbox uses the caller's terminal directly. Terminal escape sequences and host-specific terminal ioctls remain part of the risk surface; ABX does not provide terminal-session isolation.
 - ABX does not define a seccomp policy or resource quotas. Security still depends on the Linux kernel, Bubblewrap, the host configuration, and the software executed inside the sandbox.
-- A hostile process running concurrently as the same host UID may still race changes in data that the user can modify. Retained descriptors and revalidation reduce important pathname-replacement windows but are not a complete same-UID adversary model.
+- A hostile process running concurrently as the same host UID may still race changes in data that the user can modify. Retained descriptors and revalidation reduce important pathname-replacement windows but are not a complete same-UID adversary model. The known residual windows — agent-executable replacement between inspection and mount, profile entries changing between listing and inspection, data-base components appearing between canonicalization and use, and pathname-based metadata rechecks — are accepted as documented and are not tracked as findings. Mounts always use the retained descriptors, so a late swap cannot redirect what is mounted.
 - Some failed operations may leave directories or verification probe files behind. ABX avoids recursive automatic rollback that could delete unrelated user data.
 
 ## Accepted trade-offs

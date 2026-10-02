@@ -59,6 +59,7 @@ func TestSessionRejectsInvalidStructure(t *testing.T) {
 	for _, tc := range []struct{ username, shell, cwd string }{
 		{"", "/bin/bash", "/workspace"},
 		{"tester", "bash", "/workspace"},
+		{"tester", "/bin//bash", "/workspace"},
 		{"tester", "/bin/bash", "/tmp"},
 	} {
 		if _, err := Session(tc.username, tc.shell, tc.cwd, nil); err == nil {

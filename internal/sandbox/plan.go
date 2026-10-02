@@ -163,7 +163,7 @@ func build(in Input) (Plan, error) {
 			return Plan{}, errors.New("command argument contains NUL")
 		}
 	}
-	seenEnv := map[string]bool{}
+	seenEnv := make(map[string]bool, len(p.environment))
 	for _, e := range p.environment {
 		if !validName(e.Name) || seenEnv[e.Name] || strings.ContainsRune(e.Value, 0) {
 			return Plan{}, errors.New("invalid session environment")

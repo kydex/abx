@@ -3,7 +3,6 @@ package sandbox
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -19,8 +18,8 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 	if username == "" {
 		return nil, fmt.Errorf("sandbox username is empty")
 	}
-	if !filepath.IsAbs(shell) {
-		return nil, fmt.Errorf("sandbox shell %q is not absolute", shell)
+	if !cleanPath(shell) {
+		return nil, fmt.Errorf("sandbox shell %q is not a canonical absolute path", shell)
 	}
 	if workingDirectory != "/workspace" && workingDirectory != "/home/agent" {
 		return nil, fmt.Errorf("unsupported sandbox working directory %q", workingDirectory)

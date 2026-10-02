@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.8.11
+
+- Require the sandbox shell to be a canonical absolute path (same strength as the plan command check) so `Session` never accepts a value that `Build` would reject; non-canonical shells now fail fast with a precise diagnostic.
+- Preallocate the environment duplicate-detection map in plan construction, matching the validator style.
+
 ## 0.8.10
 
 - Refactor without behavior changes: move the test-only Bubblewrap version shorthand into the test file, give the sandbox path check a descriptive name, and name the minimum-version triple next to the version pattern.

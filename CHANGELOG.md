@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.8.19
+
 - Tidy naming and layout without behavior change: name the profile-list header, split the storage-path check, explain the private path tail, and wrap long syscalls.
 - Add a troubleshooting row for mise-installed agents. (English and Russian.)
 - Cover the probe gate logic, host payload assembly, identity reporting, success message, and probe CLI dispatch with unit tests instead of live-only runs.

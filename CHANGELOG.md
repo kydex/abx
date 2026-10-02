@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.8.9
+
+- Harden private probe-input validation: require canonical absolute home/sentinel paths without NUL bytes, and require the verification link to be a canonical path directly inside `/workspace` with the reserved `.abx-verify-` file name prefix.
+- Compile the Bubblewrap version pattern once instead of on every version check.
+- Name the tmpfs magic constant in the live-test probe fixture instead of using a bare hexadecimal literal.
+- Document the full sensitive home-tree list (`.config`, `.ssh`, `.gnupg`, `dotfiles`, `.aws`, `.docker`, `.kube`, `.pki`, `.cache`) in English and Russian.
+
 ## 0.8.8
 
 - Reject sensitive home trees `.aws`, `.docker`, `.kube`, `.pki`, and `.cache` as projects, and reject sibling homes outside the real home under `/home`.

@@ -133,8 +133,10 @@ func markInheritedFDsCloseOnExec(extra []*os.File) error {
 	return nil
 }
 
+var versionPattern = regexp.MustCompile(`^bubblewrap ([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`)
+
 func validateVersion(s string) error {
-	m := regexp.MustCompile(`^bubblewrap ([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`).FindStringSubmatch(s)
+	m := versionPattern.FindStringSubmatch(s)
 	if m == nil {
 		return fmt.Errorf("could not parse Bubblewrap version from %q", s)
 	}

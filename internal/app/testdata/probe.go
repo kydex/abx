@@ -93,7 +93,9 @@ func main() {
 	}
 	for _, p := range []string{"/tmp", "/var/tmp", "/run"} {
 		var s syscall.Statfs_t
-		if syscall.Statfs(p, &s) != nil || s.Type != 0x01021994 {
+		// TMPFS_MAGIC from Linux statfs; kept local so the fixture needs no extra imports.
+		const tmpfsMagic = 0x01021994
+		if syscall.Statfs(p, &s) != nil || s.Type != tmpfsMagic {
 			die("not tmpfs: " + p)
 		}
 	}

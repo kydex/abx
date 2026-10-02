@@ -69,7 +69,7 @@ func decode(raw string) (Expected, error) {
 	if err := json.Unmarshal([]byte(raw), &e); err != nil {
 		return e, err
 	}
-	if !filepath.IsAbs(e.Home) || !filepath.IsAbs(e.Sentinel) || !strings.HasPrefix(e.Link, "/workspace/.abx-verify-") || len(e.Environment) == 0 || len(e.ReadOnly) == 0 {
+	if !cleanPath(e.Home) || !cleanPath(e.Sentinel) || !cleanLink(e.Link) || len(e.Environment) == 0 || len(e.ReadOnly) == 0 {
 		return e, errors.New("incomplete probe inputs")
 	}
 	for _, name := range NamespaceNames() {
@@ -83,6 +83,17 @@ func decode(raw string) (Expected, error) {
 		}
 	}
 	return e, nil
+}
+
+// cleanPath accepts only canonical absolute host paths without NUL bytes.
+func cleanPath(p string) bool {
+	return filepath.IsAbs(p) && filepath.Clean(p) == p && !strings.ContainsRune(p, 0)
+}
+
+// cleanLink accepts only the fixed verification link layout: a canonical
+// path directly inside /workspace with the reserved file name prefix.
+func cleanLink(p string) bool {
+	return cleanPath(p) && filepath.Dir(p) == "/workspace" && strings.HasPrefix(filepath.Base(p), ".abx-verify-")
 }
 func report(out io.Writer, checks []Check) error {
 	if len(checks) == 0 {

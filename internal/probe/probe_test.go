@@ -233,6 +233,39 @@ func TestDecodeRequiresEveryNamespaceAndHostIdentity(t *testing.T) {
 	}
 }
 
+func TestDecodeRejectsNonCanonicalProbePaths(t *testing.T) {
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Link":"/workspace/.abx-verify-test","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	for _, tc := range []struct{ field, value string }{
+		{"Link", "/workspace/.abx-verify-test/../../etc/shadow"},
+		{"Link", "/tmp/.abx-verify-test"},
+		{"Link", "/workspace/other-name"},
+		{"Link", "/workspace/.abx-verify-test\x00"},
+		{"Home", "/host-home\x00"},
+		{"Home", "/host-home/"},
+		{"Sentinel", "/host-home/probe/../other"},
+	} {
+		t.Run(tc.field+"/"+tc.value, func(t *testing.T) {
+			var input map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(valid), &input); err != nil {
+				t.Fatal(err)
+			}
+			raw, err := json.Marshal(tc.value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			input[tc.field] = raw
+			raw, err = json.Marshal(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var out bytes.Buffer
+			if err := Run(string(raw), &out); err == nil || !strings.Contains(err.Error(), "incomplete probe inputs") || out.Len() != 0 {
+				t.Fatalf("non-canonical path reached observations: output=%q err=%v", out.String(), err)
+			}
+		})
+	}
+}
+
 type reportFailureWriter struct {
 	err   error
 	calls int

@@ -11,6 +11,7 @@ import (
 
 	"github.com/kydex/abx/internal/bwrap"
 	"github.com/kydex/abx/internal/host"
+	"github.com/kydex/abx/internal/sandbox"
 )
 
 func TestVerificationFilesCleanUpAfterSuccessOrLaterFailure(t *testing.T) {
@@ -76,6 +77,61 @@ func TestVerificationCleanupDoesNotDeleteReplacement(t *testing.T) {
 	entries, err := os.ReadDir(home)
 	if err != nil || len(entries) != 0 {
 		t.Fatal("other cleanup abandoned", err)
+	}
+}
+
+func TestObserveHostCollectsSandboxPayload(t *testing.T) {
+	home := t.TempDir()
+	profile := t.TempDir()
+	project := t.TempDir()
+	input := sandbox.Input{
+		Home:    profile,
+		Project: project,
+		Mode:    sandbox.Run,
+		System: []sandbox.Mount{
+			{Kind: sandbox.ReadOnly, Source: "/sys", Target: "/usr"},
+		},
+		Environment: []sandbox.Entry{{Name: "A", Value: "1"}},
+		Command:     []string{sandbox.ProbePath, "__probe", "{}"},
+	}
+	got, err := observeHost(home, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Home != home {
+		t.Fatalf("home = %q", got.Home)
+	}
+	for _, p := range []string{home, "/tmp", "/var/tmp", "/run", "/dev"} {
+		if _, ok := got.Objects[p]; !ok {
+			t.Fatalf("missing identity %q", p)
+		}
+	}
+	for _, name := range []string{"user", "mnt", "pid", "ipc", "uts"} {
+		if got.Namespaces[name] == "" {
+			t.Fatalf("missing namespace %q", name)
+		}
+	}
+	if len(got.Environment) != 1 || got.Environment[0] != "A=1" {
+		t.Fatalf("environment = %q", got.Environment)
+	}
+	for _, want := range []string{"/usr", sandbox.ProbePath} {
+		found := false
+		for _, target := range got.ReadOnly {
+			found = found || target == want
+		}
+		if !found {
+			t.Fatalf("read-only lacks %q: %q", want, got.ReadOnly)
+		}
+	}
+	if got.Skills {
+		t.Fatal("skills reported without a shared source")
+	}
+}
+
+func TestVerifySuccessReportsCleanup(t *testing.T) {
+	var out strings.Builder
+	if err := verifySuccess(&out); err != nil || out.String() != "Verification passed; temporary probe files removed.\n" {
+		t.Fatalf("success report = %q, %v", out.String(), err)
 	}
 }
 

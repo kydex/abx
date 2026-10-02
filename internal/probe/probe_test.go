@@ -70,6 +70,57 @@ func TestPrivateProbeRejectsHostExecution(t *testing.T) {
 	}
 }
 
+func TestGateChecksIdentityAndReadOnlyMount(t *testing.T) {
+	self := Identity{Device: 7, Inode: 42}
+	ro := "1 2 3:4 / /abx-probe ro,nosuid - ext4 /dev/x rw\n"
+	rw := "1 2 3:4 / /abx-probe rw,nosuid - ext4 /dev/x rw\n"
+	for _, tc := range []struct {
+		name             string
+		mounted          Identity
+		mountinfo        string
+		wantErrSubstring string
+	}{
+		{"matching identity and ro mount", self, ro, ""},
+		{"different inode", Identity{Device: 7, Inode: 43}, ro, "only available inside the sandbox"},
+		{"different device", Identity{Device: 8, Inode: 42}, ro, "only available inside the sandbox"},
+		{"writable mount", self, rw, "only available inside the sandbox"},
+		{"missing mountpoint", self, "1 2 3:4 / /other ro - ext4 /dev/x rw\n", "only available inside the sandbox"},
+		{"empty mountinfo", self, "", "only available inside the sandbox"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkGate(self, tc.mounted, tc.mountinfo)
+			if tc.wantErrSubstring == "" {
+				if err != nil {
+					t.Fatalf("gate = %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErrSubstring) {
+				t.Fatalf("gate = %v, want %q", err, tc.wantErrSubstring)
+			}
+		})
+	}
+}
+
+func TestIdentifyReportsFilesystemObject(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "object")
+	if err := os.WriteFile(file, []byte("probe"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	first, err := Identify(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := Identify(file)
+	if err != nil || first != second || first == (Identity{}) {
+		t.Fatalf("identify = %#v, %#v, %v", first, second, err)
+	}
+	if _, err := Identify(filepath.Join(dir, "missing")); err == nil {
+		t.Fatal("identified a missing path")
+	}
+}
+
 func TestWriteProbeRemovesOnlyItsTemporaryFile(t *testing.T) {
 	dir := t.TempDir()
 	marker := filepath.Join(dir, "keep")

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Cover the probe gate logic, host payload assembly, identity reporting, success message, and probe CLI dispatch with unit tests instead of live-only runs.
 - Keep an independent `go vet` pass in `make check` besides the golangci govet check, and document where the `mise` binary must live to be reachable inside the sandbox. (English and Russian.)
 
 ## 0.8.18

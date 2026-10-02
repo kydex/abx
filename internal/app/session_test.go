@@ -72,6 +72,28 @@ func TestSessionToolFailureNeverPreparesMountpoint(t *testing.T) {
 	}
 }
 
+func TestProbeInvocationRequiresPayload(t *testing.T) {
+	if os.Getuid() == 0 || os.Geteuid() == 0 || os.Geteuid() != os.Getuid() {
+		t.Skip("public CLI requires a non-root user")
+	}
+	for _, tc := range []struct {
+		name   string
+		args   []string
+		status int
+	}{
+		{"missing payload", []string{"__probe"}, 2},
+		{"extra arguments", []string{"__probe", "{}", "extra"}, 2},
+		{"invalid payload", []string{"__probe", "{}"}, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out, stderr bytes.Buffer
+			if status := Run(context.Background(), tc.args, bwrap.Stdio{Out: &out, Err: &stderr}); status != tc.status || out.Len() != 0 || stderr.Len() == 0 {
+				t.Fatalf("probe invocation = status %d, stdout %q, stderr %q", status, out.String(), stderr.String())
+			}
+		})
+	}
+}
+
 func TestRootRejectedBeforeHelpAndErrorsEscaped(t *testing.T) {
 	if os.Getuid() != 0 && os.Geteuid() != 0 {
 		t.Skip("root ordering regression requires root fixture")

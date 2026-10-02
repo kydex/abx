@@ -91,7 +91,17 @@ func gate() error {
 	if err != nil {
 		return fmt.Errorf("private probe is only available inside the sandbox: %w", err)
 	}
-	if detail := readOnlyDetail(string(raw), probePath); detail != "" {
+	return checkGate(self, mounted, string(raw))
+}
+
+// checkGate is the pure part of gate: identity comparison and mount-flag
+// inspection without filesystem reads, so it is fully unit-testable.
+// gate itself only supplies the three observed inputs.
+func checkGate(self, mounted Identity, mountinfo string) error {
+	if self != mounted {
+		return errors.New("private probe is only available inside the sandbox")
+	}
+	if detail := readOnlyDetail(mountinfo, probePath); detail != "" {
 		return fmt.Errorf("private probe is only available inside the sandbox: %s", detail)
 	}
 	return nil

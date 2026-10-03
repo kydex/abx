@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.8.20
+
 - Name failing bind sources, mounts, and tool paths in errors instead of returning bare filesystem errors.
 - Accept login shells under `/etc/alternatives` when their resolved target stays within the mounted system paths.
 - Reject probe payloads with non-canonical read-only targets at decode time.

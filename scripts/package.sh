@@ -16,6 +16,18 @@ if [[ ${tag#v} != "$version" ]]; then
     printf 'Tag %s does not match source version %s\n' "$tag" "$version" >&2
     exit 2
 fi
+if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    in_git=true
+else
+    in_git=false
+    printf 'warning: not a git work tree; packaging archives from the working directory as-is\n' >&2
+fi
+if $in_git; then
+    if ! git -C "$root" diff --quiet || ! git -C "$root" diff --cached --quiet; then
+        printf 'error: git work tree is not clean; commit or stash changes before packaging\n' >&2
+        exit 2
+    fi
+fi
 umask 022
 mkdir -p dist
 stage=$(mktemp -d)
@@ -25,11 +37,17 @@ mkdir "$stage/$name"
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false \
     -o "$stage/$name/abx" ./cmd/abx
 cp LICENSE THIRD_PARTY_LICENSES README.md README.ru.md CHANGELOG.md "$stage/$name/"
-cp -R docs "$stage/$name/docs"
+if $in_git; then
+    # Stage exactly the tracked files so untracked clutter cannot leak
+    # into the user-facing archive either.
+    git -C "$root" ls-files -z -- docs | (cd -- "$root" && xargs -0 -r cp --parents -t "$stage/$name")
+else
+    cp -R docs "$stage/$name/docs"
+fi
 tar --owner=0 --group=0 --numeric-owner -C "$stage" -czf "dist/$name.tar.gz" "$name"
 source="abx-$version-source"
 mkdir "$stage/$source"
-if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+if $in_git; then
     # Stage exactly the tracked files so untracked clutter under the staged
     # trees cannot leak into the source archive.
     git -C "$root" ls-files -z -- cmd internal scripts docs .github | (cd -- "$root" && xargs -0 -r cp --parents -t "$stage/$source")

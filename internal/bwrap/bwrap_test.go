@@ -140,6 +140,17 @@ func TestWaitDelayReportsSuccessfulExit(t *testing.T) {
 	}
 }
 
+func TestWaitDelayPreservesFailedExit(t *testing.T) {
+	// Same orphaned pipe as above, but the child itself fails: the failure
+	// must survive WaitDelay expiry instead of turning into success.
+	var out bytes.Buffer
+	cmd := exec.Command("/bin/sh", "-c", "sleep 5 >&1 & exit 17")
+	status, err := execute(context.Background(), cmd, Stdio{Out: &out, Err: io.Discard})
+	if err != nil || status != 17 {
+		t.Fatalf("WaitDelay failure = status %d, err %v", status, err)
+	}
+}
+
 func TestMarkInheritedFDsKeepsExplicitFiles(t *testing.T) {
 	keep, err := os.CreateTemp(t.TempDir(), "keep")
 	if err != nil {
@@ -310,6 +321,36 @@ exit 23`)
 	_ = tool.Close()
 	if _, err := open(context.Background(), path, true); err == nil || !strings.Contains(err.Error(), "unsafe Bubblewrap executable") {
 		t.Fatalf("non-root tool accepted with system=true: %v", err)
+	}
+}
+
+func TestToolRejectsSpecialModeBits(t *testing.T) {
+	path := writeScript(t, `if [ "$1" = "--version" ]; then
+  printf 'bubblewrap 0.12.0\n'
+  exit 0
+fi
+exit 23`)
+	for _, mode := range []os.FileMode{0o755 | os.ModeSetuid, 0o755 | os.ModeSetgid, 0o755 | os.ModeSticky} {
+		if err := os.Chmod(path, mode); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := open(context.Background(), path, false); err == nil || !strings.Contains(err.Error(), "unsafe Bubblewrap executable") {
+			t.Fatalf("special mode %v accepted by open: %v", mode, err)
+		}
+	}
+	if err := os.Chmod(path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	tool, err := open(context.Background(), path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tool.Close()
+	if err := os.Chmod(path, 0o755|os.ModeSetuid); err != nil {
+		t.Fatal(err)
+	}
+	if err := tool.Revalidate(); err == nil || !strings.Contains(err.Error(), "bubblewrap changed") {
+		t.Fatalf("special mode accepted by revalidate: %v", err)
 	}
 }
 

@@ -79,12 +79,12 @@ func ListProfiles(account Account, paths Paths) (statuses []ProfileStatus, resul
 	// Read the retained directory, even if its original path was renamed.
 	fd, err := unix.Openat(int(in.objects[paths.Profiles].file.Fd()), ".", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open profiles directory %q: %w", paths.Profiles, err)
 	}
 	dir := os.NewFile(uintptr(fd), paths.Profiles)
 	entries, err := dir.ReadDir(-1)
 	if err = errors.Join(err, dir.Close()); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read profiles directory %q: %w", paths.Profiles, err)
 	}
 	// ReadDir on a file descriptor preserves filesystem order; sort explicitly.
 	slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })

@@ -26,6 +26,9 @@ func TestVerificationFilesCleanUpAfterSuccessOrLaterFailure(t *testing.T) {
 		if target, err := os.Readlink(actual); err != nil || target != sentinel {
 			t.Fatal(target, err)
 		}
+		if !strings.HasPrefix(filepath.Base(link), ".abx-verify-") {
+			t.Fatalf("link %q left the reserved probe prefix", link)
+		}
 		if err = files.Close(); err != nil {
 			t.Fatal(err)
 		}

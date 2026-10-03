@@ -47,7 +47,7 @@ func TestResolveFromUsesLoginArgv(t *testing.T) {
 }
 
 func TestVisibleInSandboxBoundaries(t *testing.T) {
-	for _, path := range []string{"/bin/fish", "/usr/bin/fish", "/lib64/ld-linux.so"} {
+	for _, path := range []string{"/bin/fish", "/usr/bin/fish", "/lib64/ld-linux.so", "/etc/alternatives/sh"} {
 		if !visibleInSandbox(path) {
 			t.Errorf("%s not visible", path)
 		}

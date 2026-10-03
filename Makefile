@@ -1,4 +1,4 @@
-.PHONY: test check lint shellcheck actionlint diff-check security build-check coverage-check build package live
+.PHONY: test check lint shellcheck actionlint diff-check security build-check coverage-check build package package-smoke clean live
 
 COVERAGE_MIN ?= 74.0
 
@@ -42,6 +42,27 @@ package:
 	@version=$$(cat internal/app/VERSION); \
 	test -n "$$version" || { echo "error: cannot read version from internal/app/VERSION" >&2; exit 1; }; \
 	bash scripts/package.sh "v$$version"
+
+# Unpacks both archives and checks structure plus the embedded version.
+# The release binary itself is not executed, so this works for any caller.
+package-smoke:
+	@set -eu; \
+	version=$$(cat internal/app/VERSION); \
+	work=$$(mktemp -d); \
+	trap 'rm -rf "$$work"' EXIT HUP INT TERM; \
+	test -f "dist/abx-$$version-linux-amd64.tar.gz"; \
+	test -f "dist/abx-$$version-source.tar.gz"; \
+	tar -xzf "dist/abx-$$version-linux-amd64.tar.gz" -C "$$work"; \
+	test -x "$$work/abx-$$version-linux-amd64/abx"; \
+	tar -xzf "dist/abx-$$version-source.tar.gz" -C "$$work"; \
+	test -f "$$work/abx-$$version-source/go.mod"; \
+	test -f "$$work/abx-$$version-source/.golangci.yml"; \
+	test -d "$$work/abx-$$version-source/internal"; \
+	test "$$(cat "$$work/abx-$$version-source/internal/app/VERSION")" = "$$version"; \
+	printf 'package smoke ok: %s\n' "$$version"
+
+clean:
+	rm -rf ./abx dist coverage.out
 
 # Explicit opt-in on a supported non-root Linux host.
 live:

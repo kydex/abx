@@ -66,7 +66,7 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	}
 	fd, err := unix.Open(resolved, unix.O_PATH|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open Bubblewrap executable %q: %w", resolved, err)
 	}
 	f := os.NewFile(uintptr(fd), resolved)
 	defer func() {
@@ -76,14 +76,14 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	}()
 	info, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("stat Bubblewrap executable %q: %w", resolved, err)
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 || info.Mode().Perm()&0o022 != 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 || !ok || system && st.Uid != 0 {
 		return nil, errors.New("unsafe Bubblewrap executable")
 	}
 	if err = unix.Access(resolved, unix.X_OK); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("access Bubblewrap executable %q: %w", resolved, err)
 	}
 	t := &Tool{f, info, resolved}
 	check, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -197,10 +197,10 @@ func Translate(plan sandbox.Plan, source func(string) (*os.File, error)) ([]stri
 		case sandbox.ReadOnly, sandbox.Writable:
 			f, err := source(m.Source)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("bind source for %q: %w", m.Target, err)
 			}
 			if f == nil {
-				return nil, nil, errors.New("nil source file")
+				return nil, nil, fmt.Errorf("nil bind source for %q", m.Target)
 			}
 			flag := "--ro-bind-fd"
 			if m.Kind == sandbox.Writable {
@@ -219,7 +219,7 @@ func Translate(plan sandbox.Plan, source func(string) (*os.File, error)) ([]stri
 		case sandbox.Dev:
 			args = append(args, "--dev", m.Target)
 		default:
-			return nil, nil, errors.New("unsupported mount")
+			return nil, nil, fmt.Errorf("unsupported mount kind %d for %q", m.Kind, m.Target)
 		}
 	}
 	args = append(args, "--")

@@ -18,7 +18,7 @@ This document describes the boundaries enforced by the current implementation. F
 | `/proc`, `/dev` | Private/separate views | Same |
 | Network | Shared with host | Shared with host |
 
-Bubblewrap creates separate user, mount, PID, IPC, and UTS namespaces and sets the hostname to `abx`. ABX also passes `--disable-userns`, so code inside the sandbox cannot create another user namespace through Bubblewrap's supported mechanism.
+Bubblewrap creates separate user, mount, PID, IPC, and UTS namespaces and sets the hostname to `abx`. ABX also passes `--disable-userns`, so code inside the sandbox cannot create another user namespace through Bubblewrap's supported mechanism. ABX passes `--die-with-parent`, so the sandbox processes are killed with SIGKILL when the launcher exits.
 
 The environment starts empty. ABX sets HOME, USER/LOGNAME, SHELL, PWD, TMPDIR, XDG paths, PATH, and npm/Bun locations. Only terminal/locale/color settings are forwarded from the host: `TERM`, `COLORTERM`, `LANG`, `LANGUAGE`, `TZ`, `NO_COLOR`, `FORCE_COLOR`, and valid `LC_*` variables.
 

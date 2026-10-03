@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Name failing bind sources, mounts, and tool paths in errors instead of returning bare filesystem errors.
+- Accept login shells under `/etc/alternatives` when their resolved target stays within the mounted system paths.
+- Reject probe payloads with non-canonical read-only targets at decode time.
+- Test setuid/setgid/sticky rejection for the Bubblewrap tool, pin the sentinel name prefix, and pin failed exits under `WaitDelay`.
+- Stage only tracked files into the binary archive too, refuse packaging on a dirty tree, warn outside git trees, and add `make package-smoke`, `make clean`, and CI timeouts.
+- Document `--die-with-parent`. (English and Russian.)
+
 ## 0.8.19
 
 - Tidy naming and layout without behavior change: name the profile-list header, split the storage-path check, explain the private path tail, and wrap long syscalls.

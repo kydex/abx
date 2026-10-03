@@ -118,6 +118,11 @@ func decode(raw string) (Expected, error) {
 	if !cleanPath(e.Home) || !cleanPath(e.Sentinel) || !cleanLink(e.Link) || len(e.Environment) == 0 || len(e.ReadOnly) == 0 {
 		return e, errors.New("incomplete probe inputs")
 	}
+	for _, target := range e.ReadOnly {
+		if !cleanPath(target) {
+			return e, errors.New("incomplete probe inputs")
+		}
+	}
 	for _, name := range NamespaceNames() {
 		if e.Namespaces[name] == "" {
 			return e, fmt.Errorf("missing namespace %q", name)

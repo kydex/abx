@@ -95,7 +95,7 @@ func validateExecutable(path string) (string, error) {
 }
 
 func visibleInSandbox(path string) bool {
-	for _, root := range []string{"/usr", "/bin", "/sbin", "/lib", "/lib64"} {
+	for _, root := range []string{"/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc/alternatives"} {
 		if path == root || strings.HasPrefix(path, root+"/") {
 			return true
 		}

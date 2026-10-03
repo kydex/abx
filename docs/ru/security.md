@@ -20,7 +20,7 @@
 | `/proc`, `/dev` | Приватные/отдельные представления | То же |
 | Сеть | Общая с хостом | Общая с хостом |
 
-Bubblewrap создаёт отдельные user, mount, PID, IPC и UTS namespaces и задаёт hostname `abx`. ABX также передаёт `--disable-userns`, поэтому код внутри песочницы не может создать ещё один user namespace через поддерживаемый Bubblewrap механизм.
+Bubblewrap создаёт отдельные user, mount, PID, IPC и UTS namespaces и задаёт hostname `abx`. ABX также передаёт `--disable-userns`, поэтому код внутри песочницы не может создать ещё один user namespace через поддерживаемый Bubblewrap механизм. ABX передаёт `--die-with-parent`: процессы песочницы получают SIGKILL при завершении лаунчера.
 
 Окружение начинается с пустого. ABX сам задаёт HOME, USER/LOGNAME, SHELL, PWD, TMPDIR, XDG-пути, PATH и расположения npm/Bun. С хоста передаются только настройки терминала, локали и цвета: `TERM`, `COLORTERM`, `LANG`, `LANGUAGE`, `TZ`, `NO_COLOR`, `FORCE_COLOR` и корректные `LC_*`.
 

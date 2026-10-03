@@ -333,6 +333,31 @@ func TestDecodeRejectsNonCanonicalProbePaths(t *testing.T) {
 	}
 }
 
+func TestDecodeRejectsNonCleanReadOnlyTargets(t *testing.T) {
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Link":"/workspace/.abx-verify-test","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	for _, targets := range [][]string{{"relative"}, {"/usr/"}, {"/usr\x00"}, {""}, {"/usr", "relative"}} {
+		t.Run(strings.Join(targets, ","), func(t *testing.T) {
+			var input map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(valid), &input); err != nil {
+				t.Fatal(err)
+			}
+			raw, err := json.Marshal(targets)
+			if err != nil {
+				t.Fatal(err)
+			}
+			input["ReadOnly"] = raw
+			raw, err = json.Marshal(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var out bytes.Buffer
+			if err := Run(string(raw), &out); err == nil || !strings.Contains(err.Error(), "incomplete probe inputs") || out.Len() != 0 {
+				t.Fatalf("unclean read-only target reached observations: output=%q err=%v", out.String(), err)
+			}
+		})
+	}
+}
+
 type reportFailureWriter struct {
 	err   error
 	calls int

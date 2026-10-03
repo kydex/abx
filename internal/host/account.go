@@ -133,7 +133,7 @@ func canonicalizeExisting(path string) (string, error) {
 		if err == nil {
 			resolved, err := filepath.EvalSymlinks(current)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("canonicalize data base ancestor %q: %w", current, err)
 			}
 			for i := len(missing) - 1; i >= 0; i-- {
 				resolved = filepath.Join(resolved, missing[i])

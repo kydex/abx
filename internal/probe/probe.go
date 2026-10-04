@@ -275,7 +275,7 @@ func checkNamespaces(host map[string]string, readlink func(string) (string, erro
 	return checks
 }
 
-// Compare full assignments, including duplicates, but disclose only variable names.
+// checkEnvironment compares full assignments, including duplicates, but discloses only variable names.
 func checkEnvironment(actual, expected []string) Check {
 	actual, expected = slices.Clone(actual), slices.Clone(expected)
 	slices.Sort(actual)

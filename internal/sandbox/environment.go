@@ -2,6 +2,7 @@
 package sandbox
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -16,7 +17,7 @@ type Entry struct {
 // Session builds the clean environment for run, shell, work, and self-test.
 func Session(username, shell, workingDirectory string, host []string) ([]Entry, error) {
 	if username == "" {
-		return nil, fmt.Errorf("sandbox username is empty")
+		return nil, errors.New("sandbox username is empty")
 	}
 	if !cleanPath(shell) {
 		return nil, fmt.Errorf("sandbox shell %q is not a canonical absolute path", shell)

@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/kydex/abx/internal/profile"
@@ -43,7 +44,7 @@ Storage: $XDG_DATA_HOME/abx, or .local/share/abx in the passwd home.`
 
 func Parse(args []string) (Command, error) {
 	if len(args) == 0 {
-		return Command{}, fmt.Errorf("command required")
+		return Command{}, errors.New("command required")
 	}
 	k := Kind(args[0])
 	if k == "-h" || k == "--help" {
@@ -52,13 +53,13 @@ func Parse(args []string) (Command, error) {
 	switch k {
 	case "profile":
 		if len(args) < 2 {
-			return Command{}, fmt.Errorf("profile requires create, show or list")
+			return Command{}, errors.New("profile requires create, show or list")
 		}
 		k = Kind("profile " + args[1])
 		switch k {
 		case ProfileList:
 			if len(args) != 2 {
-				return Command{}, fmt.Errorf("profile list takes no arguments")
+				return Command{}, errors.New("profile list takes no arguments")
 			}
 			return Command{Kind: k}, nil
 		case ProfileCreate, ProfileShow:

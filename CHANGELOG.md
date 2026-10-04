@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Tidy comments, names, and error constructors without behavior change: fix stale doc names, stop shadowing `close`, use `errors.New` for constant errors, and check executability through `unix` instead of `syscall`.
+
 ## 0.8.20
 
 - Name failing bind sources, mounts, and tool paths in errors instead of returning bare filesystem errors.

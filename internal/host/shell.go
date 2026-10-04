@@ -9,10 +9,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
-)
 
-const executeAccessMode = 1 // X_OK on Linux.
+	"golang.org/x/sys/unix"
+)
 
 // Selection is the sandbox shell path and login argv.
 type Selection struct {
@@ -24,7 +23,7 @@ type Selection struct {
 // ResolveShell reads /etc/passwd and validates the selected shell.
 func ResolveShell(uid int) Selection { return resolveShellFrom(uid, "/etc/passwd") }
 
-// ResolveFrom is the deterministic passwd-file test seam.
+// resolveShellFrom is the deterministic passwd-file test seam.
 func resolveShellFrom(uid int, passwdPath string) Selection {
 	return resolveFrom(uid, passwdPath, visibleInSandbox)
 }
@@ -88,7 +87,7 @@ func validateExecutable(path string) (string, error) {
 		}
 		return "", fmt.Errorf("stat login shell %q: %w", path, err)
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 || syscall.Access(path, executeAccessMode) != nil {
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 || unix.Access(path, unix.X_OK) != nil {
 		return "", fmt.Errorf("login shell %q is not a regular file executable by the invoking user", path)
 	}
 	return resolved, nil

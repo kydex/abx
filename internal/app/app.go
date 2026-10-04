@@ -183,8 +183,8 @@ func executeSession(
 	return execute(ctx, tool, plan, in.SourceFile, stdio)
 }
 
-func finishClose(status *int, result *error, close func() error) {
-	if err := close(); err != nil {
+func finishClose(status *int, result *error, cleanup func() error) {
+	if err := cleanup(); err != nil {
 		*result = errors.Join(*result, err)
 		*status = 1
 	}

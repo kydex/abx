@@ -15,7 +15,7 @@ const isolationSummary = `isolation:
   network: shared with host
 `
 
-// Format returns a readable command description, never a reusable shell string.
+// formatPlan returns a readable command description, never a reusable shell string.
 func formatPlan(plan sandbox.Plan) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "cwd: %q\ncommand: %q\n", plan.WorkingDirectory(), plan.Command())

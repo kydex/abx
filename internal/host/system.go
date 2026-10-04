@@ -30,7 +30,7 @@ func (in *Inputs) discoverSystem(root string) error {
 		return err
 	}
 	if !in.objects[in.system[0].Path].info.IsDir() {
-		return fmt.Errorf("/usr is not a directory")
+		return errors.New("/usr is not a directory")
 	}
 	for _, p := range []string{"/bin", "/sbin", "/lib", "/lib64"} {
 		path := physical(p)

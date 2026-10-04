@@ -297,7 +297,7 @@ TERM COLORTERM LANG LANGUAGE TZ NO_COLOR FORCE_COLOR LC_*
 
 ## Ограничение CPU и памяти
 
-ABX лимитов CPU и памяти не ставит. Если нужны, запускайте ABX внутри systemd scope:
+ABX лимитов CPU и памяти не ставит, кроме приватных tmpfs-монтов (`/tmp`, `/var/tmp`, `/run`) с потолком 4 GiB на каждый. Если нужны общие лимиты, запускайте ABX внутри systemd scope:
 
 ```sh
 systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode

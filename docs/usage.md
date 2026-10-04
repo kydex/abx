@@ -297,7 +297,7 @@ Arbitrary host environment variables, including proxy or credential variables, a
 
 ## Limiting CPU and memory
 
-ABX sets no CPU or memory limits. If you need them, run ABX inside a systemd scope:
+ABX sets no CPU or memory limits, except that its private tmpfs mounts (`/tmp`, `/var/tmp`, `/run`) are capped at 4 GiB each. If you need general limits, run ABX inside a systemd scope:
 
 ```sh
 systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode

@@ -297,13 +297,11 @@ Arbitrary host environment variables, including proxy or credential variables, a
 
 ## Limiting CPU and memory
 
-ABX itself sets no CPU or memory limits: Bubblewrap has no such flags (only `--size` for its `tmpfs` mounts exists, which ABX does not currently set), so an unbounded tmpfs defaults to half the host RAM per mount. A runaway session — for example overnight fuzzing in several threads — can exhaust host memory until the host OOM killer steps in. To contain it, run ABX inside a systemd scope:
+ABX sets no CPU or memory limits. If you need them, run ABX inside a systemd scope:
 
 ```sh
 systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 ```
-
-`MemoryMax` caps RAM usage: excess is killed inside the scope instead of letting the host OOM killer pick victims across the whole machine. `CPUQuota=400%` allows four cores. Adjust both values to the host. This requires a systemd user session and does not work in containers without systemd.
 
 ## Troubleshooting
 

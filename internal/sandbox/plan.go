@@ -25,6 +25,10 @@ type Mount struct {
 	Kind           Kind
 	Source, Target string
 	Mode           uint32
+	// Size caps a tmpfs mount in bytes; zero means no explicit limit.
+	// Only private tmpfs mounts set it, so unbounded temporary files
+	// cannot exhaust host memory.
+	Size uint64
 }
 
 // Mode describes the visibility and working directory of a normal session.
@@ -85,11 +89,15 @@ func baseMounts() []Mount {
 	return mounts
 }
 
+// tmpfsSize caps every sandbox tmpfs. Bubblewrap itself has no memory
+// limits, and an unbounded tmpfs defaults to half the host RAM.
+const tmpfsSize = 4 << 30 // 4 GiB
+
 func privateMounts() []Mount {
 	return []Mount{
-		{Kind: Tmpfs, Target: "/tmp"},
-		{Kind: Tmpfs, Target: "/var/tmp"},
-		{Kind: Tmpfs, Target: "/run"},
+		{Kind: Tmpfs, Target: "/tmp", Size: tmpfsSize},
+		{Kind: Tmpfs, Target: "/var/tmp", Size: tmpfsSize},
+		{Kind: Tmpfs, Target: "/run", Size: tmpfsSize},
 		{Kind: Directory, Target: "/run/user", Mode: 0o700},
 		{Kind: Proc, Target: "/proc"},
 		{Kind: Dev, Target: "/dev"},

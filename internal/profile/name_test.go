@@ -26,3 +26,23 @@ func TestValidateName(t *testing.T) {
 		}
 	}
 }
+
+func FuzzValidateName(f *testing.F) {
+	for _, seed := range []string{"a", "Agent01", "a.b", "", ".agent", "a/b", "é", "a\x00b", strings.Repeat("a", 65)} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, name string) {
+		if err := ValidateName(name); err != nil {
+			return
+		}
+		// Accepted names satisfy the documented necessary conditions.
+		if len(name) < 1 || len(name) > 64 {
+			t.Fatalf("accepted out-of-range length %d: %q", len(name), name)
+		}
+		for i := 0; i < len(name); i++ {
+			if name[i] > 127 {
+				t.Fatalf("accepted non-ASCII byte %#x: %q", name[i], name)
+			}
+		}
+	})
+}

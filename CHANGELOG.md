@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Cap sandbox tmpfs mounts at 4 GiB so unbounded temporary files cannot exhaust host memory.
+- Reject NUL usernames and NUL-valued host variables in `Session`, found by the new fuzz tests for name, session, and CLI parsing (seed corpora run in `go test`).
+
 - Document how to contain runaway sessions with a systemd scope (`MemoryMax`, `CPUQuota`). (English and Russian.)
 
 - Tidy comments, names, and error constructors without behavior change: fix stale doc names, stop shadowing `close`, use `errors.New` for constant errors, and check executability through `unix` instead of `syscall`.

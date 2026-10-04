@@ -3,6 +3,8 @@ package cli
 import (
 	"reflect"
 	"testing"
+
+	"github.com/kydex/abx/internal/profile"
 )
 
 func TestStructuredArgumentsAndNames(t *testing.T) {
@@ -59,4 +61,30 @@ func TestRunArgumentsRequireSeparator(t *testing.T) {
 	if err == nil || err.Error() != "run arguments must follow --: abx run <profile> -- <argument> [additional arguments]" {
 		t.Fatalf("error = %v", err)
 	}
+}
+
+func FuzzParse(f *testing.F) {
+	f.Add("run", "demo")
+	f.Add("", "")
+	f.Add("run", "--")
+	f.Add("profile", "create")
+	f.Fuzz(func(t *testing.T, a, b string) {
+		for _, argv := range [][]string{{a}, {a, b}} {
+			c, err := Parse(argv)
+			if err != nil {
+				continue
+			}
+			switch c.Kind {
+			case Run, Shell, Work, Inspect, Verify, Help, Version,
+				ProfileCreate, ProfileShow, ProfileList:
+			default:
+				t.Fatalf("unknown command kind %q from %q", c.Kind, argv)
+			}
+			if c.Profile != "" {
+				if err := profile.ValidateName(c.Profile); err != nil {
+					t.Fatalf("invalid profile %q from %q: %v", c.Profile, argv, err)
+				}
+			}
+		}
+	})
 }

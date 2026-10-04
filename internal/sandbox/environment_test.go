@@ -3,6 +3,7 @@ package sandbox
 import (
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -107,5 +108,52 @@ func TestSessionKeepsStorageAndIdentityInsideSandbox(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func FuzzSession(f *testing.F) {
+	f.Add("tester", "/usr/bin/bash", "/workspace", "TERM=xterm")
+	f.Add("", "", "", "")
+	f.Add("u", "/bin/sh", "/home/agent", "LC_ALL=C.UTF-8")
+	f.Fuzz(func(t *testing.T, username, shell, cwd, host string) {
+		entries, err := Session(username, shell, cwd, []string{host})
+		if err != nil {
+			return
+		}
+		if len(entries) == 0 {
+			t.Fatal("accepted session built no environment")
+		}
+		seen := map[string]bool{}
+		prev := ""
+		for _, e := range entries {
+			if !validName(e.Name) || seen[e.Name] {
+				t.Fatalf("invalid session environment: %#v", e)
+			}
+			seen[e.Name] = true
+			if e.Name < prev {
+				t.Fatalf("unsorted session environment: %#v", entries)
+			}
+			prev = e.Name
+			if strings.ContainsRune(e.Value, 0) {
+				t.Fatalf("NUL in session value: %#v", e)
+			}
+		}
+	})
+}
+
+func TestSessionRejectsNulUsernameAndHostValues(t *testing.T) {
+	if _, err := Session("a\x00b", "/usr/bin/bash", "/workspace", nil); err == nil {
+		t.Fatal("accepted NUL username")
+	}
+	entries, err := Session("tester", "/usr/bin/bash", "/workspace", []string{"TERM=a\x00b", "LANG=C.UTF-8"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := toMap(entries)
+	if _, ok := m["TERM"]; ok {
+		t.Fatal("forwarded NUL host value")
+	}
+	if m["LANG"] != "C.UTF-8" {
+		t.Fatalf("dropped clean host value: %#v", m)
 	}
 }

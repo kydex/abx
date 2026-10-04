@@ -19,6 +19,9 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 	if username == "" {
 		return nil, errors.New("sandbox username is empty")
 	}
+	if strings.ContainsRune(username, 0) {
+		return nil, fmt.Errorf("sandbox username %q contains NUL", username)
+	}
 	if !cleanPath(shell) {
 		return nil, fmt.Errorf("sandbox shell %q is not a canonical absolute path", shell)
 	}
@@ -58,6 +61,9 @@ func allowlistedHost(host []string) map[string]string {
 	for _, assignment := range host {
 		key, value, ok := strings.Cut(assignment, "=")
 		if !ok || !allowed(key) {
+			continue
+		}
+		if strings.ContainsRune(value, 0) {
 			continue
 		}
 		out[key] = value

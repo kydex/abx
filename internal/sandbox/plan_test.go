@@ -87,7 +87,7 @@ func TestIndependentPrivateMountExpectation(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
-		expected := []Mount{{Kind: Tmpfs, Target: "/tmp"}, {Kind: Tmpfs, Target: "/var/tmp"}, {Kind: Tmpfs, Target: "/run"}, {Kind: Directory, Target: "/run/user", Mode: 0o700}, {Kind: Proc, Target: "/proc"}, {Kind: Dev, Target: "/dev"}}
+		expected := []Mount{{Kind: Tmpfs, Target: "/tmp", Size: tmpfsSize}, {Kind: Tmpfs, Target: "/var/tmp", Size: tmpfsSize}, {Kind: Tmpfs, Target: "/run", Size: tmpfsSize}, {Kind: Directory, Target: "/run/user", Mode: 0o700}, {Kind: Proc, Target: "/proc"}, {Kind: Dev, Target: "/dev"}}
 		var actual []Mount
 		for _, m := range p.Mounts() {
 			if m.Kind == Tmpfs || m.Kind == Proc || m.Kind == Dev || m.Target == "/run/user" {
@@ -257,6 +257,9 @@ func TestValidateRejectsPolicyMutations(t *testing.T) {
 		}},
 		{name: "changed private tmp", mutate: func(t *testing.T, p *Plan) {
 			p.mounts[mountIndex(t, *p, Tmpfs, "/tmp")].Target = "/tmp-other"
+		}},
+		{name: "tmpfs without size limit", mutate: func(t *testing.T, p *Plan) {
+			p.mounts[mountIndex(t, *p, Tmpfs, "/tmp")].Size = 0
 		}},
 		{name: "run user permissions", mutate: func(t *testing.T, p *Plan) {
 			p.mounts[mountIndex(t, *p, Directory, "/run/user")].Mode = 0o755

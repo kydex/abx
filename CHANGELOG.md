@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document how to contain runaway sessions with a systemd scope (`MemoryMax`, `CPUQuota`). (English and Russian.)
+
 - Tidy comments, names, and error constructors without behavior change: fix stale doc names, stop shadowing `close`, use `errors.New` for constant errors, and check executability through `unix` instead of `syscall`.
 
 ## 0.8.20

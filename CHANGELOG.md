@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Diagnose the Bubblewrap version probe deadline correctly: a wedged binary is reported as the 5s probe timeout instead of the exec wording `signal: killed`, and caller cancellation is reported separately.
+- Do not constrain the current project by ownership or mode, and stop rejecting group-writable storage ancestors or the passwd home on ownership. Team checkouts (`root:dev` 2775), container images with `runAsUser`, NFS with `root_squash`, and filesystems without POSIX modes (always `0777`) are legitimate layouts; only a world-writable home or storage ancestor without sticky is refused. All new refusal paths name the object they failed on. (English and Russian.)
+
 - Fix a false refusal found in pre-release review: system mounts no longer require the source basename to match the target, which broke `abx` on hosts where `/etc/resolv.conf` is a systemd-resolved stub or `/etc/localtime` points into zoneinfo.
 - Accept `-v`/`--version` alongside `-h`/`--help` in any argument position, and restore inherited descriptor flags only after confirming the descriptor number still refers to the same object.
 - Packaging: accept lightweight tags and repositories carrying several tags on `HEAD`, treat a source archive unpacked inside an unrelated repository as a plain directory, remove partial archives when a build fails partway, and document every gate in the release procedure (English and Russian).

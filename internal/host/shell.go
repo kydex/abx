@@ -35,7 +35,7 @@ func resolveFrom(uid int, passwdPath string, visible func(string) bool) Selectio
 		if resolved, err = validateExecutable(path); err == nil && visible(path) && visible(resolved) {
 			return Selection{Path: resolved, Argv: []string{resolved, "-l"}}
 		}
-		if err == nil && !visible(resolved) {
+		if err == nil && visible(path) && !visible(resolved) {
 			err = fmt.Errorf("login shell %q resolves outside read-only system mounts to %q", path, resolved)
 		}
 	}

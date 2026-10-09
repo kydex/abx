@@ -81,12 +81,8 @@ func accountFromPasswd(uid int, username, home string) (Account, error) {
 	if !info.IsDir() {
 		return Account{}, fmt.Errorf("passwd home %q is not a directory", canonical)
 	}
-	st, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return Account{}, fmt.Errorf("passwd home %q has unknown owner", canonical)
-	}
-	if int(st.Uid) != uid {
-		return Account{}, fmt.Errorf("passwd home %q is not owned by uid %d", canonical, uid)
+	if err := checkHomeWritable(info, canonical); err != nil {
+		return Account{}, err
 	}
 	return Account{UID: uid, Username: username, Home: canonical}, nil
 }
@@ -159,22 +155,15 @@ func canonicalizeExisting(path string) (string, error) {
 	}
 }
 
-// checkProjectOwner requires the project directory itself to belong to the
-// invoking user and to not be world-writable. The uid is read here rather
-// than threaded through because resolveAccount already guarantees
-// account.UID == os.Getuid(), and every test fixture lives in a TempDir
-// owned by the runner. Group-writable team checkouts stay allowed.
-func checkProjectOwner(info os.FileInfo, project string) error {
-	uid := os.Getuid()
-	st, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return fmt.Errorf("project %q has unknown owner", project)
-	}
-	if int(st.Uid) != uid {
-		return fmt.Errorf("project %q is not owned by the invoking user", project)
-	}
+// checkHomeWritable rejects an account home that any local user may write.
+// Ownership is not required: homes are legitimately owned by root in
+// container images (runAsUser) and report an unexpected uid on NFS with
+// root_squash or on sshfs/9p mounts. A world-writable home is not a
+// legitimate layout, and it is the only case here that reaches beyond the
+// documented same-UID threat model.
+func checkHomeWritable(info os.FileInfo, home string) error {
 	if info.Mode().Perm()&0o002 != 0 {
-		return fmt.Errorf("project %q is world-writable", project)
+		return fmt.Errorf("passwd home %q is world-writable", home)
 	}
 	return nil
 }
@@ -183,9 +172,10 @@ func checkProjectOwner(info os.FileInfo, project string) error {
 // to be a directory owned by the invoking user. This rejects roots under
 // another user's directory or under root-owned world-writable parents
 // without requiring an exact 0700 mode on shared ancestors such as
-// ~/.local/share or test TempDirs. Writable ancestors are additionally
-// rejected unless sticky, so an untrusted group-writable tree cannot host
-// the data base even when owned by the invoker.
+// ~/.local/share or test TempDirs. A world-writable ancestor is additionally
+// rejected unless sticky, since any local user could otherwise replace the
+// storage root. Group-writable ancestors stay allowed: that is a team policy,
+// not an attack, and refusing it breaks umask-002 machines wholesale.
 func checkDataBaseOwner(canonicalBase string, uid int) error {
 	current := canonicalBase
 	for {
@@ -201,10 +191,11 @@ func checkDataBaseOwner(canonicalBase string, uid int) error {
 			if int(st.Uid) != uid {
 				return fmt.Errorf("data base ancestor %q is not owned by the invoking user", current)
 			}
-			// Group- or other-writable ancestors are rejected unless the
-			// sticky bit contains writes to the owner (as in /tmp).
-			if info.Mode().Perm()&0o022 != 0 && info.Mode()&os.ModeSticky == 0 {
-				return fmt.Errorf("data base ancestor %q is writable by group or other", current)
+			// Only world-writable ancestors are rejected: group-writable is a
+			// deliberate team policy (umask 002, shared groups, dotfile
+			// managers) and the sticky bit is the container's own answer to it.
+			if info.Mode().Perm()&0o002 != 0 && info.Mode()&os.ModeSticky == 0 {
+				return fmt.Errorf("data base ancestor %q is world-writable", current)
 			}
 			return nil
 		}

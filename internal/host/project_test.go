@@ -81,6 +81,22 @@ func TestResolveRejectsForeignOwnedAndWorldWritableProject(t *testing.T) {
 	if err := os.Mkdir(own, 0o700); err != nil {
 		t.Fatal(err)
 	}
+	// Project ownership and mode are NOT constrained: team checkouts
+	// (root:dev 2775), shared volumes, and filesystems without POSIX modes
+	// (FAT32/exFAT/CIFS/sshfs, always 0777) are legitimate. Nothing here
+	// should refuse a writable project directory.
+	for _, mode := range []os.FileMode{0o755, 0o775, 0o777} {
+		wide := filepath.Join(root, "mode-"+mode.String())
+		if err := os.Mkdir(wide, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(wide, mode); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ResolveProject(wide, home, data); err != nil {
+			t.Errorf("project with mode %v refused: %v", mode, err)
+		}
+	}
 	if os.Getuid() == 0 {
 		foreign := filepath.Join(root, "foreign")
 		if err := os.Mkdir(foreign, 0o700); err != nil {
@@ -89,19 +105,9 @@ func TestResolveRejectsForeignOwnedAndWorldWritableProject(t *testing.T) {
 		if err := os.Chown(foreign, 65534, 65534); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := ResolveProject(foreign, home, data); err == nil {
-			t.Error("accepted foreign-owned project")
+		if _, err := ResolveProject(foreign, home, data); err != nil {
+			t.Errorf("foreign-owned project refused: %v", err)
 		}
-	}
-	wide := filepath.Join(root, "wide")
-	if err := os.Mkdir(wide, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(wide, 0o777); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := ResolveProject(wide, home, data); err == nil {
-		t.Error("accepted world-writable project")
 	}
 	if _, err := ResolveProject(own, home, data); err != nil {
 		t.Errorf("owned project rejected: %v", err)

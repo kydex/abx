@@ -188,6 +188,11 @@ func existingObjectError(dirfd int, name string) error {
 	case unix.S_IFREG:
 		kind = "regular file"
 	}
+	if kind == "symlink" {
+		// A symlink reports 0777 regardless of its target, so printing that
+		// as a mode would misread as real permissions.
+		return fmt.Errorf("%w: %q (existing symlink)", ErrProfileExists, name)
+	}
 	return fmt.Errorf("%w: %q (existing %s, mode %04o)", ErrProfileExists, name, kind, st.Mode&0o7777)
 }
 

@@ -39,12 +39,12 @@ func (in *Inputs) discoverSystem(root string) error {
 			continue
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("inspect compat system path %q: %w", path, err)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
 			link, e := os.Readlink(path)
 			if e != nil {
-				return e
+				return fmt.Errorf("read compat system link %q: %w", path, e)
 			}
 			resolved, e := filepath.EvalSymlinks(path)
 			if e != nil {
@@ -65,7 +65,7 @@ func (in *Inputs) discoverSystem(root string) error {
 		if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
 			continue
 		} else if err != nil {
-			return err
+			return fmt.Errorf("inspect system path %q: %w", p, err)
 		}
 		if err := add(path, p); err != nil {
 			return err

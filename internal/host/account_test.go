@@ -19,14 +19,27 @@ func TestAccountFromPasswd(t *testing.T) {
 	}
 	uid := os.Getuid()
 	if uid == 0 {
-		t.Skip("home ownership requires a non-root fixture")
+		t.Skip("home permissions require a non-root fixture")
 	}
 	a, err := accountFromPasswd(uid, "tester", link)
 	if err != nil || a.Home != home {
 		t.Fatalf("accountFromPasswd = %#v, %v", a, err)
 	}
-	if _, err := accountFromPasswd(60000, "tester", link); err == nil {
-		t.Error("accepted foreign-owned home")
+	// Ownership is not required: root-owned homes (container images with
+	// runAsUser) and NFS uid-mapping must keep working. Only a
+	// world-writable home is refused.
+	if _, err := accountFromPasswd(60000, "tester", link); err != nil {
+		t.Errorf("foreign uid refused: %v", err)
+	}
+	wide := filepath.Join(filepath.Dir(home), "wide-home")
+	if err := os.Mkdir(wide, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(wide, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := accountFromPasswd(uid, "tester", wide); err == nil {
+		t.Error("accepted world-writable home")
 	}
 	for _, tc := range []struct {
 		uid        int
@@ -161,7 +174,7 @@ func TestResolvePathsRejectsUnsafeDataBase(t *testing.T) {
 			t.Fatalf("file data base accepted: %v", err)
 		}
 	})
-	t.Run("group-writable ancestor", func(t *testing.T) {
+	t.Run("group-writable ancestor allowed", func(t *testing.T) {
 		wide := filepath.Join(t.TempDir(), "wide")
 		if err := os.Mkdir(wide, 0o700); err != nil {
 			t.Fatal(err)
@@ -170,8 +183,21 @@ func TestResolvePathsRejectsUnsafeDataBase(t *testing.T) {
 			t.Fatal(err)
 		}
 		account := Account{UID: os.Getuid(), Username: "tester", Home: mkhome(t)}
+		if _, err := ResolvePaths(account, filepath.Join(wide, "deep")); err != nil {
+			t.Fatalf("group-writable ancestor refused: %v", err)
+		}
+	})
+	t.Run("world-writable ancestor", func(t *testing.T) {
+		wide := filepath.Join(t.TempDir(), "wide")
+		if err := os.Mkdir(wide, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(wide, 0o777); err != nil {
+			t.Fatal(err)
+		}
+		account := Account{UID: os.Getuid(), Username: "tester", Home: mkhome(t)}
 		if _, err := ResolvePaths(account, filepath.Join(wide, "deep")); err == nil {
-			t.Fatal("group-writable ancestor accepted")
+			t.Fatal("world-writable ancestor accepted")
 		}
 	})
 	t.Run("sticky ancestor", func(t *testing.T) {

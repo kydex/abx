@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -16,9 +17,16 @@ func TestAccountFromPasswd(t *testing.T) {
 	if err := os.Symlink(home, link); err != nil {
 		t.Fatal(err)
 	}
-	a, err := accountFromPasswd(1000, "tester", link)
+	uid := os.Getuid()
+	if uid == 0 {
+		t.Skip("home ownership requires a non-root fixture")
+	}
+	a, err := accountFromPasswd(uid, "tester", link)
 	if err != nil || a.Home != home {
 		t.Fatalf("accountFromPasswd = %#v, %v", a, err)
+	}
+	if _, err := accountFromPasswd(60000, "tester", link); err == nil {
+		t.Error("accepted foreign-owned home")
 	}
 	for _, tc := range []struct {
 		uid        int
@@ -59,9 +67,14 @@ func TestAccountFromPasswd(t *testing.T) {
 }
 
 func TestResolveAccountLookupPaths(t *testing.T) {
+	uid := os.Getuid()
+	if uid == 0 {
+		t.Skip("home ownership requires a non-root fixture")
+	}
+	suid := strconv.Itoa(uid)
 	home := t.TempDir()
-	account, err := resolveAccount(1000, func(id string) (*user.User, error) {
-		if id != "1000" {
+	account, err := resolveAccount(uid, func(id string) (*user.User, error) {
+		if id != suid {
 			t.Fatalf("lookup id = %q", id)
 		}
 		return &user.User{Uid: id, Username: "tester", HomeDir: home}, nil
@@ -69,7 +82,7 @@ func TestResolveAccountLookupPaths(t *testing.T) {
 	if err != nil || account.Home != home {
 		t.Fatalf("resolveAccount = %#v, %v", account, err)
 	}
-	if _, err := resolveAccount(1000, func(string) (*user.User, error) { return nil, errors.New("lookup failed") }); err == nil {
+	if _, err := resolveAccount(uid, func(string) (*user.User, error) { return nil, errors.New("lookup failed") }); err == nil {
 		t.Fatal("accepted lookup failure")
 	}
 	for _, tc := range []struct {
@@ -78,7 +91,7 @@ func TestResolveAccountLookupPaths(t *testing.T) {
 	}{
 		{name: "nil result", user: nil},
 		{name: "malformed uid", user: &user.User{Uid: "not-a-uid", Username: "tester", HomeDir: home}},
-		{name: "mismatched uid", user: &user.User{Uid: "1001", Username: "tester", HomeDir: home}},
+		{name: "mismatched uid", user: &user.User{Uid: strconv.Itoa(uid + 1), Username: "tester", HomeDir: home}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, err := resolveAccount(1000, func(string) (*user.User, error) { return tc.user, nil }); err == nil {
@@ -146,6 +159,32 @@ func TestResolvePathsRejectsUnsafeDataBase(t *testing.T) {
 		}
 		if _, err := ResolvePaths(account, base); err == nil {
 			t.Fatalf("file data base accepted: %v", err)
+		}
+	})
+	t.Run("group-writable ancestor", func(t *testing.T) {
+		wide := filepath.Join(t.TempDir(), "wide")
+		if err := os.Mkdir(wide, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(wide, 0o775); err != nil {
+			t.Fatal(err)
+		}
+		account := Account{UID: os.Getuid(), Username: "tester", Home: mkhome(t)}
+		if _, err := ResolvePaths(account, filepath.Join(wide, "deep")); err == nil {
+			t.Fatal("group-writable ancestor accepted")
+		}
+	})
+	t.Run("sticky ancestor", func(t *testing.T) {
+		wide := filepath.Join(t.TempDir(), "wide")
+		if err := os.Mkdir(wide, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(wide, 0o777|os.ModeSticky); err != nil {
+			t.Fatal(err)
+		}
+		account := Account{UID: os.Getuid(), Username: "tester", Home: mkhome(t)}
+		if _, err := ResolvePaths(account, filepath.Join(wide, "deep")); err != nil {
+			t.Fatalf("sticky ancestor rejected: %v", err)
 		}
 	})
 }

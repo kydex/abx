@@ -81,6 +81,13 @@ func accountFromPasswd(uid int, username, home string) (Account, error) {
 	if !info.IsDir() {
 		return Account{}, fmt.Errorf("passwd home %q is not a directory", canonical)
 	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return Account{}, fmt.Errorf("passwd home %q has unknown owner", canonical)
+	}
+	if int(st.Uid) != uid {
+		return Account{}, fmt.Errorf("passwd home %q is not owned by uid %d", canonical, uid)
+	}
 	return Account{UID: uid, Username: username, Home: canonical}, nil
 }
 
@@ -152,11 +159,33 @@ func canonicalizeExisting(path string) (string, error) {
 	}
 }
 
+// checkProjectOwner requires the project directory itself to belong to the
+// invoking user and to not be world-writable. The uid is read here rather
+// than threaded through because resolveAccount already guarantees
+// account.UID == os.Getuid(), and every test fixture lives in a TempDir
+// owned by the runner. Group-writable team checkouts stay allowed.
+func checkProjectOwner(info os.FileInfo, project string) error {
+	uid := os.Getuid()
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return fmt.Errorf("project %q has unknown owner", project)
+	}
+	if int(st.Uid) != uid {
+		return fmt.Errorf("project %q is not owned by the invoking user", project)
+	}
+	if info.Mode().Perm()&0o002 != 0 {
+		return fmt.Errorf("project %q is world-writable", project)
+	}
+	return nil
+}
+
 // checkDataBaseOwner requires the longest existing ancestor of the data base
 // to be a directory owned by the invoking user. This rejects roots under
 // another user's directory or under root-owned world-writable parents
 // without requiring an exact 0700 mode on shared ancestors such as
-// ~/.local/share or test TempDirs.
+// ~/.local/share or test TempDirs. Writable ancestors are additionally
+// rejected unless sticky, so an untrusted group-writable tree cannot host
+// the data base even when owned by the invoker.
 func checkDataBaseOwner(canonicalBase string, uid int) error {
 	current := canonicalBase
 	for {
@@ -171,6 +200,11 @@ func checkDataBaseOwner(canonicalBase string, uid int) error {
 			}
 			if int(st.Uid) != uid {
 				return fmt.Errorf("data base ancestor %q is not owned by the invoking user", current)
+			}
+			// Group- or other-writable ancestors are rejected unless the
+			// sticky bit contains writes to the owner (as in /tmp).
+			if info.Mode().Perm()&0o022 != 0 && info.Mode()&os.ModeSticky == 0 {
+				return fmt.Errorf("data base ancestor %q is writable by group or other", current)
 			}
 			return nil
 		}

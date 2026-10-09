@@ -40,9 +40,48 @@ func TestResolveFromUsesLoginArgv(t *testing.T) {
 	if err := os.WriteFile(path, []byte("tester:x:1000:1000::/home/tester:/bin/sh\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	resolved, err := validateExecutable("/bin/sh")
+	if err != nil {
+		t.Skipf("host /bin/sh is unavailable: %v", err)
+	}
 	got := resolveShellFrom(1000, path)
-	if got.Path != "/bin/sh" || !reflect.DeepEqual(got.Argv, []string{"/bin/sh", "-l"}) || got.Reason != "" {
+	if got.Path != resolved || !reflect.DeepEqual(got.Argv, []string{resolved, "-l"}) || got.Reason != "" {
 		t.Fatalf("selection = %#v", got)
+	}
+}
+
+func TestValidateExecutableRejectsWritableAndSpecialModes(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "shell")
+	if err := os.WriteFile(path, []byte("x"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o775); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateExecutable(path); err == nil {
+		t.Fatal("accepted group-writable shell")
+	}
+	if err := os.Chmod(path, 0o700|os.ModeSetuid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateExecutable(path); err == nil {
+		t.Fatal("accepted setuid shell")
+	}
+}
+
+func TestShellFromPasswdRejectsUnsafeDatabaseFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "passwd")
+	// WriteFile is umask-filtered: set the mode explicitly afterwards.
+	if err := os.WriteFile(path, []byte("tester:x:1000:1000::/home/tester:/bin/sh\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o664); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := shellFromPasswd(1000, path); err == nil {
+		t.Fatal("accepted group-writable passwd database")
 	}
 }
 
@@ -176,7 +215,7 @@ func TestResolveFromChecksResolvedShellVisibility(t *testing.T) {
 	}
 
 	selection = resolveFrom(1000, passwd, func(path string) bool { return path == link || path == target })
-	if selection.Path != link || !reflect.DeepEqual(selection.Argv, []string{link, "-l"}) || selection.Reason != "" {
+	if selection.Path != target || !reflect.DeepEqual(selection.Argv, []string{target, "-l"}) || selection.Reason != "" {
 		t.Fatalf("selection = %#v", selection)
 	}
 }

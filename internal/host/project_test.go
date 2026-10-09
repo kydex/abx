@@ -70,6 +70,44 @@ func TestResolveRejectsHomeItself(t *testing.T) {
 	}
 }
 
+func TestResolveRejectsForeignOwnedAndWorldWritableProject(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	data := filepath.Join(home, ".local", "share", "abx")
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	own := filepath.Join(root, "own")
+	if err := os.Mkdir(own, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if os.Getuid() == 0 {
+		foreign := filepath.Join(root, "foreign")
+		if err := os.Mkdir(foreign, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chown(foreign, 65534, 65534); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ResolveProject(foreign, home, data); err == nil {
+			t.Error("accepted foreign-owned project")
+		}
+	}
+	wide := filepath.Join(root, "wide")
+	if err := os.Mkdir(wide, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(wide, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolveProject(wide, home, data); err == nil {
+		t.Error("accepted world-writable project")
+	}
+	if _, err := ResolveProject(own, home, data); err != nil {
+		t.Errorf("owned project rejected: %v", err)
+	}
+}
+
 func TestResolveRejectsHomeAndSensitiveOverlaps(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "users", "tester")

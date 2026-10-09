@@ -51,6 +51,9 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 	if !info.IsDir() {
 		return "", fmt.Errorf("current path %q is not a directory", project)
 	}
+	if err := checkProjectOwner(info, project); err != nil {
+		return "", err
+	}
 	project = filepath.Clean(project)
 	if project == string(filepath.Separator) {
 		return "", fmt.Errorf("project %q is the filesystem root", project)

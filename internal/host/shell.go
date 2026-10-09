@@ -33,7 +33,7 @@ func resolveFrom(uid int, passwdPath string, visible func(string) bool) Selectio
 	if err == nil {
 		var resolved string
 		if resolved, err = validateExecutable(path); err == nil && visible(path) && visible(resolved) {
-			return Selection{Path: path, Argv: []string{path, "-l"}}
+			return Selection{Path: resolved, Argv: []string{resolved, "-l"}}
 		}
 		if err == nil && !visible(resolved) {
 			err = fmt.Errorf("login shell %q resolves outside read-only system mounts to %q", path, resolved)
@@ -47,8 +47,32 @@ func resolveFrom(uid int, passwdPath string, visible func(string) bool) Selectio
 	return Selection{Reason: fmt.Sprintf("login shell %q is outside read-only system mounts", path)}
 }
 
+// checkPasswdFile pins the trust assumptions on the account database file:
+// a regular file without privilege-escalation bits that group and other
+// cannot rewrite. The account lookup path (resolveAccount) goes through NSS
+// and names no file, so only the direct reader is checked here.
+func checkPasswdFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("stat passwd database %q: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("passwd database %q is not a regular file", path)
+	}
+	if info.Mode().Perm()&0o022 != 0 {
+		return fmt.Errorf("passwd database %q is writable by group or other", path)
+	}
+	if info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+		return fmt.Errorf("passwd database %q has setuid, setgid, or sticky bit", path)
+	}
+	return nil
+}
+
 func shellFromPasswd(uid int, path string) (string, error) {
 	// #nosec G304 -- production passes fixed /etc/passwd; the parameter is a deterministic test seam.
+	if err := checkPasswdFile(path); err != nil {
+		return "", err
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("open passwd database: %w", err)
@@ -87,8 +111,17 @@ func validateExecutable(path string) (string, error) {
 		}
 		return "", fmt.Errorf("stat login shell %q: %w", path, err)
 	}
+	// Ownership is deliberately not required: user-managed shells live under
+	// system paths too (for example /usr/local/bin), and visibility already
+	// constrains shells to mounted system trees.
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 || unix.Access(path, unix.X_OK) != nil {
 		return "", fmt.Errorf("login shell %q is not a regular file executable by the invoking user", path)
+	}
+	if info.Mode().Perm()&0o022 != 0 {
+		return "", fmt.Errorf("login shell %q is writable by group or other", path)
+	}
+	if info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+		return "", fmt.Errorf("login shell %q has setuid, setgid, or sticky bit", path)
 	}
 	return resolved, nil
 }

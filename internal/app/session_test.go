@@ -72,6 +72,23 @@ func TestSessionToolFailureNeverPreparesMountpoint(t *testing.T) {
 	}
 }
 
+func TestUnknownCommandExits2(t *testing.T) {
+	var out, stderr bytes.Buffer
+	if status := Run(context.Background(), []string{"nosuch"}, bwrap.Stdio{Out: &out, Err: &stderr}); status != 2 {
+		t.Fatalf("unknown command = status %d", status)
+	}
+}
+
+func TestNoVerificationPassedOnFailedRuns(t *testing.T) {
+	for _, args := range [][]string{{"verify", "nosuchprofile"}, {"run", "nosuchprofile"}} {
+		var out, stderr bytes.Buffer
+		status := Run(context.Background(), args, bwrap.Stdio{Out: &out, Err: &stderr})
+		if status != 1 || strings.Contains(out.String(), "Verification passed") {
+			t.Fatalf("%q = status %d, stdout %q", args, status, out.String())
+		}
+	}
+}
+
 func TestProbeInvocationRequiresPayload(t *testing.T) {
 	if os.Getuid() == 0 || os.Geteuid() == 0 || os.Geteuid() != os.Getuid() {
 		t.Skip("public CLI requires a non-root user")
@@ -91,6 +108,24 @@ func TestProbeInvocationRequiresPayload(t *testing.T) {
 				t.Fatalf("probe invocation = status %d, stdout %q, stderr %q", status, out.String(), stderr.String())
 			}
 		})
+	}
+}
+
+func TestEffectiveIDValidation(t *testing.T) {
+	if err := validateEffectiveUID(1000, 1000); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateEffectiveUID(0, 1000); err == nil {
+		t.Error("setuid root accepted")
+	}
+	if err := validateEffectiveUID(0, 0); err == nil {
+		t.Error("root accepted")
+	}
+	if err := validateEffectiveGID(100, 100); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateEffectiveGID(100, 0); err == nil {
+		t.Error("setgid accepted")
 	}
 }
 

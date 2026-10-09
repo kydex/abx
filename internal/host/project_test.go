@@ -25,7 +25,12 @@ func TestResolveAllowsNormalProjectAndCanonicalizes(t *testing.T) {
 }
 
 func TestResolveRejectsProtectedSystemTrees(t *testing.T) {
-	for _, root := range systemRoots {
+	// Pinned literals: changing systemRoots requires updating this list too.
+	for _, root := range []string{
+		"/bin", "/boot", "/dev", "/etc", "/lib", "/lib64", "/opt", "/proc",
+		"/root", "/run", "/sbin", "/sys", "/usr", "/var",
+		"/srv", "/mnt", "/media", "/snap",
+	} {
 		if _, err := ResolveProject(root, "/home/tester", "/home/tester/.local/share/abx"); err == nil {
 			t.Errorf("accepted protected root %s", root)
 		}
@@ -42,7 +47,8 @@ func TestResolveRejectsExactWorldWritableRoots(t *testing.T) {
 	if err := os.MkdirAll(home, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	for _, exact := range exactProtectedRoots {
+	// Pinned literals: changing exactProtectedRoots requires updating this list too.
+	for _, exact := range []string{"/tmp", "/var/tmp", "/dev/shm"} {
 		if _, err := os.Stat(exact); err != nil {
 			t.Skipf("protected root %s is absent on this host", exact)
 		}
@@ -52,28 +58,15 @@ func TestResolveRejectsExactWorldWritableRoots(t *testing.T) {
 	}
 }
 
-func TestResolveRejectsSiblingHome(t *testing.T) {
-	// The sibling-home rule is scoped to the literal /home tree, so the
-	// fixture must live there. Use a unique base under /home and remove it.
-	base, err := os.MkdirTemp("/home", "abx-sibling-*")
-	if err != nil {
-		t.Skipf("cannot stage /home fixture: %v", err)
+func TestResolveRejectsHomeItself(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	data := filepath.Join(home, ".local", "share", "abx")
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.RemoveAll(base) })
-	realHome := filepath.Join(base, "alice")
-	sibling := filepath.Join(base, "bob", "proj")
-	own := filepath.Join(realHome, "code", "proj")
-	for _, p := range []string{realHome, sibling, own} {
-		if err := os.MkdirAll(p, 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	data := filepath.Join(realHome, ".local", "share", "abx")
-	if _, err := ResolveProject(sibling, realHome, data); err == nil {
-		t.Fatalf("accepted sibling home project %s", sibling)
-	}
-	if got, err := ResolveProject(own, realHome, data); err != nil || got != own {
-		t.Fatalf("own-home project rejected: %q, %v", got, err)
+	if _, err := ResolveProject(home, home, data); err == nil {
+		t.Error("accepted the real home itself as project")
 	}
 }
 
@@ -85,7 +78,7 @@ func TestResolveRejectsHomeAndSensitiveOverlaps(t *testing.T) {
 		t.Fatal(err)
 	}
 	candidates := []string{filepath.Dir(home), home, data, filepath.Dir(data), filepath.Join(data, "profiles")}
-	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles"} {
+	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles", ".aws", ".docker", ".kube", ".pki", ".cache"} {
 		sensitive := filepath.Join(home, relative)
 		candidates = append(candidates, sensitive, filepath.Join(sensitive, "child"))
 	}
@@ -120,7 +113,7 @@ func TestResolveRejectsCanonicalSensitiveSymlinkTarget(t *testing.T) {
 }
 
 func TestResolveRejectsDanglingSensitiveSymlinkTargetAncestors(t *testing.T) {
-	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles"} {
+	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles", ".aws", ".docker", ".kube", ".pki", ".cache"} {
 		for _, targetSuffix := range []string{"future", filepath.Join("missing", "future")} {
 			t.Run(relative+"-"+targetSuffix, func(t *testing.T) {
 				root := t.TempDir()

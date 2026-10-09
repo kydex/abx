@@ -28,6 +28,34 @@ func TestAccountFromPasswd(t *testing.T) {
 			t.Fatalf("accepted invalid account %#v", tc)
 		}
 	}
+	dangling := filepath.Join(filepath.Dir(home), "dangling-home")
+	if err := os.Symlink(filepath.Join(filepath.Dir(home), "missing"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := accountFromPasswd(1000, "tester", dangling); err == nil {
+		t.Error("accepted dangling symlink as home")
+	}
+	fileHome := filepath.Join(filepath.Dir(home), "file-home")
+	if err := os.WriteFile(fileHome, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := accountFromPasswd(1000, "tester", fileHome); err == nil {
+		t.Error("accepted regular file as home")
+	}
+	if os.Getuid() != 0 {
+		lockedParent := filepath.Join(filepath.Dir(home), "locked-parent")
+		lockedHome := filepath.Join(lockedParent, "home")
+		if err := os.MkdirAll(lockedHome, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(lockedParent, 0o000); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(lockedParent, 0o700) })
+		if _, err := accountFromPasswd(1000, "tester", lockedHome); err == nil {
+			t.Error("accepted unreachable home")
+		}
+	}
 }
 
 func TestResolveAccountLookupPaths(t *testing.T) {
@@ -108,6 +136,16 @@ func TestResolvePathsRejectsUnsafeDataBase(t *testing.T) {
 		account := Account{UID: uid, Username: "tester", Home: mkhome(t)}
 		if _, err := ResolvePaths(account, "/usr/abx-test-unowned-data"); err == nil || !strings.Contains(err.Error(), "not owned") {
 			t.Fatalf("data base under unowned ancestor accepted: %v", err)
+		}
+	})
+	t.Run("file as base", func(t *testing.T) {
+		account := Account{UID: uid, Username: "tester", Home: mkhome(t)}
+		base := filepath.Join(t.TempDir(), "filebase")
+		if err := os.WriteFile(base, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ResolvePaths(account, base); err == nil {
+			t.Fatalf("file data base accepted: %v", err)
 		}
 	})
 }

@@ -108,9 +108,11 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	output := &limitedBuffer{limit: 4096}
 	cmd.Stdout = output
 	cmd.Stderr = output
-	if err = markInheritedFDsCloseOnExec(cmd.ExtraFiles); err != nil {
+	restoreFDs, err := markInheritedFDsCloseOnExec(cmd.ExtraFiles)
+	if err != nil {
 		return nil, err
 	}
+	defer restoreFDs()
 	if err = cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return nil, fmt.Errorf("bubblewrap version probe timed out after 5s: %w", ctx.Err())
@@ -123,7 +125,7 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	return t, nil
 }
 
-func markInheritedFDsCloseOnExec(extra []*os.File) error {
+func markInheritedFDsCloseOnExec(extra []*os.File) (func(), error) {
 	keep := map[int]bool{0: true, 1: true, 2: true}
 	for _, file := range extra {
 		if file != nil {
@@ -132,21 +134,38 @@ func markInheritedFDsCloseOnExec(extra []*os.File) error {
 	}
 	entries, err := os.ReadDir("/proc/self/fd")
 	if err != nil {
-		return fmt.Errorf("read inherited file descriptors: %w", err)
+		return nil, fmt.Errorf("read inherited file descriptors: %w", err)
 	}
+	var savedFDs, savedFlags []int
 	for _, entry := range entries {
 		fd, parseErr := strconv.Atoi(entry.Name())
 		if parseErr != nil || fd < 3 || keep[fd] {
+			continue
+		}
+		flags, err := unix.FcntlInt(uintptr(fd), unix.F_GETFD, 0)
+		if err != nil {
+			if errors.Is(err, unix.EBADF) {
+				continue
+			}
+			return nil, fmt.Errorf("read file descriptor %d flags: %w", fd, err)
+		}
+		if flags&unix.FD_CLOEXEC != 0 {
 			continue
 		}
 		if _, err = unix.FcntlInt(uintptr(fd), unix.F_SETFD, unix.FD_CLOEXEC); err != nil {
 			if errors.Is(err, unix.EBADF) {
 				continue
 			}
-			return fmt.Errorf("mark file descriptor %d close-on-exec: %w", fd, err)
+			return nil, fmt.Errorf("mark file descriptor %d close-on-exec: %w", fd, err)
 		}
+		savedFDs = append(savedFDs, fd)
+		savedFlags = append(savedFlags, flags)
 	}
-	return nil
+	return func() {
+		for i, fd := range savedFDs {
+			_, _ = unix.FcntlInt(uintptr(fd), unix.F_SETFD, savedFlags[i])
+		}
+	}, nil
 }
 
 var versionPattern = regexp.MustCompile(`^bubblewrap ([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`)
@@ -271,9 +290,11 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	signals := make(chan os.Signal, 4)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(signals)
-	if err := markInheritedFDsCloseOnExec(cmd.ExtraFiles); err != nil {
+	restoreFDs, err := markInheritedFDsCloseOnExec(cmd.ExtraFiles)
+	if err != nil {
 		return 1, err
 	}
+	defer restoreFDs()
 	if err := cmd.Start(); err != nil {
 		return 1, fmt.Errorf("start Bubblewrap: %w", err)
 	}
@@ -293,7 +314,7 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 			}
 		}
 	}()
-	err := cmd.Wait()
+	err = cmd.Wait()
 	close(done)
 	forwardErr := <-forwarded
 	if forwardErr != nil {

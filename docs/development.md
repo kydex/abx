@@ -54,7 +54,7 @@ Equivalent command:
 env ABX_LIVE=1 go test -count=1 ./...
 ```
 
-Live tests execute real Bubblewrap sessions and cover runtime behavior that ordinary unit tests cannot prove. A root run does not replace a regular-user live run.
+Live tests execute real Bubblewrap sessions and cover runtime behavior that ordinary unit tests cannot prove. A root run does not replace a regular-user live run. Unit tests also skip by UID: root-only and non-root-only cases never run together, so no single machine executes the full set; CI runs non-root.
 
 To focus on one scenario:
 

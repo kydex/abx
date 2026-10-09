@@ -43,7 +43,8 @@ package:
 	test -n "$$version" || { echo "error: cannot read version from internal/app/VERSION" >&2; exit 1; }; \
 	bash scripts/package.sh "v$$version"
 
-# Unpacks both archives and checks structure plus the embedded version.
+# Verifies the checksum manifest, unpacks both archives and checks structure
+# against the mandatory file list plus the embedded version.
 # The release binary itself is not executed, so this works for any caller.
 package-smoke:
 	@set -eu; \
@@ -52,12 +53,31 @@ package-smoke:
 	trap 'rm -rf "$$work"' EXIT HUP INT TERM; \
 	test -f "dist/abx-$$version-linux-amd64.tar.gz"; \
 	test -f "dist/abx-$$version-source.tar.gz"; \
+	test -f "dist/abx-$$version-SHA256SUMS"; \
+	(cd dist && sha256sum -c "abx-$$version-SHA256SUMS"); \
 	tar -xzf "dist/abx-$$version-linux-amd64.tar.gz" -C "$$work"; \
 	test -x "$$work/abx-$$version-linux-amd64/abx"; \
+	test -f "$$work/abx-$$version-linux-amd64/LICENSE"; \
+	test -f "$$work/abx-$$version-linux-amd64/README.md"; \
+	test -d "$$work/abx-$$version-linux-amd64/docs"; \
 	tar -xzf "dist/abx-$$version-source.tar.gz" -C "$$work"; \
-	test -f "$$work/abx-$$version-source/go.mod"; \
-	test -f "$$work/abx-$$version-source/.golangci.yml"; \
+	test -d "$$work/abx-$$version-source/cmd"; \
 	test -d "$$work/abx-$$version-source/internal"; \
+	test -d "$$work/abx-$$version-source/scripts"; \
+	test -d "$$work/abx-$$version-source/docs"; \
+	test -d "$$work/abx-$$version-source/.github"; \
+	test -f "$$work/abx-$$version-source/go.mod"; \
+	test -f "$$work/abx-$$version-source/go.sum"; \
+	test -f "$$work/abx-$$version-source/Makefile"; \
+	test -f "$$work/abx-$$version-source/README.md"; \
+	test -f "$$work/abx-$$version-source/README.ru.md"; \
+	test -f "$$work/abx-$$version-source/AGENTS.md"; \
+	test -f "$$work/abx-$$version-source/AGENTS.ru.md"; \
+	test -f "$$work/abx-$$version-source/CHANGELOG.md"; \
+	test -f "$$work/abx-$$version-source/LICENSE"; \
+	test -f "$$work/abx-$$version-source/THIRD_PARTY_LICENSES"; \
+	test -f "$$work/abx-$$version-source/.gitignore"; \
+	test -f "$$work/abx-$$version-source/.golangci.yml"; \
 	test "$$(cat "$$work/abx-$$version-source/internal/app/VERSION")" = "$$version"; \
 	printf 'package smoke ok: %s\n' "$$version"
 

@@ -68,6 +68,92 @@ func TestSourcesRemainBoundToOpenedObject(t *testing.T) {
 	}
 }
 
+func countOpenFDs(t *testing.T) int {
+	t.Helper()
+	entries, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		t.Skipf("no /proc/self/fd: %v", err)
+	}
+	return len(entries)
+}
+
+func TestCreateProfileDoesNotLeakFDs(t *testing.T) {
+	before := countOpenFDs(t)
+	base := t.TempDir()
+	home := filepath.Join(base, "home")
+	if err := os.Mkdir(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	account := Account{UID: os.Getuid(), Username: "tester", Home: home}
+	paths, err := ResolvePaths(account, filepath.Join(base, "data"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateProfile(account, paths, "demo"); err != nil {
+		t.Fatal(err)
+	}
+	if got := countOpenFDs(t); got != before {
+		t.Fatalf("CreateProfile leaked %d descriptors", got-before)
+	}
+}
+
+func TestDiscoverSystemMatchesPinnedPolicy(t *testing.T) {
+	// Independent literals: changing discovery or allowedSystemTarget
+	// (internal/sandbox/plan.go) requires updating this list too.
+	allowed := map[string]bool{
+		"/usr": true, "/bin": true, "/sbin": true, "/lib": true, "/lib64": true,
+		"/etc/hosts": true, "/etc/resolv.conf": true, "/etc/nsswitch.conf": true,
+		"/etc/gai.conf": true, "/etc/passwd": true, "/etc/group": true,
+		"/etc/ssl": true, "/etc/ca-certificates": true, "/etc/pki": true,
+		"/etc/ld.so.cache": true, "/etc/ld.so.conf": true, "/etc/ld.so.conf.d": true,
+		"/etc/localtime": true, "/etc/timezone": true, "/etc/os-release": true,
+		"/etc/shells": true, "/etc/alternatives": true,
+	}
+	in := fixture(t)
+	if err := in.discoverSystem("/"); err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, s := range in.system {
+		if !allowed[s.Target] {
+			t.Errorf("discovered target %q outside pinned policy", s.Target)
+		}
+		seen[s.Target] = true
+	}
+	if !seen["/usr"] {
+		t.Error("/usr not discovered")
+	}
+	for _, p := range []string{"/bin", "/sbin", "/lib", "/lib64"} {
+		if _, err := os.Lstat(p); err != nil {
+			continue
+		}
+		if !seen[p] {
+			t.Errorf("present %s not discovered", p)
+		}
+	}
+	for _, name := range []string{"hosts", "resolv.conf", "nsswitch.conf", "gai.conf", "passwd", "group", "ssl", "ca-certificates", "pki", "ld.so.cache", "ld.so.conf", "ld.so.conf.d", "localtime", "timezone", "os-release", "shells", "alternatives"} {
+		if _, err := os.Lstat("/etc/" + name); err != nil {
+			continue
+		}
+		if !seen["/etc/"+name] {
+			t.Errorf("present /etc/%s not discovered", name)
+		}
+	}
+}
+
+func TestVisibleInSandboxRootsPinned(t *testing.T) {
+	for path, want := range map[string]bool{
+		"/usr/bin/sh": true, "/usr": true, "/bin/sh": true,
+		"/etc/alternatives": true, "/etc/alternatives/mplayer": true,
+		"/etc/passwd": false, "/etc/shadow": false, "/etc/group": false,
+		"/opt/tool": false, "/home/u/sh": false, "/sbin/init": true,
+	} {
+		if got := visibleInSandbox(path); got != want {
+			t.Errorf("visibleInSandbox(%q) = %v, want %v", path, got, want)
+		}
+	}
+}
+
 func TestSkillsTargetsRejectSymlinksBeforeMutation(t *testing.T) {
 	for _, target := range []string{".agents", ".agents/skills"} {
 		t.Run(target, func(t *testing.T) {
@@ -87,6 +173,28 @@ func TestSkillsTargetsRejectSymlinksBeforeMutation(t *testing.T) {
 			entries, e := os.ReadDir(outside)
 			if e != nil || len(entries) != 0 {
 				t.Fatal("modified external target")
+			}
+		})
+	}
+	// The flag under test is RESOLVE_NO_SYMLINKS: an inside-home target must
+	// fail too, not just outside-home ones (RESOLVE_BENEATH alone allows them).
+	for _, target := range []string{".agents", ".agents/skills"} {
+		t.Run("inside-home-"+target, func(t *testing.T) {
+			in := fixture(t)
+			if target != ".agents" {
+				if e := os.Mkdir(filepath.Join(in.home, ".agents"), 0o700); e != nil {
+					t.Fatal(e)
+				}
+			}
+			inside := filepath.Join(in.home, "other")
+			if e := os.Mkdir(inside, 0o700); e != nil {
+				t.Fatal(e)
+			}
+			if e := os.Symlink(inside, filepath.Join(in.home, target)); e != nil {
+				t.Fatal(e)
+			}
+			if e := in.observeSkills(); e == nil {
+				t.Fatal("accepted inside-home symlink target")
 			}
 		})
 	}

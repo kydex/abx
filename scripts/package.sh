@@ -27,9 +27,20 @@ if $in_git; then
         printf 'error: git work tree is not clean; commit or stash changes before packaging\n' >&2
         exit 2
     fi
+    # M-019: diff --quiet ignores untracked files, yet the binary is built
+    # from the working directory while the source archive is staged from
+    # tracked files only. Refuse untracked clutter so a single build cannot
+    # produce a binary and a source archive with different contents.
+    if [ -n "$(git -C "$root" ls-files --others --exclude-standard)" ]; then
+        printf 'error: untracked files present; commit, stash, or remove them before packaging\n' >&2
+        exit 2
+    fi
 fi
 umask 022
 mkdir -p dist
+# A-067: drop stale archives first so a failed build cannot leave old files
+# behind for a later smoke check to bless.
+rm -f dist/abx-"$version"-linux-amd64.tar.gz dist/abx-"$version"-source.tar.gz dist/abx-"$version"-SHA256SUMS
 stage=$(mktemp -d)
 trap 'rm -rf -- "$stage"' EXIT
 name="abx-$version-linux-amd64"
@@ -55,5 +66,17 @@ else
     cp -R cmd internal scripts docs .github "$stage/$source/"
 fi
 cp go.mod go.sum Makefile README.md README.ru.md AGENTS.md AGENTS.ru.md CHANGELOG.md LICENSE THIRD_PARTY_LICENSES .gitignore .golangci.yml "$stage/$source/"
+if $in_git; then
+    # M-020: every tracked top-level path must land in the source archive.
+    # A new directory or root file that is not staged fails here instead of
+    # silently dropping out of the release.
+    missing=$(git -C "$root" ls-files | sed 's|/.*||' | sort -u | while IFS= read -r top; do
+        [ -e "$stage/$source/$top" ] || printf '%s\n' "$top"
+    done)
+    if [ -n "$missing" ]; then
+        printf 'error: tracked top-level paths missing from source archive:\n%s\n' "$missing" >&2
+        exit 2
+    fi
+fi
 tar --owner=0 --group=0 --numeric-owner -C "$stage" -czf "dist/$source.tar.gz" "$source"
 (cd dist && sha256sum "$name.tar.gz" "$source.tar.gz" > "abx-$version-SHA256SUMS")

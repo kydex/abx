@@ -92,6 +92,99 @@ func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 	}
 }
 
+func countOpenFDs(t *testing.T) int {
+	t.Helper()
+	entries, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		t.Skipf("no /proc/self/fd: %v", err)
+	}
+	return len(entries)
+}
+
+func TestToolOpenCloseDoesNotLeakFDs(t *testing.T) {
+	before := countOpenFDs(t)
+	path := writeScript(t, `if [ "$1" = "--version" ]; then
+  printf 'bubblewrap 0.12.0\n'
+fi`)
+	tool, err := open(context.Background(), path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := tool.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if got := countOpenFDs(t); got != before {
+		t.Fatalf("open/close leaked %d descriptors", got-before)
+	}
+	if _, err := open(context.Background(), filepath.Join(t.TempDir(), "missing"), false); err == nil {
+		t.Fatal("opened missing tool")
+	}
+	if got := countOpenFDs(t); got != before {
+		t.Fatalf("failed open leaked %d descriptors", got-before)
+	}
+}
+
+func TestEnvironmentValuesStaySingleArgvElements(t *testing.T) {
+	env, err := sandbox.Session("tester", "/bin/sh", "/home/agent", []string{
+		"TERM=xterm", "LC_SPACED=a b", "LC_DOLLAR=$(x)", "LC_QUOTE=a'b\"c", "LC_EMPTY=",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := sandbox.Build(sandbox.Input{Home: "/profile", Project: "", Mode: sandbox.Shell, Skills: "/skills", System: []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/system", Target: "/usr"}}, Environment: env, Command: []string{"/bin/sh", "-l"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	devnull, err := os.Open("/dev/null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer devnull.Close()
+	args, _, err := Translate(p, func(string) (*os.File, error) { return devnull, nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := map[string]string{}
+	for i := 0; i+2 < len(args); i++ {
+		if args[i] == "--setenv" {
+			found[args[i+1]] = args[i+2]
+		}
+	}
+	for k, v := range map[string]string{"LC_SPACED": "a b", "LC_DOLLAR": "$(x)", "LC_QUOTE": `a'b"c`, "LC_EMPTY": ""} {
+		if found[k] != v {
+			t.Errorf("--setenv %s = %q, want single element %q", k, found[k], v)
+		}
+	}
+}
+
+func TestExecuteRunsBinaryAtRetainedFD(t *testing.T) {
+	path := writeScript(t, `if [ "$1" = "--version" ]; then
+  printf 'bubblewrap 0.12.0\n'
+  exit 0
+fi
+printf 'SELF=%s\n' "$0"`)
+	tool, err := open(context.Background(), path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tool.Close()
+	// Shell fixture lends three bind sources (/system, /profile, /skills),
+	// so the retained binary must be reachable at fd 3+3.
+	devnull, err := os.Open("/dev/null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer devnull.Close()
+	var out bytes.Buffer
+	status, err := Execute(context.Background(), tool, plan(t, sandbox.Shell), func(string) (*os.File, error) { return devnull, nil }, Stdio{Out: &out, Err: io.Discard})
+	if err != nil || status != 0 {
+		t.Fatalf("Execute = status %d, err %v", status, err)
+	}
+	if !strings.Contains(out.String(), "SELF=/proc/self/fd/6") {
+		t.Fatalf("binary did not run from retained fd: %q", out.String())
+	}
+}
+
 // versionOK is a test-only shorthand for the production version check.
 func versionOK(s string) bool { return validateVersion(s) == nil }
 
@@ -167,7 +260,8 @@ func TestMarkInheritedFDsKeepsExplicitFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := markInheritedFDsCloseOnExec([]*os.File{keep}); err != nil {
+	restore, err := markInheritedFDsCloseOnExec([]*os.File{keep})
+	if err != nil {
 		t.Fatal(err)
 	}
 	keepFlags, err := unix.FcntlInt(keep.Fd(), unix.F_GETFD, 0)
@@ -183,6 +277,14 @@ func TestMarkInheritedFDsKeepsExplicitFiles(t *testing.T) {
 	}
 	if unknownFlags&unix.FD_CLOEXEC == 0 {
 		t.Fatal("inherited descriptor remained open across exec")
+	}
+	restore()
+	unknownFlags, err = unix.FcntlInt(unknown.Fd(), unix.F_GETFD, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unknownFlags&unix.FD_CLOEXEC != 0 {
+		t.Fatal("inherited descriptor flags were not restored")
 	}
 }
 

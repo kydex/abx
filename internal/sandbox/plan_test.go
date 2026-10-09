@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -307,6 +308,72 @@ func TestValidateRejectsPolicyMutations(t *testing.T) {
 					t.Fatal("accepted mutated plan")
 				}
 			})
+		}
+	}
+}
+
+func TestValidateRejectsExpectedMutations(t *testing.T) {
+	usrExpected := func(t *testing.T, p *Plan) int {
+		t.Helper()
+		for i, m := range p.expected.system {
+			if m.Target == "/usr" {
+				return i
+			}
+		}
+		t.Fatal("no expected /usr")
+		return -1
+	}
+	tests := []struct {
+		name   string
+		mode   Mode
+		want   string
+		mutate func(*testing.T, *Plan)
+	}{
+		{name: "relative home source", want: "invalid plan expected source", mutate: func(_ *testing.T, p *Plan) { p.expected.homeSource = "relative" }},
+		{name: "relative skills source", want: "invalid plan expected source", mutate: func(_ *testing.T, p *Plan) { p.expected.skillsSource = "relative" }},
+		{name: "unknown kind", want: "invalid plan kind", mutate: func(_ *testing.T, p *Plan) { p.expected.kind = planKind(0) }},
+		{name: "empty command", want: "invalid plan command", mutate: func(_ *testing.T, p *Plan) { p.command = nil }},
+		{name: "writable expected usr", want: "invalid expected system mount", mutate: func(t *testing.T, p *Plan) { p.expected.system[usrExpected(t, p)].Kind = Writable }},
+		{name: "usr with mode", want: "invalid expected system mount", mutate: func(t *testing.T, p *Plan) { p.expected.system[usrExpected(t, p)].Mode = 0o755 }},
+		{name: "missing expected usr", want: "expected system /usr is required", mutate: func(t *testing.T, p *Plan) {
+			i := usrExpected(t, p)
+			p.expected.system = append(p.expected.system[:i], p.expected.system[i+1:]...)
+		}},
+		{name: "reordered system mount", want: "invalid plan system mount", mutate: func(_ *testing.T, p *Plan) { p.mounts[len(baseMounts())].Target = "/etc/hosts" }},
+		{name: "shell workspace mount", mode: Shell, want: "shell plan contains workspace", mutate: func(_ *testing.T, p *Plan) {
+			p.mounts = append(p.mounts, Mount{Kind: Writable, Source: "/project", Target: "/workspace"})
+		}},
+	}
+	for _, tc := range tests {
+		mode := tc.mode
+		if mode == 0 {
+			mode = Run
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Build(testInput(t, mode))
+			if err != nil {
+				t.Fatal(err)
+			}
+			tc.mutate(t, &p)
+			err = p.Validate()
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("Validate() = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestAllowedSystemTargetsPinned(t *testing.T) {
+	// Independent literals: changing allowedSystemTarget requires updating
+	// this list too, in both directions.
+	for _, target := range []string{"/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc/hosts", "/etc/resolv.conf", "/etc/nsswitch.conf", "/etc/gai.conf", "/etc/passwd", "/etc/group", "/etc/ssl", "/etc/ca-certificates", "/etc/pki", "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d", "/etc/localtime", "/etc/timezone", "/etc/os-release", "/etc/shells", "/etc/alternatives"} {
+		if !allowedSystemTarget(target) {
+			t.Errorf("pinned target %q rejected", target)
+		}
+	}
+	for _, target := range []string{"", "/", "/etc/shadow", "/etc/gshadow", "/etc/sudoers", "/etc/passwd.old", "/etc", "/root", "/home/agent"} {
+		if allowedSystemTarget(target) {
+			t.Errorf("non-policy target %q accepted", target)
 		}
 	}
 }

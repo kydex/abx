@@ -115,6 +115,7 @@ func FuzzSession(f *testing.F) {
 	f.Add("tester", "/usr/bin/bash", "/workspace", "TERM=xterm")
 	f.Add("", "", "", "")
 	f.Add("u", "/bin/sh", "/home/agent", "LC_ALL=C.UTF-8")
+	fixed := map[string]bool{"HOME": true, "USER": true, "LOGNAME": true, "SHELL": true, "PWD": true, "TMPDIR": true, "XDG_CONFIG_HOME": true, "XDG_DATA_HOME": true, "XDG_CACHE_HOME": true, "XDG_STATE_HOME": true, "XDG_RUNTIME_DIR": true, "BUN_INSTALL": true, "NPM_CONFIG_PREFIX": true, "PATH": true}
 	f.Fuzz(func(t *testing.T, username, shell, cwd, host string) {
 		entries, err := Session(username, shell, cwd, []string{host})
 		if err != nil {
@@ -136,6 +137,9 @@ func FuzzSession(f *testing.F) {
 			prev = e.Name
 			if strings.ContainsRune(e.Value, 0) {
 				t.Fatalf("NUL in session value: %#v", e)
+			}
+			if !allowed(e.Name) && !fixed[e.Name] {
+				t.Fatalf("non-allowlisted session variable: %#v", e)
 			}
 		}
 	})

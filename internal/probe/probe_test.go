@@ -6,9 +6,18 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/kydex/abx/internal/sandbox"
 )
+
+func TestProbePathMatchesSandbox(t *testing.T) {
+	if probePath != sandbox.ProbePath {
+		t.Fatalf("probePath = %q, sandbox.ProbePath = %q", probePath, sandbox.ProbePath)
+	}
+}
 
 func TestReadOnlyRequiresObservedMountFlags(t *testing.T) {
 	for _, tc := range []struct {
@@ -55,6 +64,24 @@ func TestPrivateProbeRejectsMissingObservations(t *testing.T) {
 		if err := Run(raw, &out); err == nil || out.Len() != 0 {
 			t.Fatal("accepted incomplete input")
 		}
+	}
+}
+
+func TestNamespaceNamesPinned(t *testing.T) {
+	// Keep in sync with the Translate flag prefix in internal/bwrap (no import:
+	// probe must not depend on the executor). "mnt" is implicit in Bubblewrap.
+	want := []string{"user", "mnt", "pid", "ipc", "uts"}
+	if !slices.Equal(NamespaceNames(), want) {
+		t.Fatalf("NamespaceNames() = %q, want %q", NamespaceNames(), want)
+	}
+}
+
+func TestPrivateProbeRejectsOversizedValidJSON(t *testing.T) {
+	raw := `{"Home":"` + strings.Repeat("x", 70000) + `"}`
+	var out bytes.Buffer
+	err := Run(raw, &out)
+	if err == nil || !strings.Contains(err.Error(), "probe input too large") || out.Len() != 0 {
+		t.Fatalf("oversized valid JSON = %q, %v", out.String(), err)
 	}
 }
 

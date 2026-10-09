@@ -24,10 +24,12 @@ const (
 type Mount struct {
 	Kind           Kind
 	Source, Target string
-	Mode           uint32
+	// Mode sets directory permissions via --perms; zero emits no --perms.
+	// System mounts with nonzero Mode are rejected.
+	Mode uint32
 	// Size caps a tmpfs mount in bytes; zero means no explicit limit.
-	// Only private tmpfs mounts set it, so unbounded temporary files
-	// cannot exhaust host memory.
+	// Only private tmpfs mounts set it; the device mount creates
+	// an unsized tmpfs.
 	Size uint64
 }
 
@@ -89,7 +91,7 @@ func baseMounts() []Mount {
 	return mounts
 }
 
-// tmpfsSize caps every sandbox tmpfs. Bubblewrap itself has no memory
+// tmpfsSize caps private tmpfs mounts. Bubblewrap itself has no memory
 // limits, and an unbounded tmpfs defaults to half the host RAM.
 const tmpfsSize = 4 << 30 // 4 GiB
 

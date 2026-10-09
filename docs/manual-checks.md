@@ -278,7 +278,7 @@ The command waits without output. After a couple of seconds, press **Ctrl+C once
 printf 'exit=%s\n' "$?"
 ```
 
-Expected: `exit=130`. Do not enter another command between return and reading `$?`.
+Expected: `exit=130`. Do not enter another command between return and reading `$?`. Note: only the launcher exit code is checked here; the payload itself receives SIGKILL, not the signal.
 
 ### 5.2 TERM
 

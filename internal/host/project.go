@@ -24,6 +24,9 @@ var sensitiveHomeTrees = []string{
 // exactProtectedRoots rejects exact matches without blocking subdirectories.
 // Overlap checks above would reject every TempDir-based test project if /tmp
 // were listed in systemRoots, so keep world-writable roots exact-only here.
+// /var/tmp and /dev/shm are already covered by /var and /dev in systemRoots,
+// so they only change the error text here. Do not remove /var or /dev from
+// systemRoots: without them, subdirectories outside these exact paths would pass.
 var exactProtectedRoots = []string{
 	"/tmp", "/var/tmp", "/dev/shm",
 }

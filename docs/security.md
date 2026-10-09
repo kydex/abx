@@ -14,11 +14,11 @@ This document describes the boundaries enforced by the current implementation. F
 | Current project | `/workspace`, writable, cwd | Not mounted |
 | Shared skills, if configured | `/home/agent/.agents/skills`, read-only | Same |
 | Selected system files | Read-only | Same |
-| `/tmp`, `/var/tmp`, `/run` | Private tmpfs | Same |
+| `/tmp`, `/var/tmp`, `/run` | Private tmpfs, 4 GiB each | Same |
 | `/proc`, `/dev` | Private/separate views | Same |
 | Network | Shared with host | Shared with host |
 
-Bubblewrap creates separate user, mount, PID, IPC, and UTS namespaces and sets the hostname to `abx`. ABX also passes `--disable-userns`, so code inside the sandbox cannot create another user namespace through Bubblewrap's supported mechanism. ABX passes `--die-with-parent`, so the sandbox processes are killed with SIGKILL when the launcher exits.
+Bubblewrap creates separate user, mount, PID, IPC, and UTS namespaces and sets the hostname to `abx`. ABX also passes `--disable-userns`, so code inside the sandbox cannot create another user namespace through Bubblewrap's supported mechanism. ABX passes `--die-with-parent`, so the sandbox processes are killed with SIGKILL when the launcher exits. This covers a running sandbox; a signal arriving while Bubblewrap is still setting up the sandbox, before its parent-death signal is armed, may leave an orphaned sandbox behind.
 
 The environment starts empty. ABX sets HOME, USER/LOGNAME, SHELL, PWD, TMPDIR, XDG paths, PATH, and npm/Bun locations. Only terminal/locale/color settings are forwarded from the host: `TERM`, `COLORTERM`, `LANG`, `LANGUAGE`, `TZ`, `NO_COLOR`, `FORCE_COLOR`, and valid `LC_*` variables.
 
@@ -38,9 +38,16 @@ ABX treats its storage and profiles as private data. Required ABX-owned director
 
 The current project is canonicalized before use. ABX rejects projects that overlap the filesystem root, the account home itself, ABX storage, protected system trees, or sensitive home trees (`.config`, `.ssh`, `.gnupg`, `dotfiles`, `.aws`, `.docker`, `.kube`, `.pki`, and `.cache`).
 
-Selected host sources are opened and retained by file descriptor. Before execution ABX revalidates them, and Bubblewrap receives bind sources through retained FDs rather than reopening the same path. This narrows pathname-replacement races between validation and mounting; it does not make the contents of writable files or directories immutable.
+Selected host sources are opened and retained by file descriptor. Before execution ABX revalidates them, and Bubblewrap receives bind sources through retained FDs rather than reopening the same path. This narrows pathname-replacement races between validation and mounting; it does not make the contents of writable files or directories immutable. Before execution ABX also closes every inherited file descriptor except the standard streams and the retained source descriptors, so unrelated host descriptors never reach the sandbox.
 
 The in-memory sandbox `Plan` is structurally validated when it is built and again before Bubblewrap translation. The validator checks the expected system sources, private mounts, profile/project roles, optional skills mount, working directory, command, and verification probe layout.
+
+ABX additionally validates the two host objects it executes:
+
+| Object | Check |
+|---|---|
+| `/usr/bin/bwrap` | Regular file, executable, no setuid/setgid/sticky bits, not writable by group/other, owned by root |
+| Login shell from `/etc/passwd` | Existing regular file, executable by the invoking user |
 
 ## Shared skills
 
@@ -64,8 +71,8 @@ A successful `verify` is evidence about that invocation and host state. It is no
 - Networking is shared, so sandboxed code can access network services reachable from the host and can transmit data it can read.
 - Project contents are not recursively sanitized. Projects may contain sockets, hard links, nested mounts, or intentionally dangerous source/build files.
 - The sandbox uses the caller's terminal directly. Terminal escape sequences and host-specific terminal ioctls remain part of the risk surface; ABX does not provide terminal-session isolation.
-- ABX does not define a seccomp policy or resource quotas. Security still depends on the Linux kernel, Bubblewrap, the host configuration, and the software executed inside the sandbox.
-- A hostile process running concurrently as the same host UID may still race changes in data that the user can modify. Retained descriptors and revalidation reduce important pathname-replacement windows but are not a complete same-UID adversary model. The known residual windows — agent-executable replacement between inspection and mount, profile entries changing between listing and inspection, data-base components appearing between canonicalization and use, and pathname-based metadata rechecks — are accepted as documented and are not tracked as findings. Mounts always use the retained descriptors, so a late swap cannot redirect what is mounted.
+- ABX does not define a seccomp policy or cgroup resource quotas (private tmpfs mounts are capped at 4 GiB each). Security still depends on the Linux kernel, Bubblewrap, the host configuration, and the software executed inside the sandbox.
+- A hostile process running concurrently as the same host UID may still race changes in data that the user can modify. Retained descriptors and revalidation reduce important pathname-replacement windows but are not a complete same-UID adversary model. The known residual windows — agent-executable replacement between inspection and execution, profile entries changing between listing and inspection, data-base components appearing between canonicalization and use, and pathname-based metadata rechecks — are accepted as documented and are not tracked as findings. Mounts always use the retained descriptors, so a late swap cannot redirect what is mounted.
 - Some failed operations may leave directories or verification probe files behind. ABX avoids recursive automatic rollback that could delete unrelated user data.
 
 ## Accepted trade-offs
@@ -73,7 +80,7 @@ A successful `verify` is evidence about that invocation and host state. It is no
 The following are deliberate current boundaries rather than pending implementation work:
 
 - **Runtime isolation:** networking is shared, the caller terminal is used directly without terminal-session isolation, no seccomp policy or resource quotas are defined, and project contents and nested mounts are not recursively sanitized.
-- **Path assumptions:** exact `/tmp`, `/var/tmp`, and `/dev/shm` projects are rejected, and the `/srv`, `/mnt`, `/media`, and `/snap` trees are protected including their subdirectories; sibling homes outside the real home are rejected only under `/home`; intermediate project-symlink replacement and the early-start signal race are not fully closed; system symlink aliases rely on trusted host configuration; and the sensitive-home denylist is intentionally finite. Custom `XDG_DATA_HOME` locations require a user-owned existing ancestor — pre-create the directory before use.
+- **Path assumptions:** projects overlapping protected system trees are rejected including subdirectories (`/bin`, `/boot`, `/dev`, `/etc`, `/lib`, `/lib64`, `/opt`, `/proc`, `/root`, `/run`, `/sbin`, `/sys`, `/usr`, `/var`, `/srv`, `/mnt`, `/media`, `/snap`); `/tmp` is rejected only as an exact path, while `/var/tmp` and `/dev/shm` are rejected as subdirectories of protected trees; sibling homes outside the real home are rejected only under `/home`; intermediate project-symlink replacement and the early-start signal race are not fully closed; system symlink aliases rely on trusted host configuration; and the sensitive-home denylist is intentionally finite. Missing storage components are created with mode `0700`; only the nearest existing ancestor of a custom `XDG_DATA_HOME` must already be user-owned.
 - **Verification and diagnostics:** `verify` is a smoke test rather than a complete security attestation; probe metadata travels through argv; cleanup races and residue remain best-effort; Bubblewrap setup errors and payload exit code `1` are not distinguished; and the retained Bubblewrap FD is accepted.
 - **Release and CI:** source packaging assumes a clean checkout, CI action and tool versions float, live tests gate release tags rather than pull requests, and archives are not byte-for-byte reproducible or signed/attested.
 

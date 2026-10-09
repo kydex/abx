@@ -29,7 +29,7 @@ make check
 
 Для `make check` команды `shellcheck`, `actionlint`, `govulncheck` и `golangci-lint` должны быть доступны в PATH. Сейчас проверка включает:
 
-- `golangci-lint fmt` и `golangci-lint run` для Go-пакетов (форматирование gofumpt/goimports, vet, staticcheck, gosec);
+- `golangci-lint fmt` и `golangci-lint run` для Go-пакетов (форматирование gofumpt/goimports, vet, staticcheck, gosec, errcheck, ineffassign, unused);
 - ShellCheck для `scripts/*.sh`;
 - `actionlint` для GitHub Actions workflows;
 - проверка пробелов в незакоммиченных изменениях (`git diff --check`);

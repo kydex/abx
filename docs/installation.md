@@ -10,6 +10,7 @@ ABX requires:
 
 - Linux;
 - Bubblewrap **0.12.0 or newer** at `/usr/bin/bwrap`;
+- the Bubblewrap binary must be a regular executable file without setuid/setgid/sticky bits, not writable by group/other, and owned by root;
 - unprivileged user namespaces allowed by the host;
 - a local `/etc/passwd` entry for the invoking UID;
 - an absolute, existing home directory and a usable login shell from that passwd entry.

@@ -13,6 +13,7 @@ import (
 )
 
 // Source is an observed system bind or compatibility symlink.
+// A non-empty Link makes the mount a symlink to Link; Path is then not used as the source.
 type (
 	Source struct{ Path, Target, Link string }
 	object struct {

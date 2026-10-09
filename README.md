@@ -38,6 +38,7 @@ The reported version should match the version you downloaded. Make sure `$HOME/.
 If you also downloaded the `abx-X.Y.Z-SHA256SUMS` manifest, you can verify the archive before extracting it:
 
 ```sh
+abx_version=X.Y.Z
 sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
 ```
 
@@ -126,7 +127,7 @@ For a direct launch without an outer shell, run `abx run herdr` on the host inst
 | `abx help`, `-h`, `--help` | Show CLI help |
 | `abx version` | Show the ABX version |
 
-Profiles are stored under `~/.local/share/abx/profiles` by default. An absolute `XDG_DATA_HOME` changes the storage base. Use `abx profile show <name>` when you need the exact profile path.
+Profiles are stored under `.local/share/abx/profiles` in the home directory from `/etc/passwd` (not `$HOME`) by default. An absolute `XDG_DATA_HOME` changes the storage base. Use `abx profile show <name>` when you need the exact profile path.
 
 ## Documentation
 

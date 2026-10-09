@@ -100,6 +100,7 @@ func TestIsolationSummaryMatchesBubblewrapNamespacePolicy(t *testing.T) {
 		"pid namespace: private",
 		"ipc namespace: private",
 		"uts namespace: private",
+		"mount namespace: private",
 		"network: shared with host",
 	} {
 		if !strings.Contains(isolationSummary, want) {

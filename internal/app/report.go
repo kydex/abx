@@ -12,6 +12,7 @@ const isolationSummary = `isolation:
   pid namespace: private
   ipc namespace: private
   uts namespace: private
+  mount namespace: private
   network: shared with host
 `
 

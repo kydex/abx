@@ -12,6 +12,8 @@ Run `abx` commands from the host terminal as a regular user. Use `abx shell` whe
 | Start the profile executable directly in the current project | `abx run <profile>` |
 | Open a shell with access to the current project | `abx work <profile>` |
 
+`shell`, `inspect`, and `verify` accept only the profile name, with no arguments after `--` (like `work` below); only `run` forwards arguments after `--` to the agent.
+
 ## Profiles
 
 A profile is a persistent home directory for an agent or a related toolchain. `abx run <name>` still launches an executable with the same name as the profile; that entry point may start other agent CLIs installed in the same profile.
@@ -206,7 +208,7 @@ For Herdr, launch `herdr` as an ordinary command, without `exec`: detach returns
 abx inspect opencode
 ```
 
-`inspect` resolves the same profile, agent, project, system sources, and environment as a normal `run`, then prints the plan without starting Bubblewrap. It requires the profile executable and does not describe a `shell` or `work` plan.
+`inspect` resolves the same profile, agent, project, system sources, and environment as a normal `run`, then prints the plan without starting Bubblewrap. It requires the profile executable and does not describe a `shell` or `work` plan. Like `work`, it accepts only the profile name, with no arguments after `--`.
 
 The output contains:
 
@@ -233,6 +235,8 @@ Successful verification ends with:
 ```text
 Verification passed; temporary probe files removed.
 ```
+
+Verification runs under a 30-second deadline covering setup and checks. On timeout ABX reports `execution cancelled`, returns exit `1`, and prints no check lines. Like `work`, `verify` accepts only the profile name, with no arguments after `--`.
 
 Individual checks use `PASS`, `FAIL`, `UNAVAILABLE`, and `N/A`. `N/A` is expected when shared skills are not configured. A failed or incomplete mandatory check makes `verify` fail. Failure details describe the expected and observed state where available. Environment mismatches list only differing variable names, without their values.
 
@@ -261,10 +265,10 @@ For default storage:
 ```sh
 abx_root="$HOME/.local/share/abx"
 mkdir -p "$abx_root/shared/agents/skills"
-chmod 700 "$abx_root/shared"
+chmod 700 "$abx_root" "$abx_root/shared"
 ```
 
-The `shared`, `agents`, and `skills` path components must be real directories where ABX requires them; unsafe symlink redirection is rejected. The `shared` directory must belong to the invoking user and have exact mode `0700`.
+The `shared`, `agents`, and `skills` path components must be real directories where ABX requires them; unsafe symlink redirection is rejected. The `shared` directory must belong to the invoking user and have exact mode `0700`. The storage root itself (`$abx_root`) must also belong to the invoking user and have exact mode `0700`; `mkdir -p` creates missing parents with the default mode, so set it explicitly — otherwise every ABX command fails with `private directory "abx" must have exact mode 0700`.
 
 When skills are used, ABX may create `.agents` and an empty `.agents/skills` mountpoint inside a profile. These are mount preparation directories, not copies of the shared skills.
 
@@ -285,7 +289,7 @@ Changing `XDG_DATA_HOME` selects different storage; it does not move existing pr
 
 ## Environment inside the sandbox
 
-ABX starts from a clean environment. It sets the profile HOME, PATH, XDG locations, `TMPDIR`, `NPM_CONFIG_PREFIX`, and `BUN_INSTALL` itself.
+ABX starts from a clean environment. It sets the profile `HOME`, `USER`, `LOGNAME`, `SHELL`, `PWD`, `PATH`, XDG locations, `TMPDIR`, `NPM_CONFIG_PREFIX`, and `BUN_INSTALL` itself.
 
 Only these host settings are forwarded when present:
 
@@ -311,6 +315,8 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | Bubblewrap missing or too old | Check `/usr/bin/bwrap --version`; ABX requires 0.12.0+ |
 | Sandbox cannot start | Check that the host permits unprivileged user namespaces |
 | Profile not found | Check `abx profile show <name>` and the `XDG_DATA_HOME` used for that command |
+| `private directory "abx" must have exact mode 0700` | Run `chmod 700` on the storage root and `shared` (see Shared skills) |
+| `unsafe Bubblewrap executable` | The binary must be a regular file, executable, without setuid/setgid/sticky bits, not writable by group/other, and owned by root |
 | `Command: unavailable` / agent not found | For `run` and `inspect`, install an executable matching the profile name. This status alone does not prevent `shell` or `work` |
 | Agent installed via mise not found | Check `.local/share/mise/shims/<name>` in the profile and that the `mise` binary itself is reachable inside the sandbox |
 | Shell unavailable | Check the login shell in `/etc/passwd` and that it is system-installed and executable |
@@ -320,6 +326,6 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 
 ## Exit codes and signals
 
-ABX uses exit code `0` for successful launcher operations, `1` for launcher/runtime/verification errors, and `2` for CLI syntax errors. `run`, `shell`, and `work` normally return the child process exit status; a signal exit is reported as `128 + signal`.
+ABX uses exit code `0` for successful launcher operations, `1` for launcher/runtime/verification errors, and `2` for CLI syntax errors. `run`, `shell`, and `work` normally return the child process exit status; a signal exit is reported as `128 + signal`. `verify` always reports its own status (`1` on any failure, including timeouts and signal interruptions), never a child status.
 
-`SIGINT`, `SIGTERM`, and `SIGHUP` received by ABX are forwarded to the Bubblewrap child.
+`SIGINT`, `SIGTERM`, and `SIGHUP` received by ABX are forwarded to the Bubblewrap monitor process. The sandboxed payload itself does not run signal handlers: when ABX exits, remaining sandbox processes are terminated with SIGKILL (see [Security](security.md)). In interactive `shell`/`work` sessions this means Ctrl+C ends the whole session.

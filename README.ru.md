@@ -38,6 +38,7 @@ abx version
 Если вы скачали и файл `abx-X.Y.Z-SHA256SUMS`, архив можно проверить до распаковки:
 
 ```sh
+abx_version=X.Y.Z
 sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
 ```
 
@@ -126,7 +127,7 @@ herdr workspace create --cwd /workspace --label project --focus
 | `abx help`, `-h`, `--help` | Показать справку CLI |
 | `abx version` | Показать версию ABX |
 
-По умолчанию профили находятся в `~/.local/share/abx/profiles`. Абсолютный `XDG_DATA_HOME` меняет базовый каталог хранения. Точный путь профиля можно посмотреть через `abx profile show <name>`.
+По умолчанию профили находятся в `.local/share/abx/profiles` в домашнем каталоге из `/etc/passwd` (не `$HOME`). Абсолютный `XDG_DATA_HOME` меняет базовый каталог хранения. Точный путь профиля можно посмотреть через `abx profile show <name>`.
 
 ## Документация
 

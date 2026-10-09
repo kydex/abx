@@ -29,7 +29,7 @@ make check
 
 `make check` expects `shellcheck`, `actionlint`, `govulncheck`, and `golangci-lint` to be available in PATH. It currently includes:
 
-- `golangci-lint fmt` and `golangci-lint run` for Go packages (gofumpt/goimports formatting, vet, staticcheck, gosec);
+- `golangci-lint fmt` and `golangci-lint run` for Go packages (gofumpt/goimports formatting, vet, staticcheck, gosec, errcheck, ineffassign, unused);
 - ShellCheck for `scripts/*.sh`;
 - `actionlint` for GitHub Actions workflows;
 - whitespace check for uncommitted changes (`git diff --check`);

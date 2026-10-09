@@ -6,6 +6,7 @@
 - Sharpen CLI and diagnostics without behavior change for legitimate inputs: `inspect` shows the mount namespace, Bubblewrap refusals name the violated condition, bare `abx` and `-h`/`--help` in any position show help, `-v`/`--version` works, `inspect` write errors return status 1, and dangling-symlink, timeout, and already-exists errors explain the cause.
 - Pin policies with unit tests and harden packaging: independent literals pin system-target, project-tree, namespace, and mount-point lists; `Validate` refusals, skills-symlink, oversize-probe, uid-validation, exit-2, argv-literalness, fd-index, fd-accounting, and fuzz-allowlist cases added; inherited FD flags are restored after execution; `package` refuses untracked clutter and verifies the source archive against tracked top-level paths, `dist/` is cleaned before builds, `package-smoke` checks the checksum manifest and mandatory file lists, and CI checkouts set `persist-credentials: false`.
 - Preserve real exit codes through cleanup failures, run the `__probe` sandbox gate before payload decoding, wire `package-smoke` into the release workflow, and replace the inert CI `diff-check` with a local-only target (needs a live run to confirm signal and sandbox behavior).
+- Gate release packaging on the version tag: `make package` refuses unless HEAD carries the matching tag, while plain builds stay ungated.
 
 ## 0.8.21
 

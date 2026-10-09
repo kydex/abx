@@ -23,6 +23,14 @@ else
     printf 'warning: not a git work tree; packaging archives from the working directory as-is\n' >&2
 fi
 if $in_git; then
+    # A-068: the tag must point at this checkout, otherwise the archive
+    # name would lie about its contents. Plain builds (go build,
+    # build-check, tests) are unaffected — only release packaging is gated.
+    head_tag=$(git -C "$root" describe --exact-match HEAD 2>/dev/null || true)
+    if [[ $head_tag != "$tag" ]]; then
+        printf 'error: HEAD is not tagged %s (found: %s); tag the release commit before packaging\n' "$tag" "${head_tag:-none}" >&2
+        exit 2
+    fi
     if ! git -C "$root" diff --quiet || ! git -C "$root" diff --cached --quiet; then
         printf 'error: git work tree is not clean; commit or stash changes before packaging\n' >&2
         exit 2

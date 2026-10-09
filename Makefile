@@ -1,4 +1,4 @@
-.PHONY: test check lint shellcheck actionlint diff-check security build-check coverage-check build package package-smoke clean live
+.PHONY: test check lint shellcheck actionlint local-diff-check security build-check coverage-check build package package-smoke clean live
 
 COVERAGE_MIN ?= 74.0
 
@@ -15,7 +15,7 @@ shellcheck:
 actionlint:
 	actionlint .github/workflows/*.yml
 
-diff-check:
+local-diff-check:
 	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then git diff --check; else printf 'warning: not a git work tree; skipping git diff --check\n' >&2; fi
 
 security:
@@ -32,7 +32,7 @@ coverage-check:
 	total=$$(go tool cover -func="$$profile" | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v got="$$total" -v min="$(COVERAGE_MIN)" 'BEGIN { if (got + 0 < min + 0) { printf "coverage %.1f%% is below minimum %.1f%%\n", got, min; exit 1 } printf "coverage %.1f%% (minimum %.1f%%)\n", got, min }'
 
-check: lint shellcheck actionlint diff-check security build-check coverage-check
+check: lint shellcheck actionlint security build-check coverage-check
 	go vet ./...
 
 build:

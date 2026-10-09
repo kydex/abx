@@ -62,11 +62,11 @@ func observation(name string, ok bool, err error, detail string) Check {
 }
 
 func Run(raw string, out io.Writer) error {
-	e, err := decode(raw)
-	if err != nil {
+	if err := gate(); err != nil {
 		return err
 	}
-	if err := gate(); err != nil {
+	e, err := decode(raw)
+	if err != nil {
 		return err
 	}
 	return report(out, check(e))

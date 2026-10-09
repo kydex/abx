@@ -188,7 +188,9 @@ func executeSession(
 func finishClose(status *int, result *error, cleanup func() error) {
 	if err := cleanup(); err != nil {
 		*result = errors.Join(*result, err)
-		*status = 1
+		if *status == 0 {
+			*status = 1
+		}
 	}
 }
 

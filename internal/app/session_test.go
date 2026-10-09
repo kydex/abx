@@ -364,7 +364,8 @@ func TestFinishClosePreservesOperationAndCleanupFailures(t *testing.T) {
 		wantClose  bool
 	}{
 		{"success", 0, nil, nil, 0, false, false},
-		{"close failure overrides successful status", 23, nil, closeErr, 1, false, true},
+		{"close failure preserves operation status", 23, nil, closeErr, 23, false, true},
+		{"close failure on success becomes status 1", 0, nil, closeErr, 1, false, true},
 		{"operation failure preserved", 1, opErr, nil, 1, true, false},
 		{"operation and close failures joined", 1, opErr, closeErr, 1, true, true},
 	} {

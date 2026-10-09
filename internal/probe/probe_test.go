@@ -78,10 +78,16 @@ func TestNamespaceNamesPinned(t *testing.T) {
 
 func TestPrivateProbeRejectsOversizedValidJSON(t *testing.T) {
 	raw := `{"Home":"` + strings.Repeat("x", 70000) + `"}`
+	if _, err := decode(raw); err == nil || !strings.Contains(err.Error(), "probe input too large") {
+		t.Fatalf("oversized valid JSON err = %v", err)
+	}
+}
+
+func TestProbeGateRunsBeforeDecode(t *testing.T) {
 	var out bytes.Buffer
-	err := Run(raw, &out)
-	if err == nil || !strings.Contains(err.Error(), "probe input too large") || out.Len() != 0 {
-		t.Fatalf("oversized valid JSON = %q, %v", out.String(), err)
+	err := Run("not json at all", &out)
+	if err == nil || !strings.Contains(err.Error(), "only available inside the sandbox") || out.Len() != 0 {
+		t.Fatalf("host Run without gate = %q, %v", out.String(), err)
 	}
 }
 
@@ -318,10 +324,9 @@ func TestDecodeRequiresEveryNamespaceAndHostIdentity(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var out bytes.Buffer
-			err = Run(string(raw), &out)
-			if err == nil || !strings.Contains(err.Error(), tc.message) || !strings.Contains(err.Error(), tc.key) || out.Len() != 0 {
-				t.Fatalf("incomplete input reached observations: output=%q err=%v", out.String(), err)
+			_, err = decode(string(raw))
+			if err == nil || !strings.Contains(err.Error(), tc.message) || !strings.Contains(err.Error(), tc.key) {
+				t.Fatalf("incomplete input accepted: %v", err)
 			}
 		})
 	}
@@ -352,9 +357,8 @@ func TestDecodeRejectsNonCanonicalProbePaths(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var out bytes.Buffer
-			if err := Run(string(raw), &out); err == nil || !strings.Contains(err.Error(), "incomplete probe inputs") || out.Len() != 0 {
-				t.Fatalf("non-canonical path reached observations: output=%q err=%v", out.String(), err)
+			if _, err := decode(string(raw)); err == nil || !strings.Contains(err.Error(), "incomplete probe inputs") {
+				t.Fatalf("non-canonical path accepted: %v", err)
 			}
 		})
 	}
@@ -377,9 +381,8 @@ func TestDecodeRejectsNonCleanReadOnlyTargets(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var out bytes.Buffer
-			if err := Run(string(raw), &out); err == nil || !strings.Contains(err.Error(), "incomplete probe inputs") || out.Len() != 0 {
-				t.Fatalf("unclean read-only target reached observations: output=%q err=%v", out.String(), err)
+			if _, err := decode(string(raw)); err == nil || !strings.Contains(err.Error(), "incomplete probe inputs") {
+				t.Fatalf("unclean read-only target accepted: %v", err)
 			}
 		})
 	}

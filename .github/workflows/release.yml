@@ -25,6 +25,8 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: bash scripts/package.sh "$RELEASE_TAG"
+      - name: Smoke-check archives
+        run: make package-smoke
       - uses: actions/upload-artifact@v7
         with:
           name: abx-${{ github.ref_name }}

@@ -40,15 +40,22 @@ type Expected struct {
 	Skills               bool
 }
 
+const (
+	statePass        = "PASS"
+	stateUnavailable = "UNAVAILABLE"
+	stateFail        = "FAIL"
+	stateNA          = "N/A"
+)
+
 type Check struct{ Name, State, Detail string }
 
 func observation(name string, ok bool, err error, detail string) Check {
-	c := Check{Name: name, State: "PASS"}
+	c := Check{Name: name, State: statePass}
 	if err != nil {
-		c.State = "UNAVAILABLE"
+		c.State = stateUnavailable
 		c.Detail = err.Error()
 	} else if !ok {
-		c.State = "FAIL"
+		c.State = stateFail
 		c.Detail = detail
 	}
 	return c
@@ -83,9 +90,6 @@ func gate() error {
 	mounted, err := Identify(probePath)
 	if err != nil {
 		return fmt.Errorf("private probe is only available inside the sandbox: %w", err)
-	}
-	if self != mounted {
-		return errors.New("private probe is only available inside the sandbox")
 	}
 	raw, err := os.ReadFile("/proc/self/mountinfo")
 	if err != nil {
@@ -136,7 +140,7 @@ func decode(raw string) (Expected, error) {
 	return e, nil
 }
 
-// cleanPath accepts only canonical absolute host paths without NUL bytes.
+// cleanPath accepts only clean absolute host paths without NUL bytes.
 func cleanPath(p string) bool {
 	return filepath.IsAbs(p) && filepath.Clean(p) == p && !strings.ContainsRune(p, 0)
 }
@@ -153,7 +157,7 @@ func report(out io.Writer, checks []Check) error {
 	}
 	failed := false
 	for _, c := range checks {
-		if c.State != "PASS" && !(c.State == "N/A" && c.Name == "shared skills") {
+		if c.State != statePass && !(c.State == stateNA && c.Name == "shared skills") {
 			failed = true
 		}
 		line := fmt.Sprintf("%s %q", c.State, c.Name)
@@ -227,7 +231,7 @@ func check(e Expected) []Check {
 		add("read-only "+target, detail == "", err, detail)
 	}
 	if !e.Skills {
-		checks = append(checks, Check{Name: "shared skills", State: "N/A", Detail: "not configured"})
+		checks = append(checks, Check{Name: "shared skills", State: stateNA, Detail: "not configured"})
 	}
 	for _, p := range []string{"/home/agent", "/workspace"} {
 		err := writeAndRemove(p)

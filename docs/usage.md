@@ -34,7 +34,7 @@ By default, profiles are stored under:
 
 ABX uses the home directory from `/etc/passwd`, not the host `HOME` environment variable. If `XDG_DATA_HOME` is an absolute path, the storage root becomes `<XDG_DATA_HOME>/abx`. Relative values are ignored.
 
-`profile create` creates a new empty profile and refuses to overwrite an existing one. `profile show` reports the actual path and whether the matching entry-point executable and optional shared skills are usable. `profile list` lists all profiles.
+`profile create` creates a new empty profile and refuses to overwrite an existing one. `profile show` reports the actual path and whether the matching entry-point executable and optional shared skills are usable. `profile list` lists all profiles. Entries with invalid names are skipped silently.
 
 `profile show` reports a missing profile as `State: absent` and returns status `0`; it is not an existence check by exit code. Command availability is a host-side file check, not proof that the tool or sandbox can start. Mandatory layout errors still fail the command.
 

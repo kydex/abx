@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix documentation against code from two audit rounds (English and Russian): shared-skills recipe now sets `0700` on the storage root, sandbox environment lists all variables, `verify` documents its 30-second deadline, exit-code and signal sections describe SIGKILL delivery and per-command argument rules, Bubblewrap trust requirements are stated, and resource/namespace tables match the implementation.
+- Sharpen CLI and diagnostics without behavior change for legitimate inputs: `inspect` shows the mount namespace, Bubblewrap refusals name the violated condition, bare `abx` and `-h`/`--help` in any position show help, `-v`/`--version` works, `inspect` write errors return status 1, and dangling-symlink, timeout, and already-exists errors explain the cause.
 
 ## 0.8.21
 

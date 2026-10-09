@@ -48,7 +48,7 @@ func (in *Inputs) checkTargets() error {
 			return fmt.Errorf("unsafe skills target %s: %w", relative, err)
 		}
 		if err = unix.Close(fd); err != nil {
-			return err
+			return fmt.Errorf("close skills target %s: %w", relative, err)
 		}
 	}
 	return nil

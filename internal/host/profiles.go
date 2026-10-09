@@ -125,9 +125,12 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 		return "", err
 	}
 	created := false
+	completed := false
 	defer func() {
-		result = errors.Join(result, parent.Close())
-		if result != nil && created {
+		if closeErr := parent.Close(); closeErr != nil {
+			result = errors.Join(result, closeErr)
+		}
+		if result != nil && created && !completed {
 			result = fmt.Errorf("profile creation incomplete; created directories may remain: %w", result)
 		}
 	}()
@@ -152,6 +155,7 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 			return "", closeErr
 		}
 	}
+	completed = true
 	return filepath.Join(paths.Profiles, name), nil
 }
 
@@ -161,6 +165,30 @@ func openDirectoryAt(parent int, name string) (*os.File, error) {
 		return nil, fmt.Errorf("open directory %q: %w", name, err)
 	}
 	return os.NewFile(uintptr(fd), name), nil
+}
+
+// existingObjectError describes the object blocking exclusive creation so
+// "already exists" names the actual type and mode.
+func existingObjectError(dirfd int, name string) error {
+	fd, err := unix.Openat(dirfd, name, unix.O_PATH|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return fmt.Errorf("%w: %q", ErrProfileExists, name)
+	}
+	defer unix.Close(fd)
+	var st unix.Stat_t
+	if err := unix.Fstat(fd, &st); err != nil {
+		return fmt.Errorf("%w: %q", ErrProfileExists, name)
+	}
+	kind := "special file"
+	switch st.Mode & unix.S_IFMT {
+	case unix.S_IFDIR:
+		kind = "directory"
+	case unix.S_IFLNK:
+		kind = "symlink"
+	case unix.S_IFREG:
+		kind = "regular file"
+	}
+	return fmt.Errorf("%w: %q (existing %s, mode %04o)", ErrProfileExists, name, kind, st.Mode&0o7777)
 }
 
 func createDirectoryAt(parent *os.File, name string, uid int, private, exclusive bool) (dir *os.File, created bool, result error) {
@@ -178,7 +206,7 @@ func createDirectoryAt(parent *os.File, name string, uid int, private, exclusive
 			created = true
 		case errors.Is(err, unix.EEXIST):
 			if exclusive {
-				return nil, false, fmt.Errorf("%w: %q", ErrProfileExists, name)
+				return nil, false, existingObjectError(int(parent.Fd()), name)
 			}
 		default:
 			return nil, false, fmt.Errorf("create directory %q: %w", name, err)

@@ -54,7 +54,7 @@ func (t *Tool) Revalidate() error {
 		return err
 	}
 	if !os.SameFile(t.info, info) || info.Mode().Perm()&0o022 != 0 || info.Mode().Perm()&0o111 == 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
-		return errors.New("bubblewrap changed")
+		return fmt.Errorf("bubblewrap changed: %q", t.path)
 	}
 	return nil
 }
@@ -79,8 +79,19 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		return nil, fmt.Errorf("stat Bubblewrap executable %q: %w", resolved, err)
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 || info.Mode().Perm()&0o022 != 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 || !ok || system && st.Uid != 0 {
-		return nil, errors.New("unsafe Bubblewrap executable")
+	switch {
+	case !info.Mode().IsRegular():
+		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: not a regular file", resolved)
+	case info.Mode().Perm()&0o111 == 0:
+		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: not executable", resolved)
+	case info.Mode().Perm()&0o022 != 0:
+		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: writable by group or other", resolved)
+	case info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0:
+		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: has setuid, setgid, or sticky bit", resolved)
+	case !ok:
+		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: unavailable file metadata", resolved)
+	case system && st.Uid != 0:
+		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: not owned by root (uid %d)", resolved, st.Uid)
 	}
 	if err = unix.Access(resolved, unix.X_OK); err != nil {
 		return nil, fmt.Errorf("access Bubblewrap executable %q: %w", resolved, err)
@@ -101,6 +112,9 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		return nil, err
 	}
 	if err = cmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("bubblewrap version probe timed out after 5s: %w", ctx.Err())
+		}
 		return nil, fmt.Errorf("bubblewrap version: %w", err)
 	}
 	if err := validateVersion(output.text); err != nil {

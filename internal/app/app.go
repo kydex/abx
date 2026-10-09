@@ -154,8 +154,10 @@ func runSessionForAccount(ctx context.Context, c cli.Command, env []string, stdi
 		return 1, err
 	}
 	if c.Kind == cli.Inspect {
-		_, err = io.WriteString(stdio.Out, formatPlan(plan))
-		return 0, err
+		if _, err = io.WriteString(stdio.Out, formatPlan(plan)); err != nil {
+			return 1, err
+		}
+		return 0, nil
 	}
 	return executeSession(ctx, in, plan, stdio, bwrap.Open, bwrap.Execute)
 }

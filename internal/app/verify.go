@@ -132,11 +132,12 @@ func (p *probeFiles) create(home, project string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+	p.files = append(p.files, probeFile{f.Name(), nil})
 	info, err := f.Stat()
 	if err != nil {
-		return "", "", errors.Join(err, f.Close(), os.Remove(f.Name()))
+		return "", "", errors.Join(err, f.Close())
 	}
-	p.files = append(p.files, probeFile{f.Name(), info})
+	p.files[len(p.files)-1].info = info
 	if err = f.Close(); err != nil {
 		return "", "", err
 	}
@@ -157,7 +158,7 @@ func (p *probeFiles) Close() error {
 	for i := len(p.files) - 1; i >= 0; i-- {
 		f := p.files[i]
 		info, err := os.Lstat(f.path)
-		if err == nil && !os.SameFile(info, f.info) {
+		if err == nil && f.info != nil && !os.SameFile(info, f.info) {
 			err = errors.New("temporary probe object was replaced")
 		}
 		if err == nil {

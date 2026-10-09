@@ -210,3 +210,22 @@ func TestProjectSystemTreeResolutionFailures(t *testing.T) {
 		t.Fatal("unresolved existing system link was ignored")
 	}
 }
+
+func TestSiblingOutsideHomeWithSymlinkedHomeRoot(t *testing.T) {
+	root := t.TempDir()
+	real := filepath.Join(root, "realhome")
+	alice := filepath.Join(real, "alice")
+	if err := os.MkdirAll(alice, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "home")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	if !siblingOutsideHome(alice, filepath.Join(real, "bob", "proj"), link) {
+		t.Error("sibling project accepted under symlinked home root")
+	}
+	if siblingOutsideHome(alice, filepath.Join(alice, "proj"), link) {
+		t.Error("own project rejected under symlinked home root")
+	}
+}

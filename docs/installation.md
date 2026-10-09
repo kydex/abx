@@ -15,7 +15,7 @@ ABX requires:
 - a local `/etc/passwd` entry for the invoking UID;
 - an absolute, existing home directory and a usable login shell from that passwd entry.
 
-The published prebuilt binary targets `linux/amd64` (`x86_64`). Other Linux architectures can be built from source if the Go toolchain and dependencies support them.
+The published prebuilt binary targets `linux/amd64` (`x86_64`). Other Linux architectures can be built from source if the Go toolchain and dependencies support them. Cross-compiling to other operating systems is unsupported: the codebase uses Linux-only APIs and fails at compile time elsewhere.
 
 Basic checks:
 

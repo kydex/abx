@@ -125,7 +125,7 @@ herdr workspace create --cwd /workspace --label project --focus
 | `abx inspect <name>` | Показать план `run` без запуска Bubblewrap; требуется одноимённый executable профиля |
 | `abx verify <name>` | Запустить тестовую песочницу и проверить основные свойства изоляции |
 | `abx help`, `-h`, `--help` | Показать справку CLI |
-| `abx version` | Показать версию ABX |
+| `abx version`, `-v`, `--version` | Показать версию ABX |
 
 По умолчанию профили находятся в `.local/share/abx/profiles` в домашнем каталоге из `/etc/passwd` (не `$HOME`). Абсолютный `XDG_DATA_HOME` меняет базовый каталог хранения. Точный путь профиля можно посмотреть через `abx profile show <name>`.
 

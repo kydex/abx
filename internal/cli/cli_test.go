@@ -15,14 +15,29 @@ func TestStructuredArgumentsAndNames(t *testing.T) {
 	if c.Profile != "shell" || !reflect.DeepEqual(c.Args, []string{"a b", "$(literal)", "", "--help"}) {
 		t.Fatal(c)
 	}
-	for _, argv := range [][]string{{"shell", "run"}, {"work", "tools"}, {"inspect", "agent"}, {"verify", "agent"}, {"help"}, {"-h"}, {"version"}} {
+	for _, argv := range [][]string{{"shell", "run"}, {"work", "tools"}, {"inspect", "agent"}, {"verify", "agent"}, {"help"}, {"-h"}, {"--help"}, {"-v"}, {"--version"}, {"shell", "agent", "--help"}, {"verify", "agent", "--help"}, {"run", "--help"}} {
 		if _, e := Parse(argv); e != nil {
 			t.Fatal(e)
 		}
 	}
-	for _, argv := range [][]string{nil, {"agent"}, {"work"}, {"work", "../bad"}, {"work", "tools", "--"}, {"work", "tools", "arg"}, {"shell", "--create", "agent"}, {"shell", "agent", "--"}, {"run", "../bad"}, {"run", "agent", "arg"}, {"help", "extra"}, {"verify", "agent", "extra"}} {
+	for _, argv := range [][]string{{"agent"}, {"work"}, {"work", "../bad"}, {"work", "tools", "--"}, {"work", "tools", "arg"}, {"shell", "--create", "agent"}, {"shell", "agent", "--"}, {"run", "../bad"}, {"run", "agent", "arg"}, {"help", "extra"}, {"verify", "agent", "extra"}} {
 		if _, e := Parse(argv); e == nil {
 			t.Fatalf("accepted %q", argv)
+		}
+	}
+}
+
+func TestBareAndHelpShortcuts(t *testing.T) {
+	for _, argv := range [][]string{nil, {}} {
+		c, err := Parse(argv)
+		if err != nil || c.Kind != Help {
+			t.Fatalf("%q: %+v %v", argv, c, err)
+		}
+	}
+	for _, argv := range [][]string{{"-v"}, {"--version"}} {
+		c, err := Parse(argv)
+		if err != nil || c.Kind != Version {
+			t.Fatalf("%q: %+v %v", argv, c, err)
 		}
 	}
 }

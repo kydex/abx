@@ -39,16 +39,28 @@ const Usage = `abx:
   abx inspect <profile>
   abx verify <profile>
   abx help | -h | --help
-  abx version
+  abx version | -v | --version
 Storage: $XDG_DATA_HOME/abx, or .local/share/abx in the passwd home.`
 
 func Parse(args []string) (Command, error) {
 	if len(args) == 0 {
-		return Command{}, errors.New("command required")
+		return Command{Kind: Help}, nil
 	}
 	k := Kind(args[0])
 	if k == "-h" || k == "--help" {
 		k = Help
+	}
+	if k == "-v" || k == "--version" {
+		k = Version
+	}
+	rest := args[1:]
+	if k == Run && len(rest) > 1 {
+		rest = rest[:1]
+	}
+	for _, a := range rest {
+		if a == "-h" || a == "--help" {
+			return Command{Kind: Help}, nil
+		}
 	}
 	switch k {
 	case "profile":
@@ -64,7 +76,7 @@ func Parse(args []string) (Command, error) {
 			return Command{Kind: k}, nil
 		case ProfileCreate, ProfileShow:
 			if len(args) != 3 {
-				return Command{}, fmt.Errorf("%s requires exactly one name", k)
+				return Command{}, errors.New(string(k) + " requires exactly one name")
 			}
 			if err := profile.ValidateName(args[2]); err != nil {
 				return Command{}, err

@@ -26,7 +26,7 @@ Arbitrary host environment variables, including proxy, credential, and loader/ru
 
 ## Files visible from the host
 
-ABX exposes `/usr` read-only and, when present, the compatibility paths `/bin`, `/sbin`, `/lib`, and `/lib64`. It also exposes a limited set of `/etc` resources needed by typical command-line programs, such as account/group data, DNS configuration, certificates, timezone data, dynamic-loader configuration, OS metadata, shells, and alternatives.
+ABX exposes `/usr` read-only and, when present, the compatibility paths `/bin`, `/sbin`, `/lib`, and `/lib64`. It also exposes a limited set of `/etc` resources, when present on the host, needed by typical command-line programs, such as account/group data, DNS configuration, certificates, timezone data, dynamic-loader configuration, OS metadata, shells, and alternatives. Missing files are skipped silently; `abx inspect` prints the actually discovered list.
 
 The entire host `/etc`, host home, and host `/run` are not mounted into the sandbox.
 

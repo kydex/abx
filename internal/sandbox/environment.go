@@ -23,7 +23,7 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 		return nil, fmt.Errorf("sandbox username %q contains NUL", username)
 	}
 	if !cleanPath(shell) {
-		return nil, fmt.Errorf("sandbox shell %q is not a canonical absolute path", shell)
+		return nil, fmt.Errorf("sandbox shell %q is not a clean absolute path", shell)
 	}
 	if workingDirectory != "/workspace" && workingDirectory != "/home/agent" {
 		return nil, fmt.Errorf("unsupported sandbox working directory %q", workingDirectory)

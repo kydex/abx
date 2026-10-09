@@ -76,7 +76,7 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 	// Reject another user's home such as /home/bob/proj when realHome is
 	// /home/alice. Projects inside the own home remain allowed. Scoped to
 	// /home so isolated test directories under /tmp keep working.
-	if within(realHome, "/home") && within(project, "/home") && !within(project, realHome) {
+	if siblingOutsideHome(realHome, project, "/home") {
 		return "", fmt.Errorf("project %q is outside the real home %q", project, realHome)
 	}
 	for _, relative := range sensitiveHomeTrees {
@@ -96,6 +96,16 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 
 func overlaps(a, b string) bool { return within(a, b) || within(b, a) }
 
+// siblingOutsideHome reports a project under the shared home root but outside
+// the invoking user's home. homeRoot is canonicalized once so a symlinked
+// /home does not silently disable the rule.
+func siblingOutsideHome(realHome, project, homeRoot string) bool {
+	if resolved, err := filepath.EvalSymlinks(homeRoot); err == nil {
+		homeRoot = resolved
+	}
+	return within(realHome, homeRoot) && within(project, homeRoot) && !within(project, realHome)
+}
+
 func within(path, root string) bool {
 	rel, err := filepath.Rel(filepath.Clean(root), filepath.Clean(path))
 	return err == nil && !filepath.IsAbs(rel) && (rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))))
@@ -110,7 +120,7 @@ func canonicalProtectedTree(path string) (string, error) {
 	}
 	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)
+		return "", fmt.Errorf("canonicalize protected tree %q: %w (remove the dangling symlink if one points here)", path, err)
 	}
 	return filepath.Clean(resolved), nil
 }

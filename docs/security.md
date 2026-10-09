@@ -36,7 +36,7 @@ ABX does not mount the account home as a whole. The selected profile is mounted 
 
 ABX treats its storage and profiles as private data. Required ABX-owned directories must be real directories, belong to the invoking user, and have exact mode `0700` where the policy requires it. Unsafe existing objects are rejected rather than automatically repaired.
 
-The current project is canonicalized before use. ABX rejects projects that overlap the filesystem root, the account home itself, ABX storage, protected system trees, or sensitive home trees (`.config`, `.ssh`, `.gnupg`, `dotfiles`, `.aws`, `.docker`, `.kube`, `.pki`, and `.cache`).
+The current project is canonicalized before use. ABX rejects projects that overlap the filesystem root, the account home itself, ABX storage, protected system trees, or sensitive home trees (`.config`, `.ssh`, `.gnupg`, `dotfiles`, `.aws`, `.docker`, `.kube`, `.pki`, `.cache`, `.netrc`, `.git-credentials`, `.password-store`, `.npmrc`, `.gem/credentials`, `.local/share/keyrings`, `.mozilla`, and `.thunderbird`).
 
 Selected host sources are opened and retained by file descriptor. Before execution ABX revalidates them, and Bubblewrap receives bind sources through retained FDs rather than reopening the same path. This narrows pathname-replacement races between validation and mounting; it does not make the contents of writable files or directories immutable. Before execution ABX also closes every inherited file descriptor except the standard streams and the retained source descriptors, so unrelated host descriptors never reach the sandbox.
 
@@ -48,6 +48,8 @@ ABX additionally validates the two host objects it executes:
 |---|---|
 | `/usr/bin/bwrap` | Regular file, executable, no setuid/setgid/sticky bits, not writable by group/other, owned by root |
 | Login shell from `/etc/passwd` | Existing regular file, executable by the invoking user |
+
+The mounted `/etc/shells` is provided for programs inside the sandbox; login-shell validation does not consult it. The built-in checks above are stricter on most systems, and `/etc/shells` on some distributions lists non-system paths.
 
 ## Shared skills
 

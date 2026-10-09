@@ -111,6 +111,18 @@ func TestSessionKeepsStorageAndIdentityInsideSandbox(t *testing.T) {
 	}
 }
 
+func TestSessionNamesMatchValidatorPolicy(t *testing.T) {
+	entries, err := Session("tester", "/bin/sh", "/workspace", []string{"TERM=xterm", "LC_X=y", "LD_PRELOAD=nope"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if !allowed(e.Name) && !fixedSessionName(e.Name) {
+			t.Fatalf("session variable outside validator policy: %#v", e)
+		}
+	}
+}
+
 func FuzzSession(f *testing.F) {
 	f.Add("tester", "/usr/bin/bash", "/workspace", "TERM=xterm")
 	f.Add("", "", "", "")

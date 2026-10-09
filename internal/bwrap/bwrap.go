@@ -53,11 +53,34 @@ func (t *Tool) Revalidate() error {
 	if err != nil {
 		return err
 	}
-	if !os.SameFile(t.info, info) || info.Mode().Perm()&0o022 != 0 || info.Mode().Perm()&0o111 == 0 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+	if !os.SameFile(t.info, info) {
 		return fmt.Errorf("bubblewrap changed: %q", t.path)
+	}
+	if reason := unsafeModeReason(info.Mode()); reason != "" {
+		return fmt.Errorf("bubblewrap changed: %q (%s)", t.path, reason)
 	}
 	return nil
 }
+
+// unsafeModeReason reports why mode bits fail the executable policy shared
+// by open and Revalidate. open additionally requires a regular file,
+// metadata, root ownership for system paths, and access; Revalidate
+// additionally requires identity via os.SameFile. Neither subsumes the
+// other by design: rechecking ownership would add nothing (changing an
+// inode owner requires privileges), while entry must verify it once.
+func unsafeModeReason(mode os.FileMode) string {
+	switch {
+	case mode.Perm()&0o111 == 0:
+		return "not executable"
+	case mode.Perm()&0o022 != 0:
+		return "writable by group or other"
+	case mode&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0:
+		return "has setuid, setgid, or sticky bit"
+	default:
+		return ""
+	}
+}
+
 func Open(ctx context.Context) (*Tool, error) { return open(ctx, Path, true) }
 func open(ctx context.Context, path string, system bool) (tool *Tool, err error) {
 	resolved, err := filepath.EvalSymlinks(path)
@@ -79,18 +102,16 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		return nil, fmt.Errorf("stat Bubblewrap executable %q: %w", resolved, err)
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
-	switch {
-	case !info.Mode().IsRegular():
+	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: not a regular file", resolved)
-	case info.Mode().Perm()&0o111 == 0:
-		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: not executable", resolved)
-	case info.Mode().Perm()&0o022 != 0:
-		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: writable by group or other", resolved)
-	case info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0:
-		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: has setuid, setgid, or sticky bit", resolved)
-	case !ok:
+	}
+	if reason := unsafeModeReason(info.Mode()); reason != "" {
+		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: %s", resolved, reason)
+	}
+	if !ok {
 		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: unavailable file metadata", resolved)
-	case system && st.Uid != 0:
+	}
+	if system && st.Uid != 0 {
 		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: not owned by root (uid %d)", resolved, st.Uid)
 	}
 	if err = unix.Access(resolved, unix.X_OK); err != nil {

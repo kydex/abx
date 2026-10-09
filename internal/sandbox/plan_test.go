@@ -145,7 +145,7 @@ func TestEnvironmentLastAllowedValueWins(t *testing.T) {
 }
 
 func TestVerificationAddsOnlyFixedReadOnlyProbe(t *testing.T) {
-	input := Input{Mode: Run, Home: "/profile", Project: "/project", Command: []string{ProbePath, "__probe", "{}"}, System: []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}}}
+	input := Input{Mode: Run, Home: "/profile", Project: "/project", Command: []string{ProbePath, "__probe", "{}"}, System: []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}}, Environment: []Entry{{Name: "PWD", Value: "/workspace"}}}
 	normal, err := Build(input)
 	if err != nil {
 		t.Fatal(err)
@@ -312,6 +312,61 @@ func TestValidateRejectsPolicyMutations(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsEnvironmentPolicyMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		want   string
+		mutate func(*Plan)
+	}{
+		{name: "LD_PRELOAD environment", want: "not allowlisted", mutate: func(p *Plan) {
+			p.environment = append(p.environment, Entry{Name: "LD_PRELOAD", Value: "/tmp/x.so"})
+		}},
+		{name: "PWD mismatch", want: "does not match working directory", mutate: func(p *Plan) {
+			for i := range p.environment {
+				if p.environment[i].Name == "PWD" {
+					p.environment[i].Value = "/elsewhere"
+				}
+			}
+		}},
+		{name: "missing PWD", want: "exactly once", mutate: func(p *Plan) {
+			kept := make([]Entry, 0, len(p.environment))
+			for _, e := range p.environment {
+				if e.Name != "PWD" {
+					kept = append(kept, e)
+				}
+			}
+			p.environment = kept
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Build(testInput(t, Run))
+			if err != nil {
+				t.Fatal(err)
+			}
+			tc.mutate(&p)
+			if err := p.Validate(); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("Validate() = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestSystemMountSourceMustMatchTarget(t *testing.T) {
+	usr := Mount{Kind: ReadOnly, Source: "/usr", Target: "/usr"}
+	for _, m := range []Mount{
+		{Kind: ReadOnly, Source: "/etc", Target: "/etc/ssl"},
+		{Kind: ReadOnly, Source: "/home/u/.ssh", Target: "/etc/pki"},
+		{Kind: ReadOnly, Source: "/etc/hosts", Target: "/etc/hosts", Size: 1},
+	} {
+		in := testInput(t, Run)
+		in.System = []Mount{usr, m}
+		if _, err := Build(in); err == nil {
+			t.Fatalf("accepted system mount %+v", m)
+		}
+	}
+}
+
 func TestValidateRejectsExpectedMutations(t *testing.T) {
 	usrExpected := func(t *testing.T, p *Plan) int {
 		t.Helper()
@@ -430,7 +485,7 @@ func TestValidateRejectsRoleSourceAndKindMutations(t *testing.T) {
 }
 
 func TestValidateKindPreservesBuildSemantics(t *testing.T) {
-	input := Input{Mode: Run, Home: "/profile", Project: "/project", Command: []string{ProbePath, "__probe", "{}"}, System: []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}}}
+	input := Input{Mode: Run, Home: "/profile", Project: "/project", Command: []string{ProbePath, "__probe", "{}"}, System: []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}}, Environment: []Entry{{Name: "PWD", Value: "/workspace"}}}
 	normal, err := Build(input)
 	if err != nil {
 		t.Fatal(err)
@@ -463,7 +518,7 @@ func TestValidateKindPreservesBuildSemantics(t *testing.T) {
 }
 
 func TestValidateVerificationProbePolicy(t *testing.T) {
-	input := Input{Mode: Run, Home: "/profile", Project: "/project", Command: []string{ProbePath, "__probe", "{}"}, System: []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}}}
+	input := Input{Mode: Run, Home: "/profile", Project: "/project", Command: []string{ProbePath, "__probe", "{}"}, System: []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}}, Environment: []Entry{{Name: "PWD", Value: "/workspace"}}}
 	verified, err := BuildVerification(input)
 	if err != nil {
 		t.Fatal(err)

@@ -38,12 +38,17 @@ func diagnosticPlan(t *testing.T, mode sandbox.Mode) sandbox.Plan {
 	if mode != sandbox.Run {
 		command = []string{"/bin/sh", "-l"}
 	}
+	pwd := "/workspace"
+	if mode == sandbox.Shell {
+		pwd = "/home/agent"
+	}
 	plan, err := sandbox.Build(sandbox.Input{
-		Home:    "/profile",
-		Project: project,
-		Mode:    mode,
-		System:  []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"}},
-		Command: command,
+		Home:        "/profile",
+		Project:     project,
+		Mode:        mode,
+		System:      []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"}},
+		Environment: []sandbox.Entry{{Name: "PWD", Value: pwd}},
+		Command:     command,
 	})
 	if err != nil {
 		t.Fatal(err)

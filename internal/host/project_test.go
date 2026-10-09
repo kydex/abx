@@ -116,7 +116,7 @@ func TestResolveRejectsHomeAndSensitiveOverlaps(t *testing.T) {
 		t.Fatal(err)
 	}
 	candidates := []string{filepath.Dir(home), home, data, filepath.Dir(data), filepath.Join(data, "profiles")}
-	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles", ".aws", ".docker", ".kube", ".pki", ".cache"} {
+	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles", ".aws", ".docker", ".kube", ".pki", ".cache", ".netrc", ".git-credentials", ".password-store", ".npmrc", ".gem/credentials", ".local/share/keyrings", ".mozilla", ".thunderbird"} {
 		sensitive := filepath.Join(home, relative)
 		candidates = append(candidates, sensitive, filepath.Join(sensitive, "child"))
 	}
@@ -151,7 +151,7 @@ func TestResolveRejectsCanonicalSensitiveSymlinkTarget(t *testing.T) {
 }
 
 func TestResolveRejectsDanglingSensitiveSymlinkTargetAncestors(t *testing.T) {
-	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles", ".aws", ".docker", ".kube", ".pki", ".cache"} {
+	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles", ".aws", ".docker", ".kube", ".pki", ".cache", ".netrc", ".git-credentials", ".password-store", ".npmrc", ".gem/credentials", ".local/share/keyrings", ".mozilla", ".thunderbird"} {
 		for _, targetSuffix := range []string{"future", filepath.Join("missing", "future")} {
 			t.Run(relative+"-"+targetSuffix, func(t *testing.T) {
 				root := t.TempDir()
@@ -164,7 +164,11 @@ func TestResolveRejectsDanglingSensitiveSymlinkTargetAncestors(t *testing.T) {
 					t.Fatal(err)
 				}
 				target := filepath.Join(external, targetSuffix)
-				if err := os.Symlink(target, filepath.Join(home, relative)); err != nil {
+				link := filepath.Join(home, relative)
+				if err := os.MkdirAll(filepath.Dir(link), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(target, link); err != nil {
 					t.Fatal(err)
 				}
 				data := filepath.Join(home, ".local", "share", "abx")

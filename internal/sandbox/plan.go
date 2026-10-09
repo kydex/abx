@@ -190,6 +190,9 @@ func build(in Input) (Plan, error) {
 		if (m.Kind == ReadOnly && !cleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
 			return Plan{}, errors.New("invalid system source")
 		}
+		if (m.Kind == ReadOnly && filepath.Base(m.Source) != filepath.Base(m.Target)) || m.Size != 0 {
+			return Plan{}, fmt.Errorf("invalid system mount %q", m.Target)
+		}
 		seen[m.Target] = true
 		p.mounts = append(p.mounts, m)
 	}

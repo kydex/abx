@@ -29,7 +29,11 @@ func plan(t *testing.T, mode sandbox.Mode) sandbox.Plan {
 	if mode != sandbox.Run {
 		cmd = []string{"/bin/sh", "-l"}
 	}
-	p, e := sandbox.Build(sandbox.Input{Home: "/profile", Project: project, Mode: mode, Skills: "/skills", System: []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/system", Target: "/usr"}}, Command: cmd})
+	cwd := "/workspace"
+	if mode == sandbox.Shell {
+		cwd = "/home/agent"
+	}
+	p, e := sandbox.Build(sandbox.Input{Home: "/profile", Project: project, Mode: mode, Skills: "/skills", System: []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"}}, Environment: []sandbox.Entry{{Name: "PWD", Value: cwd}}, Command: cmd})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -38,7 +42,7 @@ func plan(t *testing.T, mode sandbox.Mode) sandbox.Plan {
 
 func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 	byPath := make(map[string]*os.File)
-	for _, path := range []string{"/system", "/profile", "/skills", "/project"} {
+	for _, path := range []string{"/usr", "/profile", "/skills", "/project"} {
 		f, err := os.CreateTemp(t.TempDir(), "source")
 		if err != nil {
 			t.Fatal(err)
@@ -61,7 +65,7 @@ func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 		if !reflect.DeepEqual(args[:len(prefix)], prefix) {
 			t.Fatal(args)
 		}
-		want := []string{"/system", "/profile", "/skills"}
+		want := []string{"/usr", "/profile", "/skills"}
 		if mode != sandbox.Shell {
 			want = append(want, "/project")
 		}
@@ -131,7 +135,7 @@ func TestEnvironmentValuesStaySingleArgvElements(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := sandbox.Build(sandbox.Input{Home: "/profile", Project: "", Mode: sandbox.Shell, Skills: "/skills", System: []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/system", Target: "/usr"}}, Environment: env, Command: []string{"/bin/sh", "-l"}})
+	p, err := sandbox.Build(sandbox.Input{Home: "/profile", Project: "", Mode: sandbox.Shell, Skills: "/skills", System: []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"}}, Environment: env, Command: []string{"/bin/sh", "-l"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,6 +430,30 @@ exit 23`)
 	}
 }
 
+func TestRevalidateAcceptsOwnerChange(t *testing.T) {
+	if os.Getuid() != 0 {
+		t.Skip("chown requires root")
+	}
+	path := writeScript(t, `if [ "$1" = "--version" ]; then
+  printf 'bubblewrap 0.12.0\n'
+  exit 0
+fi
+exit 23`)
+	tool, err := open(context.Background(), path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tool.Close()
+	// Ownership rechecking would add nothing (changing an inode owner
+	// requires privileges): Revalidate pins identity and mode bits only.
+	if err := os.Chown(path, 65534, 65534); err != nil {
+		t.Fatal(err)
+	}
+	if err := tool.Revalidate(); err != nil {
+		t.Fatalf("owner change rejected by revalidate: %v", err)
+	}
+}
+
 func TestToolRejectsSpecialModeBits(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
   printf 'bubblewrap 0.12.0\n'
@@ -636,7 +664,7 @@ func TestTranslateSourceFailurePreservesBorrowedFiles(t *testing.T) {
 			var requested []string
 			args, files, err := Translate(plan(t, sandbox.Shell), func(path string) (*os.File, error) {
 				requested = append(requested, path)
-				if path == "/system" {
+				if path == "/usr" {
 					return f, nil
 				}
 				if nilSource {
@@ -650,7 +678,7 @@ func TestTranslateSourceFailurePreservesBorrowedFiles(t *testing.T) {
 			if len(args) != 0 || len(files) != 0 {
 				t.Fatal("returned a partial launch after source failure")
 			}
-			if !reflect.DeepEqual(requested, []string{"/system", "/profile"}) {
+			if !reflect.DeepEqual(requested, []string{"/usr", "/profile"}) {
 				t.Fatalf("continued looking up sources after failure: %v", requested)
 			}
 			if _, err := f.Stat(); err != nil {

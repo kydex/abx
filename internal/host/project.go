@@ -19,6 +19,8 @@ var systemRoots = []string{
 var sensitiveHomeTrees = []string{
 	".config", ".ssh", ".gnupg", "dotfiles",
 	".aws", ".docker", ".kube", ".pki", ".cache",
+	".netrc", ".git-credentials", ".password-store", ".npmrc",
+	".gem/credentials", ".local/share/keyrings", ".mozilla", ".thunderbird",
 }
 
 // exactProtectedRoots rejects exact matches without blocking subdirectories.

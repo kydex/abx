@@ -97,6 +97,48 @@ func TestCreateProfileDoesNotLeakFDs(t *testing.T) {
 	}
 }
 
+func TestDiscoverSystemRejectsUnsafeCompatLinks(t *testing.T) {
+	t.Run("link into home rejected", func(t *testing.T) {
+		in := fixture(t)
+		root := t.TempDir()
+		if err := os.Mkdir(filepath.Join(root, "usr"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(in.account.Home, filepath.Join(root, "bin")); err != nil {
+			t.Fatal(err)
+		}
+		if err := in.discoverSystem(root); err == nil {
+			t.Fatal("accepted compat link into home")
+		}
+	})
+	t.Run("link into system accepted", func(t *testing.T) {
+		in := fixture(t)
+		root := t.TempDir()
+		if err := os.Mkdir(filepath.Join(root, "usr"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(filepath.Join(root, "usr"), filepath.Join(root, "bin")); err != nil {
+			t.Fatal(err)
+		}
+		if err := in.discoverSystem(root); err != nil {
+			t.Fatalf("rejected safe compat link: %v", err)
+		}
+	})
+	t.Run("dangling link rejected", func(t *testing.T) {
+		in := fixture(t)
+		root := t.TempDir()
+		if err := os.Mkdir(filepath.Join(root, "usr"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(filepath.Join(root, "missing"), filepath.Join(root, "bin")); err != nil {
+			t.Fatal(err)
+		}
+		if err := in.discoverSystem(root); err == nil {
+			t.Fatal("accepted dangling compat link")
+		}
+	})
+}
+
 func TestDiscoverSystemMatchesPinnedPolicy(t *testing.T) {
 	// Independent literals: changing discovery or allowedSystemTarget
 	// (internal/sandbox/plan.go) requires updating this list too.

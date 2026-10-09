@@ -71,6 +71,21 @@ func allowlistedHost(host []string) map[string]string {
 	return out
 }
 
+// fixedSessionName reports names Session always sets itself. Validate reuses
+// it so the environment policy and the structural check cannot drift apart;
+// environment_test pins that Session output stays within this set.
+func fixedSessionName(name string) bool {
+	switch name {
+	case "HOME", "USER", "LOGNAME", "SHELL", "PWD", "TMPDIR",
+		"XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME",
+		"XDG_STATE_HOME", "XDG_RUNTIME_DIR", "BUN_INSTALL",
+		"NPM_CONFIG_PREFIX", "PATH":
+		return true
+	default:
+		return false
+	}
+}
+
 func allowed(key string) bool {
 	switch key {
 	case "TERM", "COLORTERM", "LANG", "LANGUAGE", "TZ", "NO_COLOR", "FORCE_COLOR":

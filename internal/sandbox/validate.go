@@ -3,6 +3,7 @@ package sandbox
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -39,7 +40,23 @@ func (p Plan) Validate() error {
 		if !validName(e.Name) || seenEnv[e.Name] || strings.ContainsRune(e.Value, 0) {
 			return errors.New("invalid plan environment")
 		}
+		if !allowed(e.Name) && !fixedSessionName(e.Name) {
+			return fmt.Errorf("plan environment variable %q is not allowlisted", e.Name)
+		}
 		seenEnv[e.Name] = true
+	}
+
+	pwd := 0
+	for _, e := range p.environment {
+		if e.Name == "PWD" {
+			pwd++
+			if e.Value != p.cwd {
+				return errors.New("plan PWD does not match working directory")
+			}
+		}
+	}
+	if pwd != 1 {
+		return errors.New("plan PWD must be set exactly once")
 	}
 
 	base := baseMounts()
@@ -54,6 +71,9 @@ func (p Plan) Validate() error {
 		}
 		if (m.Kind == ReadOnly && !cleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
 			return errors.New("invalid expected system source")
+		}
+		if (m.Kind == ReadOnly && filepath.Base(m.Source) != filepath.Base(m.Target)) || m.Size != 0 {
+			return fmt.Errorf("invalid expected system mount %q", m.Target)
 		}
 		if seenSystem[m.Target] {
 			return fmt.Errorf("duplicate expected system mount %q", m.Target)

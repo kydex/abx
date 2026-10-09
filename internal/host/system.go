@@ -46,6 +46,13 @@ func (in *Inputs) discoverSystem(root string) error {
 			if e != nil {
 				return e
 			}
+			resolved, e := filepath.EvalSymlinks(path)
+			if e != nil {
+				return fmt.Errorf("resolve compat system link %q: %w", path, e)
+			}
+			if overlaps(resolved, in.account.Home) || overlaps(resolved, in.paths.Root) {
+				return fmt.Errorf("protected data overlaps system link %q", resolved)
+			}
 			in.links[path] = link
 			in.system = append(in.system, Source{Target: p, Link: link})
 		} else if err = add(path, p); err != nil {

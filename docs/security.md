@@ -38,11 +38,11 @@ ABX treats its storage and profiles as private data. Required ABX-owned director
 
 The current project is canonicalized before use. ABX rejects projects that overlap the filesystem root, the account home itself, ABX storage, protected system trees, or sensitive home trees (`.config`, `.ssh`, `.gnupg`, `dotfiles`, `.aws`, `.docker`, `.kube`, `.pki`, `.cache`, `.netrc`, `.git-credentials`, `.password-store`, `.npmrc`, `.gem/credentials`, `.local/share/keyrings`, `.mozilla`, and `.thunderbird`).
 
-Selected host sources are opened and retained by file descriptor. Before execution ABX revalidates them, and Bubblewrap receives bind sources through retained FDs rather than reopening the same path. This narrows pathname-replacement races between validation and mounting; it does not make the contents of writable files or directories immutable. Before execution ABX also closes every inherited file descriptor except the standard streams and the retained source descriptors, so unrelated host descriptors never reach the sandbox.
+Selected host sources are opened and retained by file descriptor. Before execution ABX revalidates them, and Bubblewrap receives bind sources through retained FDs rather than reopening the same path. This narrows pathname-replacement races between validation and mounting; it does not make the contents of writable files or directories immutable. Before execution ABX also marks every inherited file descriptor close-on-exec, except the standard streams and the retained source descriptors, so unrelated host descriptors never reach the sandbox. The original flags are restored on the launcher side afterwards.
 
 The in-memory sandbox `Plan` is structurally validated when it is built and again before Bubblewrap translation. The validator checks the expected system sources, private mounts, profile/project roles, optional skills mount, working directory, command, and verification probe layout.
 
-ABX additionally validates the two host objects it executes:
+ABX additionally validates the host objects it depends on: two that it executes and the account database it reads.
 
 | Object | Check |
 |---|---|
@@ -76,7 +76,7 @@ A successful `verify` is evidence about that invocation and host state. It is no
 - Networking is shared, so sandboxed code can access network services reachable from the host and can transmit data it can read.
 - Project contents are not recursively sanitized. Projects may contain sockets, hard links, nested mounts, or intentionally dangerous source/build files.
 - The sandbox uses the caller's terminal directly. Terminal escape sequences and host-specific terminal ioctls remain part of the risk surface; ABX does not provide terminal-session isolation.
-- ABX does not define a seccomp policy or cgroup resource quotas (private tmpfs mounts are capped at 4 GiB each). Security still depends on the Linux kernel, Bubblewrap, the host configuration, and the software executed inside the sandbox.
+- ABX does not define a seccomp policy or cgroup resource quotas. Its private tmpfs mounts (`/tmp`, `/var/tmp`, `/run`) are capped at 4 GiB each; the `--dev` mount creates its own tmpfs without a cap. Security still depends on the Linux kernel, Bubblewrap, the host configuration, and the software executed inside the sandbox.
 - A hostile process running concurrently as the same host UID may still race changes in data that the user can modify. Retained descriptors and revalidation reduce important pathname-replacement windows but are not a complete same-UID adversary model. The known residual windows — agent-executable replacement between inspection and execution, profile entries changing between listing and inspection, data-base components appearing between canonicalization and use, and pathname-based metadata rechecks — are accepted as documented and are not tracked as findings. Mounts always use the retained descriptors, so a late swap cannot redirect what is mounted.
 - Some failed operations may leave directories or verification probe files behind. ABX avoids recursive automatic rollback that could delete unrelated user data.
 

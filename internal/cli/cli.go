@@ -47,25 +47,15 @@ func Parse(args []string) (Command, error) {
 		return Command{Kind: Help}, nil
 	}
 	k := Kind(args[0])
-	if k == "-h" || k == "--help" {
+	// Help and version are recognised only where the command itself goes.
+	// Scanning later positions made "profile create demo --version" print the
+	// version, exit 0 and create nothing: a silent no-op that reads as success.
+	// Subcommands keep their documented "no extra arguments" refusal instead.
+	switch k {
+	case "-h", "--help":
 		k = Help
-	}
-	if k == "-v" || k == "--version" {
+	case "-v", "--version":
 		k = Version
-	}
-	rest := args[1:]
-	if k == Run && len(rest) > 1 {
-		// Only the profile name precedes "--"; agent arguments after it are
-		// passed through untouched and must not be read as ABX flags.
-		rest = rest[:1]
-	}
-	for _, a := range rest {
-		switch a {
-		case "-h", "--help":
-			return Command{Kind: Help}, nil
-		case "-v", "--version":
-			return Command{Kind: Version}, nil
-		}
 	}
 	switch k {
 	case "profile":

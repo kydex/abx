@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Recognise `-h`/`--help` and `-v`/`--version` only in the first argument position again. Scanning later positions made `abx profile create demo --version` print the version, exit `0` and create nothing — a silent no-op that reads as success.
+- Document what the code actually does: the four storage-base restrictions with their exact refusal messages, help and version as first-position commands, the `--dev` tmpfs being uncapped, inherited descriptors being marked close-on-exec rather than closed, the login-shell visibility rule, and the effective-UID requirement. (English and Russian.)
+
 - Diagnose the Bubblewrap version probe deadline correctly: a wedged binary is reported as the 5s probe timeout instead of the exec wording `signal: killed`, and caller cancellation is reported separately.
 - Do not constrain the current project by ownership or mode, and stop rejecting group-writable storage ancestors or the passwd home on ownership. Team checkouts (`root:dev` 2775), container images with `runAsUser`, NFS with `root_squash`, and filesystems without POSIX modes (always `0777`) are legitimate layouts; only a world-writable home or storage ancestor without sticky is refused. All new refusal paths name the object they failed on. (English and Russian.)
 

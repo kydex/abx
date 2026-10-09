@@ -15,7 +15,7 @@ func TestStructuredArgumentsAndNames(t *testing.T) {
 	if c.Profile != "shell" || !reflect.DeepEqual(c.Args, []string{"a b", "$(literal)", "", "--help"}) {
 		t.Fatal(c)
 	}
-	for _, argv := range [][]string{{"shell", "run"}, {"work", "tools"}, {"inspect", "agent"}, {"verify", "agent"}, {"help"}, {"-h"}, {"--help"}, {"-v"}, {"--version"}, {"shell", "agent", "--help"}, {"verify", "agent", "--help"}, {"run", "--help"}} {
+	for _, argv := range [][]string{{"shell", "run"}, {"work", "tools"}, {"inspect", "agent"}, {"verify", "agent"}, {"help"}, {"-h"}, {"--help"}, {"-v"}, {"--version"}, {"shell", "agent"}, {"verify", "agent"}} {
 		if _, e := Parse(argv); e != nil {
 			t.Fatal(e)
 		}
@@ -34,7 +34,7 @@ func TestBareAndHelpShortcuts(t *testing.T) {
 			t.Fatalf("%q: %+v %v", argv, c, err)
 		}
 	}
-	for _, argv := range [][]string{{"-v"}, {"--version"}, {"version", "--version"}, {"version", "-v"}, {"help", "--version"}} {
+	for _, argv := range [][]string{{"-v"}, {"--version"}, {"version"}} {
 		c, err := Parse(argv)
 		if err != nil || c.Kind != Version {
 			t.Fatalf("%q: %+v %v", argv, c, err)
@@ -44,6 +44,22 @@ func TestBareAndHelpShortcuts(t *testing.T) {
 	c, err := Parse([]string{"run", "demo", "--", "--version", "-v", "--help"})
 	if err != nil || c.Kind != Run || !reflect.DeepEqual(c.Args, []string{"--version", "-v", "--help"}) {
 		t.Fatalf("run args after separator: %+v %v", c, err)
+	}
+	// Help and version are only commands in the first position. Anywhere else
+	// they are arguments, and must not turn a real command into a silent no-op.
+	for _, argv := range [][]string{
+		{"profile", "create", "demo", "--version"},
+		{"profile", "create", "demo", "-h"},
+		{"run", "--version"},
+		{"inspect", "--help"},
+		{"version", "--version"},
+		{"help", "-h"},
+		{"profile", "list", "extra"},
+	} {
+		c, err := Parse(argv)
+		if err == nil {
+			t.Fatalf("accepted %q as %q with no error", argv, c.Kind)
+		}
 	}
 }
 

@@ -10,7 +10,7 @@ When you run an agent, the current project is mounted writable at `/workspace`. 
 
 - Linux. The published prebuilt binary is for x86-64 (`amd64`).
 - Run ABX as a regular user, without `sudo`.
-- Bubblewrap **0.12.0 or newer** installed at `/usr/bin/bwrap`, with unprivileged user namespaces allowed by the host.
+- Bubblewrap **0.12.0 or newer** installed at `/usr/bin/bwrap`, owned by root, not group- or world-writable and without setuid/setgid/sticky bits, with unprivileged user namespaces allowed by the host.
 - A local `/etc/passwd` entry for your UID, with a valid home directory and a usable login shell.
 - The runtime or package manager required by the agent you want to install, such as Bun or npm.
 

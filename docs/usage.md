@@ -14,6 +14,8 @@ Run `abx` commands from the host terminal as a regular user. Use `abx shell` whe
 
 `shell`, `inspect`, and `verify` accept only the profile name, with no arguments after `--` (like `work` below); only `run` forwards arguments after `--` to the agent.
 
+`abx` with no arguments prints the same help as `abx help`. `-h`/`--help` and `-v`/`--version` are commands in the first position only: `abx --help` and `abx -v` work, but `abx profile create demo --version` is an argument error, not a version query.
+
 ## Profiles
 
 A profile is a persistent home directory for an agent or a related toolchain. `abx run <name>` still launches an executable with the same name as the profile; that entry point may start other agent CLIs installed in the same profile.
@@ -268,7 +270,7 @@ mkdir -p "$abx_root/shared/agents/skills"
 chmod 700 "$abx_root" "$abx_root/shared"
 ```
 
-The `shared`, `agents`, and `skills` path components must be real directories where ABX requires them; unsafe symlink redirection is rejected. The `shared` directory must belong to the invoking user and have exact mode `0700`. The storage root itself (`$abx_root`) must also belong to the invoking user and have exact mode `0700`; `mkdir -p` creates missing parents with the default mode, so set it explicitly — otherwise every ABX command fails with `private directory "abx" must have exact mode 0700`.
+The `shared`, `agents`, and `skills` path components must be real directories where ABX requires them; unsafe symlink redirection is rejected. The `shared` directory must belong to the invoking user and have exact mode `0700`. The storage root itself (`$abx_root`) must also belong to the invoking user and have exact mode `0700`; `mkdir -p` creates missing parents with the default mode, so set it explicitly — otherwise `profile`, `run`, `shell`, `work`, `inspect`, and `verify` fail with `private directory "<path>/abx" must have exact mode 0700` (`profile create` reports only the last component). `help` and `version` keep working.
 
 When skills are used, ABX may create `.agents` and an empty `.agents/skills` mountpoint inside a profile. These are mount preparation directories, not copies of the shared skills.
 
@@ -284,6 +286,8 @@ env XDG_DATA_HOME="$ABX_DATA" abx run opencode
 ```
 
 ABX appends its own `abx` component, so this example stores profiles under `$ABX_DATA/abx/profiles`.
+
+The base must satisfy four conditions, each with its own refusal message: it must not be the filesystem root (`data base "<path>" is the filesystem root`); it must not overlap a sensitive home tree such as `~/.config` or `~/.ssh` (`data base "<path>" overlaps sensitive home tree "<path>"`); its nearest existing ancestor must belong to you (`data base ancestor "<path>" is not owned by the invoking user`); and that ancestor must not be world-writable unless it carries the sticky bit (`data base ancestor "<path>" is world-writable`). Missing components below that ancestor are created for you with mode `0700`, so only the ancestor has to exist.
 
 Changing `XDG_DATA_HOME` selects different storage; it does not move existing profiles.
 
@@ -315,7 +319,7 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | Bubblewrap missing or too old | Check `/usr/bin/bwrap --version`; ABX requires 0.12.0+ |
 | Sandbox cannot start | Check that the host permits unprivileged user namespaces |
 | Profile not found | Check `abx profile show <name>` and the `XDG_DATA_HOME` used for that command |
-| `private directory "abx" must have exact mode 0700` | Run `chmod 700` on the storage root and `shared` (see Shared skills) |
+| `private directory "<path>" must have exact mode 0700` | Run `chmod 700` on the storage root and `shared` (see Shared skills) |
 | `unsafe Bubblewrap executable` | The binary must be a regular file, executable, without setuid/setgid/sticky bits, not writable by group/other, and owned by root |
 | `Command: unavailable` / agent not found | For `run` and `inspect`, install an executable matching the profile name. This status alone does not prevent `shell` or `work` |
 | Agent installed via mise not found | Check `.local/share/mise/shims/<name>` in the profile and that the `mise` binary itself is reachable inside the sandbox |
@@ -323,6 +327,9 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | Project rejected | Use a dedicated project directory outside protected paths |
 | Host tool missing inside `abx shell` | It may exist only in the host home; install it in the profile or system-wide |
 | `verify` reports `FAIL` or `UNAVAILABLE` | Read the failing observation; the sandbox did not complete verification successfully |
+| `must not run as root` / `must not run with effective privileges` | Run as a regular user; the real and effective UID/GID must match, so neither `sudo` nor `sg`/`newgrp` work |
+| `login shell ... is outside read-only system mounts` or `... resolves outside ...` | The passwd shell and its resolved target must both live under `/usr`, `/bin`, `/sbin`, `/lib`, `/lib64`, or `/etc/alternatives`; `/snap`, Nix and `~/.local` shells are not visible inside the sandbox |
+| `data base ancestor ... is not owned by the invoking user` | The nearest existing ancestor of `XDG_DATA_HOME` must be yours; pick another base |
 
 ## Exit codes and signals
 

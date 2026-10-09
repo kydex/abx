@@ -27,13 +27,7 @@ make live
 
 The [optional manual checks](manual-checks.md) are available for diagnosis or targeted investigation. They are not a requirement before every release and add no release gate.
 
-Then verify packaging locally:
-
-```sh
-version=$(cat internal/app/VERSION)
-make package
-(cd dist && sha256sum -c "abx-$version-SHA256SUMS")
-```
+Packaging runs after the tag exists (see *Publish a version*, step 5): the script requires the release tag on `HEAD`, so it cannot be rehearsed before that. To rehearse against archives you already have, run `make package-smoke`.
 
 `make package` reads `internal/app/VERSION` and delegates to `scripts/package.sh`. The packaging script does not run tests and does not create a git tag. In a git work tree it requires:
 
@@ -77,7 +71,7 @@ git tag -a "$tag" -m "ABX $version"
 git push origin "$tag"
 ```
 
-6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. Download its workflow artifact, verify `abx-X.Y.Z-SHA256SUMS`, and smoke-test the binary.
+6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. Download its workflow artifact: the archive files inside keep their `abx-X.Y.Z-*` names, so `(cd <downloaded> && sha256sum -c "abx-X.Y.Z-SHA256SUMS")` verifies them as-is. Then smoke-test the binary.
 7. Publish the verified binary archive, source archive, and checksum manifest through the project's user-facing release channel.
 
 Local packaging can be rehearsed at any time with `make package-smoke` against existing `dist/` files; `make package` itself requires the tag, so run it after step 5.

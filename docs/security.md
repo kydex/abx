@@ -46,8 +46,11 @@ ABX additionally validates the two host objects it executes:
 
 | Object | Check |
 |---|---|
-| `/usr/bin/bwrap` | Regular file, executable, no setuid/setgid/sticky bits, not writable by group/other, owned by root |
-| Login shell from `/etc/passwd` | Existing regular file, executable by the invoking user |
+| `/usr/bin/bwrap` | Regular file, executable, no setuid/setgid/sticky bits, not writable by group/other, owned by root; before execution it must still resolve to the same inode |
+| `/etc/passwd` | Regular file, not writable by group/other, no setuid/setgid/sticky bits |
+| Login shell from `/etc/passwd` | Resolved target is a regular file, executable by the invoking user, not writable by group/other, no setuid/setgid/sticky bits; both the passwd path and its resolved target must be visible in the sandbox |
+
+Ownership of the login shell is deliberately not required: user-managed shells also live under system paths (for example `/usr/local/bin`), and the visibility rule already limits them to mounted system trees.
 
 The mounted `/etc/shells` is provided for programs inside the sandbox; login-shell validation does not consult it. The built-in checks above are stricter on most systems, and `/etc/shells` on some distributions lists non-system paths.
 

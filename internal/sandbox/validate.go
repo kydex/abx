@@ -3,7 +3,6 @@ package sandbox
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -72,7 +71,7 @@ func (p Plan) Validate() error {
 		if (m.Kind == ReadOnly && !cleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
 			return errors.New("invalid expected system source")
 		}
-		if (m.Kind == ReadOnly && filepath.Base(m.Source) != filepath.Base(m.Target)) || m.Size != 0 {
+		if m.Size != 0 {
 			return fmt.Errorf("invalid expected system mount %q", m.Target)
 		}
 		if seenSystem[m.Target] {

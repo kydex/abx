@@ -13,7 +13,9 @@ ABX requires:
 - the Bubblewrap binary must be a regular executable file without setuid/setgid/sticky bits, not writable by group/other, and owned by root;
 - unprivileged user namespaces allowed by the host;
 - a local `/etc/passwd` entry for the invoking UID;
-- an absolute, existing home directory and a usable login shell from that passwd entry.
+- an absolute, existing home directory that is a directory owned by your UID;
+- a usable login shell from that passwd entry: a regular file executable by you, not writable by group or other, and without setuid/setgid/sticky bits;
+- a `/etc/passwd` that is a regular file not writable by group or other, and without setuid/setgid/sticky bits.
 
 The published prebuilt binary targets `linux/amd64` (`x86_64`). Other Linux architectures can be built from source if the Go toolchain and dependencies support them. Cross-compiling to other operating systems is unsupported: the codebase uses Linux-only APIs and fails at compile time elsewhere.
 

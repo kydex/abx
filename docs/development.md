@@ -32,7 +32,7 @@ make check
 - `golangci-lint fmt` and `golangci-lint run` for Go packages (gofumpt/goimports formatting, vet, staticcheck, gosec, errcheck, ineffassign, unused);
 - ShellCheck for `scripts/*.sh`;
 - `actionlint` for GitHub Actions workflows;
-- whitespace check for uncommitted changes (`git diff --check`);
+Whitespace errors in uncommitted changes are a local convenience, not a gate: `make local-diff-check` runs `git diff --check` on demand. It is excluded from `make check` because a fresh CI checkout has nothing staged or modified, so it cannot find anything there.
 - `govulncheck`;
 - static production build check;
 - race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`;

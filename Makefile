@@ -15,6 +15,8 @@ shellcheck:
 actionlint:
 	actionlint .github/workflows/*.yml
 
+# Local helper: whitespace errors in uncommitted changes. Not part of make
+# check — on a fresh checkout the index matches HEAD and it can find nothing.
 local-diff-check:
 	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then git diff --check; else printf 'warning: not a git work tree; skipping git diff --check\n' >&2; fi
 

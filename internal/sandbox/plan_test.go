@@ -352,17 +352,36 @@ func TestValidateRejectsEnvironmentPolicyMutations(t *testing.T) {
 	}
 }
 
-func TestSystemMountSourceMustMatchTarget(t *testing.T) {
+func TestSystemMountRejectsNonPolicyShapes(t *testing.T) {
 	usr := Mount{Kind: ReadOnly, Source: "/usr", Target: "/usr"}
 	for _, m := range []Mount{
-		{Kind: ReadOnly, Source: "/etc", Target: "/etc/ssl"},
-		{Kind: ReadOnly, Source: "/home/u/.ssh", Target: "/etc/pki"},
+		// size is meaningless on a bind source and silently dropped by Translate
 		{Kind: ReadOnly, Source: "/etc/hosts", Target: "/etc/hosts", Size: 1},
+		// not an allowlisted target at all
+		{Kind: ReadOnly, Source: "/etc/shadow", Target: "/etc/shadow"},
+		{Kind: ReadOnly, Source: "/etc", Target: "/etc"},
 	} {
 		in := testInput(t, Run)
 		in.System = []Mount{usr, m}
 		if _, err := Build(in); err == nil {
 			t.Fatalf("accepted system mount %+v", m)
+		}
+	}
+}
+
+// Resolved sources legitimately differ from targets: /etc/resolv.conf points
+// at ../run/systemd/resolve/stub-resolv.conf under systemd-resolved, and
+// /etc/localtime at a zoneinfo path. Rejecting by name broke real hosts.
+func TestSystemMountAcceptsResolvedSymlinkTargets(t *testing.T) {
+	for _, m := range []Mount{
+		{Kind: ReadOnly, Source: "/run/systemd/resolve/stub-resolv.conf", Target: "/etc/resolv.conf"},
+		{Kind: ReadOnly, Source: "/usr/share/zoneinfo/Europe/Berlin", Target: "/etc/localtime"},
+		{Kind: ReadOnly, Source: "/etc/ssl/certs", Target: "/etc/ssl"},
+	} {
+		in := testInput(t, Run)
+		in.System = []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}, m}
+		if _, err := Build(in); err != nil {
+			t.Errorf("rejected legitimate system mount %+v: %v", m, err)
 		}
 	}
 }

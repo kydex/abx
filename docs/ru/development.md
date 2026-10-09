@@ -32,7 +32,7 @@ make check
 - `golangci-lint fmt` и `golangci-lint run` для Go-пакетов (форматирование gofumpt/goimports, vet, staticcheck, gosec, errcheck, ineffassign, unused);
 - ShellCheck для `scripts/*.sh`;
 - `actionlint` для GitHub Actions workflows;
-- проверка пробелов в незакоммиченных изменениях (`git diff --check`);
+Проверка пробелов в незакоммиченных изменениях — локальное удобство, а не гейт: `make local-diff-check` запускает `git diff --check` по требованию. Она исключена из `make check`, потому что на свежем чекауте CI нет ни staged, ни изменённых файлов и находить ей там нечего.
 - `govulncheck`;
 - проверку статической production-сборки;
 - Go-тесты с race detector без кэша и общим coverage floor из `Makefile`;

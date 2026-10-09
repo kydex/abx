@@ -35,7 +35,14 @@ make package
 (cd dist && sha256sum -c "abx-$version-SHA256SUMS")
 ```
 
-`make package` reads `internal/app/VERSION` and delegates to `scripts/package.sh`. The packaging script does not run tests and does not create a git tag. It rejects a tag that does not match `internal/app/VERSION`.
+`make package` reads `internal/app/VERSION` and delegates to `scripts/package.sh`. The packaging script does not run tests and does not create a git tag. In a git work tree it requires:
+
+- the tag argument to match `internal/app/VERSION`;
+- a clean work tree with no untracked files, so the binary built from the working directory cannot differ from the source archive staged from the index;
+- `HEAD` to carry that exact tag, so the archive name cannot describe different contents;
+- every tracked top-level path to land in the source archive.
+
+Plain builds (`go build`, `make build-check`, `go test`) are not gated: only archive creation requires the tag. Outside a git work tree the script warns and packages the directory as-is.
 
 It creates:
 
@@ -59,7 +66,7 @@ The workflow artifact is for maintainer validation and distribution. The current
 
 1. Move the intended changelog entries from `Unreleased` into a new `X.Y.Z` section.
 2. Change `internal/app/VERSION` to the same `X.Y.Z`.
-3. Run `make check`, the appropriate live tests, and local packaging/checksum verification.
+3. Run `make check` and the appropriate live tests.
 4. Commit and push the release changes.
 5. After branch CI succeeds, create and push an annotated tag:
 
@@ -70,8 +77,10 @@ git tag -a "$tag" -m "ABX $version"
 git push origin "$tag"
 ```
 
-6. Confirm that the tag workflow succeeds. Download its workflow artifact, verify `abx-X.Y.Z-SHA256SUMS`, and smoke-test the binary.
+6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. Download its workflow artifact, verify `abx-X.Y.Z-SHA256SUMS`, and smoke-test the binary.
 7. Publish the verified binary archive, source archive, and checksum manifest through the project's user-facing release channel.
+
+Local packaging can be rehearsed at any time with `make package-smoke` against existing `dist/` files; `make package` itself requires the tag, so run it after step 5.
 
 Do not move an already published version tag to different contents. Publish later fixes as a new version.
 

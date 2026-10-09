@@ -157,7 +157,23 @@ func markInheritedFDsCloseOnExec(extra []*os.File) (func(), error) {
 	if err != nil {
 		return nil, fmt.Errorf("read inherited file descriptors: %w", err)
 	}
-	var savedFDs, savedFlags []int
+	// Restore by descriptor number and identity: after cmd.Wait the numbers
+	// may have been reused, so a plain F_SETFD would clear CLOEXEC on a
+	// foreign descriptor.
+	type savedFlag struct {
+		fd   int
+		info os.FileInfo
+		flag int
+	}
+	var saved []savedFlag
+	restore := func() {
+		for _, s := range saved {
+			if cur, err := os.Stat(fmt.Sprintf("/proc/self/fd/%d", s.fd)); err != nil || !os.SameFile(cur, s.info) {
+				continue
+			}
+			_, _ = unix.FcntlInt(uintptr(s.fd), unix.F_SETFD, s.flag)
+		}
+	}
 	for _, entry := range entries {
 		fd, parseErr := strconv.Atoi(entry.Name())
 		if parseErr != nil || fd < 3 || keep[fd] {
@@ -168,25 +184,30 @@ func markInheritedFDsCloseOnExec(extra []*os.File) (func(), error) {
 			if errors.Is(err, unix.EBADF) {
 				continue
 			}
+			restore()
 			return nil, fmt.Errorf("read file descriptor %d flags: %w", fd, err)
 		}
 		if flags&unix.FD_CLOEXEC != 0 {
 			continue
 		}
+		info, err := os.Stat(fmt.Sprintf("/proc/self/fd/%d", fd))
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			restore()
+			return nil, fmt.Errorf("stat file descriptor %d: %w", fd, err)
+		}
 		if _, err = unix.FcntlInt(uintptr(fd), unix.F_SETFD, unix.FD_CLOEXEC); err != nil {
 			if errors.Is(err, unix.EBADF) {
 				continue
 			}
+			restore()
 			return nil, fmt.Errorf("mark file descriptor %d close-on-exec: %w", fd, err)
 		}
-		savedFDs = append(savedFDs, fd)
-		savedFlags = append(savedFlags, flags)
+		saved = append(saved, savedFlag{fd: fd, info: info, flag: flags})
 	}
-	return func() {
-		for i, fd := range savedFDs {
-			_, _ = unix.FcntlInt(uintptr(fd), unix.F_SETFD, savedFlags[i])
-		}
-	}, nil
+	return restore, nil
 }
 
 var versionPattern = regexp.MustCompile(`^bubblewrap ([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`)

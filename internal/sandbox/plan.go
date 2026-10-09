@@ -190,9 +190,16 @@ func build(in Input) (Plan, error) {
 		if (m.Kind == ReadOnly && !cleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
 			return Plan{}, errors.New("invalid system source")
 		}
-		if (m.Kind == ReadOnly && filepath.Base(m.Source) != filepath.Base(m.Target)) || m.Size != 0 {
+		if m.Size != 0 {
 			return Plan{}, fmt.Errorf("invalid system mount %q", m.Target)
 		}
+		// Source-to-target correspondence is a host-layer property: the only
+		// producer is host.discoverSystem, which drives targets from a fixed
+		// list, resolves each source, rejects overlaps with the account home
+		// and ABX storage, and retains the descriptor. It cannot be restated
+		// here as a basename rule: /etc/resolv.conf legitimately resolves to
+		// ../run/systemd/resolve/stub-resolv.conf and /etc/localtime to a
+		// zoneinfo path, so any name-based tie breaks real hosts.
 		seen[m.Target] = true
 		p.mounts = append(p.mounts, m)
 	}

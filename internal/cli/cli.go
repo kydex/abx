@@ -55,11 +55,16 @@ func Parse(args []string) (Command, error) {
 	}
 	rest := args[1:]
 	if k == Run && len(rest) > 1 {
+		// Only the profile name precedes "--"; agent arguments after it are
+		// passed through untouched and must not be read as ABX flags.
 		rest = rest[:1]
 	}
 	for _, a := range rest {
-		if a == "-h" || a == "--help" {
+		switch a {
+		case "-h", "--help":
 			return Command{Kind: Help}, nil
+		case "-v", "--version":
+			return Command{Kind: Version}, nil
 		}
 	}
 	switch k {

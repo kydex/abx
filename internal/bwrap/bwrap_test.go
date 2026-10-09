@@ -290,6 +290,31 @@ func TestMarkInheritedFDsKeepsExplicitFiles(t *testing.T) {
 	if unknownFlags&unix.FD_CLOEXEC != 0 {
 		t.Fatal("inherited descriptor flags were not restored")
 	}
+	// A restore must never touch a descriptor whose number was reused:
+	// close it, let another file take the slot, then restore.
+	slot := int(unknown.Fd())
+	if err := unknown.Close(); err != nil {
+		t.Fatal(err)
+	}
+	replacement, err := os.CreateTemp(t.TempDir(), "replacement")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer replacement.Close()
+	if int(replacement.Fd()) != slot {
+		t.Skipf("descriptor slot %d was not reused (got %d)", slot, replacement.Fd())
+	}
+	if _, err := unix.FcntlInt(replacement.Fd(), unix.F_SETFD, unix.FD_CLOEXEC); err != nil {
+		t.Fatal(err)
+	}
+	restore()
+	replacementFlags, err := unix.FcntlInt(replacement.Fd(), unix.F_GETFD, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replacementFlags&unix.FD_CLOEXEC == 0 {
+		t.Fatal("restore cleared CLOEXEC on a reused descriptor")
+	}
 }
 
 func TestExecuteDropsInheritedFileDescriptors(t *testing.T) {

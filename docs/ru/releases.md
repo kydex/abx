@@ -35,7 +35,14 @@ make package
 (cd dist && sha256sum -c "abx-$version-SHA256SUMS")
 ```
 
-`make package` читает `internal/app/VERSION` и передаёт работу `scripts/package.sh`. Packaging script не запускает тесты и не создаёт git tag. Тег, не совпадающий с `internal/app/VERSION`, отклоняется.
+`make package` читает `internal/app/VERSION` и передаёт работу `scripts/package.sh`. Packaging script не запускает тесты и не создаёт git tag. В git work tree он требует:
+
+- совпадения переданного тега с `internal/app/VERSION`;
+- чистого work tree без неотслеживаемых файлов, иначе бинарник из рабочего каталога может отличаться от source-архива, собранного из индекса;
+- наличия именно этого тега на `HEAD`, иначе имя архива может описывать другое содержимое;
+- попадания каждого tracked-пути верхнего уровня в source-архив.
+
+Обычные сборки (`go build`, `make build-check`, `go test`) не ограничены: гейт касается только создания архивов. Вне git work tree скрипт предупреждает и упаковывает каталог как есть.
 
 Скрипт создаёт:
 
@@ -59,7 +66,7 @@ Workflow artifact предназначен для проверки и дальн
 
 1. Перенесите нужные записи changelog из `Unreleased` в новую секцию `X.Y.Z`.
 2. Измените `internal/app/VERSION` на то же значение `X.Y.Z`.
-3. Выполните `make check`, нужные live tests и локальную проверку packaging/checksums.
+3. Выполните `make check` и нужные live tests.
 4. Закоммитьте и отправьте release-изменения.
 5. После успешного CI ветки создайте и отправьте annotated tag:
 
@@ -70,8 +77,10 @@ git tag -a "$tag" -m "ABX $version"
 git push origin "$tag"
 ```
 
-6. Убедитесь, что tag workflow прошёл. Скачайте его workflow artifact, проверьте `abx-X.Y.Z-SHA256SUMS` и сделайте smoke-test бинарника.
+6. Убедитесь, что tag workflow прошёл. Он собирает архивы и затем выполняет `make package-smoke`: сверяет манифест сумм, распаковывает оба архива и проверяет обязательные списки файлов. Скачайте его workflow artifact, проверьте `abx-X.Y.Z-SHA256SUMS` и сделайте smoke-test бинарника.
 7. Опубликуйте проверенные бинарный архив, source archive и checksum manifest через пользовательский release-канал проекта.
+
+Локальную упаковку можно репетировать в любой момент через `make package-smoke` по уже готовым файлам в `dist/`; сама `make package` требует тега, поэтому запускайте её после шага 5.
 
 Не переносите уже опубликованный version tag на другое содержимое. Последующие исправления выпускайте новой версией.
 

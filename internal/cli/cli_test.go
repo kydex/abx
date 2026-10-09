@@ -34,11 +34,16 @@ func TestBareAndHelpShortcuts(t *testing.T) {
 			t.Fatalf("%q: %+v %v", argv, c, err)
 		}
 	}
-	for _, argv := range [][]string{{"-v"}, {"--version"}} {
+	for _, argv := range [][]string{{"-v"}, {"--version"}, {"version", "--version"}, {"version", "-v"}, {"help", "--version"}} {
 		c, err := Parse(argv)
 		if err != nil || c.Kind != Version {
 			t.Fatalf("%q: %+v %v", argv, c, err)
 		}
+	}
+	// Agent arguments after "--" must never be read as ABX flags.
+	c, err := Parse([]string{"run", "demo", "--", "--version", "-v", "--help"})
+	if err != nil || c.Kind != Run || !reflect.DeepEqual(c.Args, []string{"--version", "-v", "--help"}) {
+		t.Fatalf("run args after separator: %+v %v", c, err)
 	}
 }
 

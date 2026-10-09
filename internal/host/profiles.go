@@ -174,7 +174,8 @@ func existingObjectError(dirfd int, name string) error {
 	if err != nil {
 		return fmt.Errorf("%w: %q", ErrProfileExists, name)
 	}
-	defer unix.Close(fd)
+	// The descriptor only carries a stat sample; a failing close has nothing left to protect.
+	defer func() { _ = unix.Close(fd) }()
 	var st unix.Stat_t
 	if err := unix.Fstat(fd, &st); err != nil {
 		return fmt.Errorf("%w: %q", ErrProfileExists, name)

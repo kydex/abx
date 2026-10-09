@@ -2,23 +2,82 @@
 
 ## Unreleased
 
-- Recognise `-h`/`--help` and `-v`/`--version` only in the first argument position again. Scanning later positions made `abx profile create demo --version` print the version, exit `0` and create nothing — a silent no-op that reads as success.
-- Document what the code actually does: the four storage-base restrictions with their exact refusal messages, help and version as first-position commands, the `--dev` tmpfs being uncapped, inherited descriptors being marked close-on-exec rather than closed, the login-shell visibility rule, and the effective-UID requirement. (English and Russian.)
+## 0.8.22
 
-- Diagnose the Bubblewrap version probe deadline correctly: a wedged binary is reported as the 5s probe timeout instead of the exec wording `signal: killed`, and caller cancellation is reported separately.
-- Do not constrain the current project by ownership or mode, and stop rejecting group-writable storage ancestors or the passwd home on ownership. Team checkouts (`root:dev` 2775), container images with `runAsUser`, NFS with `root_squash`, and filesystems without POSIX modes (always `0777`) are legitimate layouts; only a world-writable home or storage ancestor without sticky is refused. All new refusal paths name the object they failed on. (English and Russian.)
+Hardening of host trust checks, packaging gates, and a documentation pass driven by
+two independent audit rounds plus three pre-release reviews. Fail-closed refusals
+may reject setups that previously worked — the exact conditions are listed below and
+in `docs/installation.md`.
 
-- Fix a false refusal found in pre-release review: system mounts no longer require the source basename to match the target, which broke `abx` on hosts where `/etc/resolv.conf` is a systemd-resolved stub or `/etc/localtime` points into zoneinfo.
-- Accept `-v`/`--version` alongside `-h`/`--help` in any argument position, and restore inherited descriptor flags only after confirming the descriptor number still refers to the same object.
-- Packaging: accept lightweight tags and repositories carrying several tags on `HEAD`, treat a source archive unpacked inside an unrelated repository as a plain directory, remove partial archives when a build fails partway, and document every gate in the release procedure (English and Russian).
-- Document the actual login-shell, passwd-database, data-base, and installation requirements, and correct the signal description: terminal signals reach the payload through the foreground process group, they are not delivered as SIGKILL.
+### Host trust checks
 
-- Fix documentation against code from two audit rounds (English and Russian): shared-skills recipe now sets `0700` on the storage root, sandbox environment lists all variables, `verify` documents its 30-second deadline, exit-code and signal sections describe SIGKILL delivery and per-command argument rules, Bubblewrap trust requirements are stated, and resource/namespace tables match the implementation.
-- Sharpen CLI and diagnostics without behavior change for legitimate inputs: `inspect` shows the mount namespace, Bubblewrap refusals name the violated condition, bare `abx` and `-h`/`--help` in any position show help, `-v`/`--version` works, `inspect` write errors return status 1, and dangling-symlink, timeout, and already-exists errors explain the cause.
-- Pin policies with unit tests and harden packaging: independent literals pin system-target, project-tree, namespace, and mount-point lists; `Validate` refusals, skills-symlink, oversize-probe, uid-validation, exit-2, argv-literalness, fd-index, fd-accounting, and fuzz-allowlist cases added; inherited FD flags are restored after execution; `package` refuses untracked clutter and verifies the source archive against tracked top-level paths, `dist/` is cleaned before builds, `package-smoke` checks the checksum manifest and mandatory file lists, and CI checkouts set `persist-credentials: false`.
-- Stop cleanup failures from overwriting a non-zero exit status: a failing cleanup now yields status `1` only when the operation itself succeeded, so the status reported by the deferred close stays the operation's own. Run the `__probe` sandbox gate before payload decoding, wire `package-smoke` into the release workflow, and replace the inert CI `diff-check` with a local-only target.
-- Gate release packaging on the version tag: `make package` refuses unless HEAD carries the matching tag, while plain builds stay ungated.
-- Tighten host trust checks (fail-closed, may refuse previously accepted setups): login shells and the passwd database must not be group/other-writable or carry special bits, the executed shell is the resolved target, passwd homes and projects must belong to the invoking user, projects must not be world-writable, and data-base ancestors must not be group/other-writable without the sticky bit. Shell ownership is deliberately not required (user-managed shells under system paths).
+- The login shell must not be group/other-writable and must carry no setuid, setgid,
+  or sticky bits. The resolved target is what executes, not the raw passwd path, and
+  both must be visible inside the sandbox. Shell ownership is deliberately not
+  required, so user-managed shells under `/usr/local` keep working.
+- `/etc/passwd` must be a regular file, not group/other-writable, without special bits.
+- The passwd home must not be world-writable. Ownership is not required: container
+  images with `runAsUser` and NFS with `root_squash` legitimately differ.
+- The current project is not constrained by ownership or mode. Team checkouts
+  (`root:dev` 2775) and filesystems without POSIX modes (always `0777`) are valid.
+- Storage ancestors must belong to the invoking user and must not be world-writable
+  unless they carry the sticky bit. Group-writable ancestors stay allowed: that is a
+  team policy, and refusing it breaks machines running umask 002.
+- Compatibility links `/bin`, `/sbin`, `/lib`, `/lib64` are resolved and rejected if
+  they point into the account home or ABX storage.
+- The sensitive-home denylist grows from 9 to 17 entries (`.netrc`, `.npmrc`,
+  `.git-credentials`, `.password-store`, keyrings, mail profiles).
+
+### Execution and diagnostics
+
+- A wedged Bubblewrap binary is reported as the 5-second probe timeout instead of the
+  exec wording `signal: killed`; caller cancellation is reported separately.
+- Inherited descriptor flags are restored after execution, only after confirming the
+  descriptor number still refers to the same object.
+- `open` and `Revalidate` share one mode-bit rule, so the two checks can no longer
+  drift apart; the deliberate difference in ownership handling is documented.
+- The `__probe` sandbox gate runs before payload decoding.
+- Cleanup failures no longer overwrite a non-zero exit status.
+- Refusals name the object they failed on: Bubblewrap trust conditions, dangling
+  symlinks, already-exists profile objects (type and mode), and skills close errors.
+
+### CLI
+
+- Bare `abx` prints help. `-h`/`--help` and `-v`/`--version` are commands in the first
+  argument position only — `abx profile create demo --version` is an argument error,
+  not a silent no-op.
+- `inspect` reports the mount namespace and returns status `1` when writing the plan fails.
+
+### Plan validation
+
+- `Plan.Validate` enforces the environment allowlist and requires `PWD` to be set
+  exactly once and to match the working directory.
+
+### Packaging and CI
+
+- `make package` requires the release tag on `HEAD`, a clean tree, and no untracked
+  files; it verifies every tracked top-level path lands in the source archive, cleans
+  `dist/` before building, and removes partial archives when a build fails partway.
+  Plain builds stay ungated. Lightweight tags and several tags on `HEAD` are accepted,
+  and a source archive unpacked inside an unrelated repository is treated as a plain
+  directory.
+- `make package-smoke` verifies the checksum manifest, unpacks both archives, and
+  checks the mandatory file lists. It now runs in the release workflow.
+- The inert CI `diff-check` is replaced by a local-only `local-diff-check`.
+- CI checkouts set `persist-credentials: false`.
+
+### Tests and documentation
+
+- Independent literals pin the system-target, project-tree, namespace, and mount-point
+  policies so a change to one list cannot pass silently. Added coverage for validator
+  refusals, inside-home skills symlinks, oversized probe input, UID validation, exit
+  code 2, environment argv literalness, the descriptor index, descriptor accounting,
+  and the environment allowlist in fuzzing. (English and Russian.)
+- Documentation brought in line with the implementation: storage-base restrictions and
+  their refusal messages, the 30-second `verify` deadline, per-command argument rules,
+  Bubblewrap and login-shell trust requirements, the uncapped `--dev` tmpfs,
+  inherited-descriptor handling, and the signal model — terminal signals reach the
+  payload through the foreground process group rather than as SIGKILL. (English and Russian.)
 
 ## 0.8.21
 

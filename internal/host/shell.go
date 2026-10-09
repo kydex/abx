@@ -69,10 +69,10 @@ func checkPasswdFile(path string) error {
 }
 
 func shellFromPasswd(uid int, path string) (string, error) {
-	// #nosec G304 -- production passes fixed /etc/passwd; the parameter is a deterministic test seam.
 	if err := checkPasswdFile(path); err != nil {
 		return "", err
 	}
+	// #nosec G304 -- production passes fixed /etc/passwd; the parameter is a deterministic test seam.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("open passwd database: %w", err)

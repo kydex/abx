@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.8.23
+
+Tightened what ABX trusts before it starts: the account home, the storage root, the
+account database, and the place the agent binary really lives. Verification no longer
+reports observations it could not fail, packaging gained a Bubblewrap provenance pin and
+an execution smoke check, and a mutation sweep over 280 guards turned ten refusals that
+could be deleted without any test noticing into pinned behaviour. The container-image
+layout is no longer supported — see the first entry below for exactly what that refuses.
+
 - The account home must now be owned by the invoking UID, and `/etc/passwd` must
   be owned by root. Both were previously accepted from any owner. The home is
   named by the passwd entry and is where the profile and the writable sandbox

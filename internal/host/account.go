@@ -104,7 +104,7 @@ func ResolvePaths(account Account, xdgDataHome string) (Paths, error) {
 		return Paths{}, fmt.Errorf("data base %q is the filesystem root", canonicalBase)
 	}
 	for _, relative := range sensitiveHomeTrees {
-		sensitive, err := canonicalProtectedTree(filepath.Join(filepath.Clean(account.Home), relative))
+		sensitive, err := canonicalSensitiveTree(filepath.Join(filepath.Clean(account.Home), relative))
 		if err != nil {
 			return Paths{}, err
 		}

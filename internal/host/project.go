@@ -82,7 +82,7 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 		return "", fmt.Errorf("project %q is outside the real home %q", project, realHome)
 	}
 	for _, relative := range sensitiveHomeTrees {
-		sensitive, err := canonicalProtectedTree(filepath.Join(realHome, relative))
+		sensitive, err := canonicalSensitiveTree(filepath.Join(realHome, relative))
 		if err != nil {
 			return "", err
 		}
@@ -125,4 +125,37 @@ func canonicalProtectedTree(path string) (string, error) {
 		return "", fmt.Errorf("canonicalize protected tree %q: %w (remove the dangling symlink if one points here)", path, err)
 	}
 	return filepath.Clean(resolved), nil
+}
+
+// canonicalSensitiveTree resolves a sensitive home tree for the two overlap
+// rules, and it is deliberately forgiving about a link that does not resolve
+// yet: such a link still says where it is headed, and that target is what has
+// to be compared against, because a path that does not exist today can sit
+// inside the project or the data base tomorrow.
+//
+// The literal link would be safe too — nothing can exist underneath a link that
+// resolves nowhere, and both callers compare against an already resolved path —
+// but the target is the stronger statement and it costs nothing.
+func canonicalSensitiveTree(path string) (string, error) {
+	if _, err := os.Lstat(path); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return filepath.Clean(path), nil
+		}
+		return "", fmt.Errorf("inspect protected tree %q: %w", path, err)
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err == nil {
+		return filepath.Clean(resolved), nil
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)
+	}
+	target, readErr := os.Readlink(path)
+	if readErr != nil {
+		return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(filepath.Dir(path), target)
+	}
+	return filepath.Clean(target), nil
 }

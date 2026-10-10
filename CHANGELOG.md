@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- A dangling symlink among the sensitive home trees (`~/.config`, `~/.ssh`,
+  `~/.aws`, `~/.netrc`, `~/.mozilla` and the rest) no longer takes down every
+  command. ABX checks seventeen paths under the passwd home; the path existed as
+  a link, so the missing-path branch did not apply and resolving it failed —
+  `abx profile list`, `abx run`, even `abx help` all stopped until someone deleted
+  the link. Uninstalling a program leaves exactly that behind. A dangling link
+  shelters nothing, so it is now treated as a missing path. A symlink that
+  resolves is still followed, and the overlap rule still applies to its target.
+
+The check keeps its teeth where they matter. An unresolvable sensitive link is
+compared by its target text rather than by the link itself, so a project or a
+storage base that sits where the link is headed is still refused even before the
+target exists. Protected system roots keep the strict rule and are still a hard
+refusal. (English and Russian.)
+
 - Correct the documented signal behaviour. A terminal `Ctrl+C` in `shell` or `work`
   reaches the payload and the Bubblewrap monitor at the same time: the monitor
   installs a handler only for `SIGCHLD`, so it dies by the default action, and the

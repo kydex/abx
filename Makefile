@@ -59,6 +59,7 @@ package-smoke:
 	(cd dist && sha256sum -c "abx-$$version-SHA256SUMS"); \
 	tar -xzf "dist/abx-$$version-linux-amd64.tar.gz" -C "$$work"; \
 	test -x "$$work/abx-$$version-linux-amd64/abx"; \
+	test "$$("$$work/abx-$$version-linux-amd64/abx" version)" = "abx $$version"; \
 	test -f "$$work/abx-$$version-linux-amd64/LICENSE"; \
 	test -f "$$work/abx-$$version-linux-amd64/README.md"; \
 	test -d "$$work/abx-$$version-linux-amd64/docs"; \

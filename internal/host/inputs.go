@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/kydex/abx/internal/profile"
@@ -168,6 +169,9 @@ func resolve(account Account, paths Paths, name, project string, mode Mode, need
 			if err != nil {
 				return nil, err
 			}
+			if err = in.checkAgentPlacement(); err != nil {
+				return nil, err
+			}
 			in.command = append([]string{in.executable}, args...)
 		}
 	}
@@ -175,6 +179,43 @@ func resolve(account Account, paths Paths, name, project string, mode Mode, need
 		return nil, err
 	}
 	return in, nil
+}
+
+// agentMountPoint is where the profile home appears inside the sandbox.
+const agentMountPoint = "/home/agent"
+
+// checkAgentPlacement refuses an agent whose real file will not exist inside
+// the sandbox, before anything is started.
+//
+// resolveAgent accepts any symlink that ends at a regular executable file,
+// which is what a package manager needs: the binary lives under /usr or inside
+// the profile, and ~/.local/bin/<name> points at it. But a link that ends
+// outside the profile and outside every mounted system source yields a path
+// that is absent inside the sandbox, and the session then dies at exec time
+// blaming the tool rather than the profile. Nothing is mounted there, so this
+// reports the real cause instead.
+func (in *Inputs) checkAgentPlacement() error {
+	rel := strings.TrimPrefix(in.executable, agentMountPoint)
+	if rel == in.executable {
+		return fmt.Errorf("agent path %q is not inside the agent mount", in.executable)
+	}
+	host := filepath.Join(in.home, rel)
+	resolved, err := filepath.EvalSymlinks(host)
+	if err != nil {
+		return fmt.Errorf("resolve profile executable %q: %w", host, err)
+	}
+	if within(resolved, in.home) {
+		return nil
+	}
+	for _, s := range in.system {
+		if s.Link == "" && (resolved == s.Path || within(resolved, s.Path)) {
+			return nil
+		}
+	}
+	return fmt.Errorf(
+		"profile executable %q resolves to %q, which the sandbox does not mount; "+
+			"put the binary inside the profile or under a mounted system path such as /usr",
+		host, resolved)
 }
 
 func resolveAgent(home, name string) (string, error) {
@@ -209,7 +250,7 @@ func resolveAgent(home, name string) (string, error) {
 			}
 			continue
 		}
-		return filepath.Join("/home/agent", dir, name), nil
+		return filepath.Join(agentMountPoint, dir, name), nil
 	}
 	if invalid != nil {
 		return "", invalid

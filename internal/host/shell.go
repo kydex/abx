@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -21,7 +22,12 @@ type Selection struct {
 }
 
 // ResolveShell reads /etc/passwd and validates the selected shell.
-func ResolveShell(uid int) Selection { return resolveShellFrom(uid, "/etc/passwd") }
+func ResolveShell(uid int) Selection {
+	if err := checkPasswdOwner("/etc/passwd"); err != nil {
+		return Selection{Reason: err.Error()}
+	}
+	return resolveShellFrom(uid, "/etc/passwd")
+}
 
 // resolveShellFrom is the deterministic passwd-file test seam.
 func resolveShellFrom(uid int, passwdPath string) Selection {
@@ -64,6 +70,27 @@ func checkPasswdFile(path string) error {
 	}
 	if info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
 		return fmt.Errorf("passwd database %q has setuid, setgid, or sticky bit", path)
+	}
+	return nil
+}
+
+// checkPasswdOwner pins the trust anchor itself. It is deliberately separate
+// from checkPasswdFile and is reached only for the database ABX actually uses:
+// the account entry it yields names the home every session runs against, so a
+// passwd file owned by anyone but root is one somebody could replace. On a real
+// host /etc/passwd is always root-owned; a container that hands over a
+// different one is out of scope, the same way a root-owned home now is.
+func checkPasswdOwner(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("stat passwd database %q: %w", path, err)
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return fmt.Errorf("passwd database %q has unknown owner", path)
+	}
+	if st.Uid != 0 {
+		return fmt.Errorf("passwd database %q is owned by uid %d, not by root", path, st.Uid)
 	}
 	return nil
 }

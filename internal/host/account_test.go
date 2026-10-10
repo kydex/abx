@@ -25,11 +25,13 @@ func TestAccountFromPasswd(t *testing.T) {
 	if err != nil || a.Home != home {
 		t.Fatalf("accountFromPasswd = %#v, %v", a, err)
 	}
-	// Ownership is not required: root-owned homes (container images with
-	// runAsUser) and NFS uid-mapping must keep working. Only a
-	// world-writable home is refused.
-	if _, err := accountFromPasswd(60000, "tester", link); err != nil {
-		t.Errorf("foreign uid refused: %v", err)
+	// Ownership is required. The old rule let any uid keep working so that
+	// container images with runAsUser and NFS uid-mapping would not break;
+	// ABX is for real hosts, where the passwd home belongs to the invoking
+	// user, and a home owned by somebody else is one somebody else can replace.
+	if _, err := accountFromPasswd(60000, "tester", link); err == nil ||
+		!strings.Contains(err.Error(), "not by uid 60000") {
+		t.Errorf("foreign uid accepted: %v", err)
 	}
 	wide := filepath.Join(filepath.Dir(home), "wide-home")
 	if err := os.Mkdir(wide, 0o700); err != nil {

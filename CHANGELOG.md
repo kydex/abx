@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- The account home must now be owned by the invoking UID, and `/etc/passwd` must
+  be owned by root. Both were previously accepted from any owner. The home is
+  named by the passwd entry and is where the profile and the writable sandbox
+  home live, and the passwd entry is what resolves the login shell, so a file
+  owned by somebody else is one somebody else can replace. The storage root
+  additionally rejects a setgid ancestor: a setgid directory makes everything
+  created under it inherit a group the check never inspects, while the sticky
+  bit stays allowed because it is the documented answer to a shared directory.
+
+  **This drops support for container images that hand the process a root-owned
+  home or a passwd file of their own** (runAsUser, and any user-namespace
+  remapping of `/etc`). ABX now targets real hosts. If you ran it inside such a
+  container, `abx` will refuse to start with `passwd home ... is owned by uid 0`
+  or `passwd database ... is not owned by root`.
+- A profile executable that resolves outside the profile and outside every
+  mounted system path is now refused while the profile is resolved, with a
+  message naming the resolved location. It previously produced a path that does
+  not exist inside the sandbox and failed at exec time blaming the tool. Package
+  managers are unaffected: a symlink into `/usr` or into the profile still
+  works, which is what `~/.local/bin/<name>` pointing at a separately installed
+  binary is.
+- `make package-smoke` now runs the binary out of the unpacked release archive
+  and compares its reported version. The gate already verified the checksums and
+  unpacked both archives; it never executed what it unpacked, so an archive that
+  was structurally intact but did not run passed.
+
 - Correct a 0.8.22 claim: packaging drops the three stale archives of the
   version being built, not everything in `dist/`. Older builds of other versions
   are left alone on purpose, so the wording "cleans `dist/`" overstated what the

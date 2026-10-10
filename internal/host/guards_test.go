@@ -417,3 +417,158 @@ func TestPrepareWithoutSkillsLeavesProfileHomeUntouched(t *testing.T) {
 		t.Fatalf("Prepare added entries: %v", entries)
 	}
 }
+
+// The four refusals added after the 0.8.21 round. Each one narrows what is
+// still trusted: the home named by the account database, the storage root, the
+// account database itself, and the place the agent binary really lives.
+
+func TestResolvePathsRejectsSetgidDataBaseAncestor(t *testing.T) {
+	base := t.TempDir()
+	account := Account{UID: os.Getuid(), Username: "tester", Home: base}
+	if _, err := ResolvePaths(account, filepath.Join(base, "missing/data")); err != nil {
+		t.Fatalf("plain data base rejected: %v", err)
+	}
+	// The sticky bit is the documented answer to a shared directory and stays
+	// allowed; setgid is not, because everything created under the storage
+	// root would inherit a group this check never inspects.
+	if err := os.Chmod(base, os.ModeSetgid|0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolvePaths(account, filepath.Join(base, "missing/data")); err == nil ||
+		!strings.Contains(err.Error(), "setuid or setgid") {
+		t.Fatalf("setgid data base ancestor accepted: %v", err)
+	}
+	if err := os.Chmod(base, os.ModeSticky|0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolvePaths(account, filepath.Join(base, "missing/data")); err != nil {
+		t.Fatalf("sticky data base ancestor rejected: %v", err)
+	}
+}
+
+func TestCheckPasswdOwnerRequiresRoot(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "passwd")
+	if err := os.WriteFile(path, []byte("root:x:0:0::/root:/bin/sh\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkPasswdOwner(path); err == nil {
+		t.Fatal("passwd file owned by a non-root uid accepted")
+	}
+	if err := checkPasswdOwner(filepath.Join(t.TempDir(), "absent")); err == nil {
+		t.Fatal("missing passwd database accepted")
+	}
+	// The real host database is the trust anchor and must stay root-owned;
+	// this is the one case the test environment cannot fake.
+	if os.Getuid() == 0 {
+		if err := checkPasswdOwner("/etc/passwd"); err != nil {
+			t.Fatalf("host /etc/passwd rejected: %v", err)
+		}
+	}
+}
+
+func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
+	in := fixture(t)
+	outside := filepath.Join(t.TempDir(), "agent-bin")
+	if err := os.WriteFile(outside, []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(in.home, ".local", "bin", "demo")
+	if err := os.MkdirAll(filepath.Dir(link), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, link); err != nil {
+		t.Fatal(err)
+	}
+	in.executable = filepath.Join(agentMountPoint, ".local", "bin", "demo")
+	// A link that leaves the profile and every mounted source resolves to a
+	// path the sandbox has no mount for: the session would die at exec time
+	// blaming the tool. It has to be refused while the profile is resolved.
+	if err := in.checkAgentPlacement(); err == nil ||
+		!strings.Contains(err.Error(), "does not mount") {
+		t.Fatalf("agent outside the sandbox accepted: %v", err)
+	}
+	// A link that stays inside the profile is the package-manager layout and
+	// must keep working.
+	inside := filepath.Join(in.home, ".local", "libexec")
+	if err := os.MkdirAll(inside, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inside, "demo"), []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(inside, "demo"), link); err != nil {
+		t.Fatal(err)
+	}
+	if err := in.checkAgentPlacement(); err != nil {
+		t.Fatalf("agent inside the profile refused: %v", err)
+	}
+	// So must a link into a mounted system source, which is how a system-wide
+	// package manager installs an agent.
+	if in.system == nil {
+		in.system = []Source{{Path: "/usr", Target: "/usr"}}
+	}
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/usr/bin/sh", link); err != nil {
+		t.Fatal(err)
+	}
+	if err := in.checkAgentPlacement(); err != nil {
+		t.Fatalf("agent in a mounted system path refused: %v", err)
+	}
+}
+
+// checkAgentPlacement is only worth anything if resolve() actually calls it.
+// This walks the real path through resolve(), which needs a host /etc/passwd
+// owned by root; where that is not the case the whole run is refused earlier
+// and the test says so rather than passing silently.
+func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
+	if err := checkPasswdOwner("/etc/passwd"); err != nil {
+		t.Skipf("host account database is not trusted here: %v", err)
+	}
+	home, project := t.TempDir(), t.TempDir()
+	root := filepath.Join(home, "data")
+	paths := Paths{Root: root, Profiles: filepath.Join(root, "profiles")}
+	profileHome := filepath.Join(paths.Profiles, "demo")
+	binDir := filepath.Join(profileHome, ".local", "bin")
+	if err := os.MkdirAll(binDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(t.TempDir(), "elsewhere")
+	if err := os.WriteFile(outside, []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(binDir, "demo")); err != nil {
+		t.Fatal(err)
+	}
+	account := Account{UID: os.Getuid(), Username: "tester", Home: home}
+	if _, err := resolve(account, paths, "demo", project, Run, true, nil); err == nil ||
+		!strings.Contains(err.Error(), "does not mount") {
+		t.Fatalf("resolve accepted an agent the sandbox cannot mount: %v", err)
+	}
+	// The same layout with the binary inside the profile must still resolve:
+	// this is the package-manager case, and refusing it would be the bug.
+	if err := os.Remove(filepath.Join(binDir, "demo")); err != nil {
+		t.Fatal(err)
+	}
+	inside := filepath.Join(profileHome, ".local", "libexec")
+	if err := os.MkdirAll(inside, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inside, "demo"), []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(inside, "demo"), filepath.Join(binDir, "demo")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := resolve(account, paths, "demo", project, Run, true, nil)
+	if err != nil {
+		t.Fatalf("resolve refused a package-manager layout: %v", err)
+	}
+	if err = got.Close(); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -81,7 +81,7 @@ func accountFromPasswd(uid int, username, home string) (Account, error) {
 	if !info.IsDir() {
 		return Account{}, fmt.Errorf("passwd home %q is not a directory", canonical)
 	}
-	if err := checkHomeWritable(info, canonical); err != nil {
+	if err := checkHomeWritable(info, canonical, uid); err != nil {
 		return Account{}, err
 	}
 	return Account{UID: uid, Username: username, Home: canonical}, nil
@@ -156,14 +156,20 @@ func canonicalizeExisting(path string) (string, error) {
 }
 
 // checkHomeWritable rejects an account home that any local user may write.
-// Ownership is not required: homes are legitimately owned by root in
-// container images (runAsUser) and report an unexpected uid on NFS with
-// root_squash or on sshfs/9p mounts. A world-writable home is not a
-// legitimate layout, and it is the only case here that reaches beyond the
-// documented same-UID threat model.
-func checkHomeWritable(info os.FileInfo, home string) error {
+// Ownership IS required: the home is read from the passwd database, so a home
+// owned by someone else means a home somebody else can replace. Containers
+// that hand the process a root-owned home are no longer supported: ABX is for
+// real hosts, where the home belongs to the invoking user.
+func checkHomeWritable(info os.FileInfo, home string, uid int) error {
 	if info.Mode().Perm()&0o002 != 0 {
 		return fmt.Errorf("passwd home %q is world-writable", home)
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return fmt.Errorf("passwd home %q has unknown owner", home)
+	}
+	if int(st.Uid) != uid {
+		return fmt.Errorf("passwd home %q is owned by uid %d, not by uid %d", home, st.Uid, uid)
 	}
 	return nil
 }
@@ -196,6 +202,14 @@ func checkDataBaseOwner(canonicalBase string, uid int) error {
 			// managers) and the sticky bit is the container's own answer to it.
 			if info.Mode().Perm()&0o002 != 0 && info.Mode()&os.ModeSticky == 0 {
 				return fmt.Errorf("data base ancestor %q is world-writable", current)
+			}
+			// The sticky bit is allowed above, setuid and setgid are not: a
+			// setgid directory makes everything created under it inherit a
+			// group, so the storage root could end up group-owned by a path
+			// this check never inspects. The passwd database is checked the
+			// same way.
+			if info.Mode()&(os.ModeSetuid|os.ModeSetgid) != 0 {
+				return fmt.Errorf("data base ancestor %q has a setuid or setgid bit", current)
 			}
 			return nil
 		}

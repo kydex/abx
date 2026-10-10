@@ -60,7 +60,8 @@ package-smoke:
 	tar -xzf "dist/abx-$$version-linux-amd64.tar.gz" -C "$$work"; \
 	test -x "$$work/abx-$$version-linux-amd64/abx"; \
 	if [ "$$(id -u)" -ne 0 ]; then \
-		test "$$("$$work/abx-$$version-linux-amd64/abx" version)" = "abx $$version"; \
+		"$$work/abx-$$version-linux-amd64/abx" version > "$$work/version.out"; \
+		printf 'abx %s\n' "$$version" | cmp -s - "$$work/version.out"; \
 	else \
 		echo "note: built as root, so the archive was not executed: abx refuses to run as root, which is the correct behaviour, not a broken archive"; \
 	fi; \

@@ -26,7 +26,9 @@
 - `make package-smoke` now runs the binary out of the unpacked release archive
   and compares its reported version. The gate already verified the checksums and
   unpacked both archives; it never executed what it unpacked, so an archive that
-  was structurally intact but did not run passed.
+  was structurally intact but did not run passed. Built as root, the execution
+  step is skipped with a note instead: ABX refuses to run as root before it
+  parses any argument, so that outcome says nothing about the archive.
 
 - Correct a 0.8.22 claim: packaging drops the three stale archives of the
   version being built, not everything in `dist/`. Older builds of other versions

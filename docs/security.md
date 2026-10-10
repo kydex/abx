@@ -47,7 +47,7 @@ ABX additionally validates the host objects it depends on: two that it executes 
 | Object | Check |
 |---|---|
 | `/usr/bin/bwrap` | Regular file, executable, no setuid/setgid/sticky bits, not writable by group/other, owned by root; before execution it must still resolve to the same inode |
-| `/etc/passwd` | Regular file, not writable by group/other, no setuid/setgid/sticky bits |
+| `/etc/passwd` | Regular file, not writable by group/other, no setuid/setgid/sticky bits, owned by root |
 | Login shell from `/etc/passwd` | Resolved target is a regular file, executable by the invoking user, not writable by group/other, no setuid/setgid/sticky bits; both the passwd path and its resolved target must be visible in the sandbox |
 
 The account database is reached by two different routes, and the checks above cover only one of them. The account record itself (`home`, `username`) comes from NSS through `os/user.LookupId`, which may be backed by a file the row above never names and never inspects; the login shell is always read from the literal `/etc/passwd`. On a host whose `nsswitch.conf` resolves `passwd` through `sss` or `ldap`, the shell lookup therefore fails and ABX refuses even though `id` and `getent` report the account correctly. A local `/etc/passwd` entry for the invoking UID is required; that requirement is stated in [Installation](installation.md) as well.

@@ -12,6 +12,11 @@
   path rather than two. The download step now says plainly that the project has
   no download page of its own, and the Bubblewrap requirement is split into one
   condition per bullet. (English and Russian.)
+- The security model now lists the root-ownership requirement for `/etc/passwd`
+  in the table of validated host objects. The check has been in the code since
+  0.8.23; the table, which the document offers as the complete list, was not
+  updated with it. A reader relying on the table would have learned of the check
+  only from the accepted-trade-offs section near the end. (English and Russian.)
 
 ## 0.8.23
 

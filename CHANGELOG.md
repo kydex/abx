@@ -21,6 +21,10 @@
   holding the archive. `--ignore-missing` skips absent files without failing, so from
   the wrong directory `sha256sum --check` still exits 0 and reports only that nothing
   was verified -- an integrity check that looks like a pass. (English and Russian.)
+- The development guide lists what `make check` runs as a single list again. The
+  `go vet` entry had been pushed below a paragraph, so it rendered as a stray
+  one-item list with no visible connection to the six items above it. The Russian
+  version was already correct. (English.)
 
 ## 0.8.23
 

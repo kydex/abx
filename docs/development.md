@@ -34,10 +34,10 @@ make check
 - `actionlint` for GitHub Actions workflows;
 - `govulncheck`;
 - static production build check;
-- race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`.
+- race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`;
+- an independent `go vet` pass besides the golangci govet check.
 
 Whitespace errors in uncommitted changes are a local convenience, not a gate: `make local-diff-check` runs `git diff --check` on demand. It is excluded from `make check` because a fresh CI checkout has nothing staged or modified, so it cannot find anything there.
-- independent `go vet` pass besides the golangci govet check.
 
 The race detector requires a supported Go platform and a working C toolchain. `make test` is the faster option while iterating.
 

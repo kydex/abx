@@ -175,3 +175,66 @@ func TestValidNameRejectsEmptyKey(t *testing.T) {
 		t.Fatal("a valid environment variable name was rejected")
 	}
 }
+
+// The three guards below are the first things build does, before anything is
+// recorded in the plan. Nothing downstream re-checks them: Validate compares
+// the built plan against expectations, and an empty home or a relative command
+// recorded faithfully as an expectation passes every later comparison.
+
+func TestBuildRejectsUnusableHomeAndCommand(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		apply func(*Input)
+	}{
+		{"empty home", func(in *Input) { in.Home = "" }},
+		{"relative home", func(in *Input) { in.Home = "data/profiles/demo" }},
+		{"home needs cleaning", func(in *Input) { in.Home = "/data/profiles/../profiles/demo" }},
+		{"no command", func(in *Input) { in.Command = nil }},
+		{"empty command", func(in *Input) { in.Command = []string{} }},
+		{"relative command", func(in *Input) { in.Command = []string{"bin/demo"} }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := testInput(t, Run)
+			tc.apply(&in)
+			if _, err := Build(in); err == nil || !strings.Contains(err.Error(), "invalid session inputs") {
+				t.Fatalf("accepted: %v", err)
+			}
+		})
+	}
+}
+
+// Skills is optional but not unchecked: when it is named at all it has to be an
+// absolute clean path, because it becomes a read-only mount source.
+func TestBuildRejectsUnusableSkillsSource(t *testing.T) {
+	for _, skills := range []string{"skills", "/skills/../elsewhere", "/skills\x00/x"} {
+		in := testInput(t, Run)
+		in.Skills = skills
+		if _, err := Build(in); err == nil || !strings.Contains(err.Error(), "invalid skills source") {
+			t.Fatalf("accepted %q: %v", skills, err)
+		}
+	}
+	// Absent is a legitimate value, not a rejected one.
+	in := testInput(t, Run)
+	in.Skills = ""
+	if _, err := Build(in); err != nil {
+		t.Fatalf("no skills source rejected: %v", err)
+	}
+}
+
+// Without /usr the sandbox has no userspace: no shell, no loader, nothing to run.
+// Every other system entry is optional, so this is the one that cannot go missing.
+//
+// The requirement is enforced twice — once while constructing the plan and once
+// in Validate — so asserting only that Build fails passes whichever of the two
+// is still standing. This case pins the construction guard on its own, which is
+// the one that stops a plan with no /usr from ever existing.
+func TestBuildRequiresUsrInSystemLayout(t *testing.T) {
+	in := testInput(t, Run)
+	in.System = []Mount{{Kind: Symlink, Source: "usr/bin", Target: "/bin"}}
+	if _, err := build(in); err == nil || !strings.Contains(err.Error(), "system /usr is required") {
+		t.Fatalf("built a plan without /usr: %v", err)
+	}
+	if _, err := Build(in); err == nil || !strings.Contains(err.Error(), "/usr is required") {
+		t.Fatalf("accepted a system layout without /usr: %v", err)
+	}
+}

@@ -1,10 +1,13 @@
 package host
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 // A mutation sweep found these guards removable with the suite still green:
@@ -231,5 +234,186 @@ func TestDiscoverLayoutAcceptsAbsentOptionalPaths(t *testing.T) {
 	}
 	if len(in2.system) != 3 {
 		t.Errorf("layout produced %d sources, want 3: %+v", len(in2.system), in2.system)
+	}
+}
+
+// A second sweep round. Same rule as above: each case pins one refusal, and
+// every one of them was confirmed by deleting the condition and watching the
+// suite stay green.
+
+func TestResolveProjectRejectsRelativeWorkingDirectory(t *testing.T) {
+	home, project := t.TempDir(), t.TempDir()
+	if _, err := ResolveProject(project, home, filepath.Join(home, "data")); err != nil {
+		t.Fatalf("absolute project rejected: %v", err)
+	}
+	// A relative path resolves against whatever directory abx happens to run
+	// in, so the same project would be a different directory next time.
+	for _, cwd := range []string{"proj", "./proj", "../proj", ""} {
+		if _, err := ResolveProject(cwd, home, filepath.Join(home, "data")); err == nil ||
+			!strings.Contains(err.Error(), "not absolute") {
+			t.Fatalf("relative working directory %q accepted: %v", cwd, err)
+		}
+	}
+}
+
+func TestCanonicalSensitiveTreeResolvesRelativeLinkTarget(t *testing.T) {
+	home := t.TempDir()
+	// ~/.netrc -> credentials/ : the link resolves nowhere yet, but it says
+	// where it is headed, and that is the place a project must not overlap.
+	if err := os.Symlink("credentials", filepath.Join(home, ".netrc")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := canonicalSensitiveTree(filepath.Join(home, ".netrc"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(home, "credentials"); got != want {
+		t.Fatalf("relative link target = %q, want %q", got, want)
+	}
+	// An absolute target is used as written.
+	other := t.TempDir()
+	if err := os.Symlink(other, filepath.Join(home, ".ssh")); err != nil {
+		t.Fatal(err)
+	}
+	if got, err = canonicalSensitiveTree(filepath.Join(home, ".ssh")); err != nil || got != other {
+		t.Fatalf("absolute link target = %q, %v", got, err)
+	}
+}
+
+func TestCreateDirectoryAtExclusiveRejectsExistingObject(t *testing.T) {
+	base := t.TempDir()
+	parent, err := openDirectoryAt(unix.AT_FDCWD, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer parent.Close()
+	// Open mode reuses an existing directory; exclusive mode refuses it. The
+	// difference is the whole point of the flag, so a caller that asks for
+	// exclusive must never silently get the other behavior.
+	dir, created, err := createDirectoryAt(parent, "shared", os.Getuid(), true, true)
+	if err != nil || !created || dir == nil {
+		t.Fatalf("exclusive create: %v", err)
+	}
+	if err = dir.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = createDirectoryAt(parent, "shared", os.Getuid(), true, true); !errors.Is(err, ErrProfileExists) {
+		t.Fatalf("exclusive create reused an existing directory: %v", err)
+	}
+	reused, created, err := createDirectoryAt(parent, "shared", os.Getuid(), true, false)
+	if err != nil || created || reused == nil {
+		t.Fatalf("non-exclusive create did not reuse: %v", err)
+	}
+	if err = reused.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestResolveAgentReportsFirstBrokenCandidate(t *testing.T) {
+	home := t.TempDir()
+	// Two candidates, both unusable, in the order resolveAgent tries them.
+	// The report must name the first: it is the one an operator sees at the
+	// documented path, and the later fallback is only a fallback.
+	if err := os.MkdirAll(filepath.Join(home, ".local/bin"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(home, "bin"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(home, ".local/bin/demo"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, "bin/demo"), []byte("#!/bin/sh\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := resolveAgent(home, "demo")
+	if err == nil || !strings.Contains(err.Error(), filepath.Join(".local", "bin", "demo")) {
+		t.Fatalf("agent error does not name the first candidate: %v", err)
+	}
+	if err != nil && strings.Contains(err.Error(), "no execute permission") {
+		t.Fatalf("reported the fallback instead of the first candidate: %v", err)
+	}
+}
+
+// The same first-error rule, reached through the other branch: a candidate that
+// cannot even be inspected because a parent is not a directory. Here the first
+// candidate fails to stat, so only the stat-side guard can keep it.
+func TestResolveAgentKeepsFirstStatFailureOverLaterFallback(t *testing.T) {
+	home := t.TempDir()
+	// .local as a file makes .local/bin/demo unreachable: stat returns ENOTDIR.
+	if err := os.WriteFile(filepath.Join(home, ".local"), []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(home, "bin"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, "bin/demo"), []byte("#!/bin/sh\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := resolveAgent(home, "demo")
+	if err == nil {
+		t.Fatal("no usable agent reported for unreadable candidate paths")
+	}
+	if !strings.Contains(err.Error(), filepath.Join(".local", "bin", "demo")) {
+		t.Fatalf("reported a later candidate instead of the first: %v", err)
+	}
+	if strings.Contains(err.Error(), "no execute permission") {
+		t.Fatalf("the fallback overwrote the first failure: %v", err)
+	}
+}
+
+func TestShellFromPasswdSkipsCommentsAndBlankLines(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "passwd")
+	// A commented-out entry for the same uid must not win over the real one.
+	data := "# tester:x:1000:1000::/home/tester:/bin/dash\n" +
+		"\n" +
+		"malformed line without all fields\n" +
+		"tester:x:1000:1000::/home/tester:/usr/bin/fish\n"
+	if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := shellFromPasswd(1000, path)
+	if err != nil || got != "/usr/bin/fish" {
+		t.Fatalf("shellFromPasswd = %q, %v", got, err)
+	}
+	// Without the skip the comment parses as an entry, so uid 1000 would
+	// resolve to /bin/dash and the comment would win.
+}
+
+func TestValidateExecutableReportsMissingShellDistinctly(t *testing.T) {
+	// The missing case gets its own message because callers surface it to the
+	// user as "the shell you configured is gone", not as a generic resolve error.
+	_, err := validateExecutable(filepath.Join(t.TempDir(), "absent"))
+	if err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Fatalf("missing shell reported as %v", err)
+	}
+	// A dangling symlink is the same situation seen through a link.
+	dir := t.TempDir()
+	link := filepath.Join(dir, "sh")
+	if err := os.Symlink(filepath.Join(dir, "gone"), link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = validateExecutable(link); err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Fatalf("dangling shell link reported as %v", err)
+	}
+}
+
+func TestPrepareWithoutSkillsLeavesProfileHomeUntouched(t *testing.T) {
+	in := fixture(t)
+	if err := in.Prepare(); err != nil {
+		t.Fatal(err)
+	}
+	// No skills configured means nothing to mount, so Prepare must not create
+	// the mountpoint: it would leave a directory the user never asked for and
+	// that the next run would then find "already there".
+	if _, err := os.Lstat(filepath.Join(in.home, ".agents")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Prepare created .agents without skills configured: %v", err)
+	}
+	entries, err := os.ReadDir(in.home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("Prepare added entries: %v", entries)
 	}
 }

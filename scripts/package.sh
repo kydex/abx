@@ -58,17 +58,19 @@ mkdir -p dist
 # behind for a later smoke check to bless.
 rm -f dist/abx-"$version"-linux-amd64.tar.gz dist/abx-"$version"-source.tar.gz dist/abx-"$version"-SHA256SUMS
 stage=$(mktemp -d)
-trap 'rm -rf -- "$stage"' EXIT
 # A-067: a build that fails partway must not leave a partial archive behind for
 # a later smoke check to treat as a release candidate. Runs only on failure,
-# so a successful build keeps its artifacts.
+# so a successful build keeps its artifacts. One trap, not two: a second
+# `trap ... EXIT` replaces the first, and the staging directory would then
+# survive every run.
 failed=1
-cleanup_dist() {
+cleanup() {
+    rm -rf -- "$stage"
     if [ "$failed" -ne 0 ]; then
         rm -f "dist/abx-$version-linux-amd64.tar.gz" "dist/abx-$version-source.tar.gz" "dist/abx-$version-SHA256SUMS"
     fi
 }
-trap 'cleanup_dist' EXIT
+trap cleanup EXIT
 name="abx-$version-linux-amd64"
 mkdir "$stage/$name"
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false \
@@ -76,8 +78,10 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false \
 cp LICENSE THIRD_PARTY_LICENSES README.md README.ru.md CHANGELOG.md "$stage/$name/"
 if $in_git; then
     # Stage exactly the tracked files so untracked clutter cannot leak
-    # into the user-facing archive either.
-    git -C "$root" ls-files -z -- docs | (cd -- "$root" && xargs -0 -r cp --parents -t "$stage/$name")
+    # into the user-facing archive either. -P keeps a tracked symlink a
+    # symlink: without it cp follows it and archives whatever the target
+    # happens to hold, which can be outside the repository entirely.
+    git -C "$root" ls-files -z -- docs | (cd -- "$root" && xargs -0 -r cp -P --parents -t "$stage/$name")
 else
     cp -R docs "$stage/$name/docs"
 fi
@@ -86,8 +90,9 @@ source="abx-$version-source"
 mkdir "$stage/$source"
 if $in_git; then
     # Stage exactly the tracked files so untracked clutter under the staged
-    # trees cannot leak into the source archive.
-    git -C "$root" ls-files -z -- cmd internal scripts docs .github | (cd -- "$root" && xargs -0 -r cp --parents -t "$stage/$source")
+    # trees cannot leak into the source archive. -P for the same reason as the
+    # binary archive above.
+    git -C "$root" ls-files -z -- cmd internal scripts docs .github | (cd -- "$root" && xargs -0 -r cp -P --parents -t "$stage/$source")
 else
     cp -R cmd internal scripts docs .github "$stage/$source/"
 fi

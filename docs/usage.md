@@ -12,7 +12,7 @@ Run `abx` commands from the host terminal as a regular user. Use `abx shell` whe
 | Start the profile executable directly in the current project | `abx run <profile>` |
 | Open a shell with access to the current project | `abx work <profile>` |
 
-`shell`, `inspect`, and `verify` accept only the profile name, with no arguments after `--` (like `work` below); only `run` forwards arguments after `--` to the agent.
+Every command takes exactly the profile name and nothing else: `run`, `shell`, and `work` reject any extra argument outright, and so do `inspect`, `verify`, and the `profile` subcommands. A `--` is an argument, not a separator you may leave dangling — only `run` accepts one, and only to introduce arguments for the agent (`abx run <profile> -- <argument> [additional arguments]`). `abx shell <profile> --` is an error.
 
 `abx` with no arguments prints the same help as `abx help`. `-h`/`--help` and `-v`/`--version` are commands in the first position only: `abx --help` and `abx -v` work, but `abx profile create demo --version` is an argument error, not a version query.
 
@@ -270,7 +270,7 @@ mkdir -p "$abx_root/shared/agents/skills"
 chmod 700 "$abx_root" "$abx_root/shared"
 ```
 
-The `shared`, `agents`, and `skills` path components must be real directories where ABX requires them; unsafe symlink redirection is rejected. The `shared` directory must belong to the invoking user and have exact mode `0700`. The storage root itself (`$abx_root`) must also belong to the invoking user and have exact mode `0700`; `mkdir -p` creates missing parents with the default mode, so set it explicitly — otherwise `profile`, `run`, `shell`, `work`, `inspect`, and `verify` fail with `private directory "<path>/abx" must have exact mode 0700` (`profile create` reports only the last component). `help` and `version` keep working.
+The `shared`, `agents`, and `skills` path components must be real directories where ABX requires them; unsafe symlink redirection is rejected. The `shared` directory must belong to the invoking user and have exact mode `0700`. The storage root itself (`$abx_root`) must also belong to the invoking user and have exact mode `0700`; `mkdir -p` creates missing parents with the default mode, so set it explicitly — otherwise `profile`, `run`, `shell`, `work`, `inspect`, and `verify` fail with `private directory "<component>" must have exact mode 0700`, naming the single path component it stopped at rather than the full path (`profile create` walks the components in order and stops at the first one that does not qualify). `help` and `version` keep working.
 
 When skills are used, ABX may create `.agents` and an empty `.agents/skills` mountpoint inside a profile. These are mount preparation directories, not copies of the shared skills.
 

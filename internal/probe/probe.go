@@ -311,6 +311,7 @@ func sanitizeEnvironment(entries []string) []string {
 	}
 	return out
 }
+
 func checkEnvironment(actual, expected []string) Check {
 	actual, expected = sanitizeEnvironment(actual), sanitizeEnvironment(expected)
 	slices.Sort(actual)

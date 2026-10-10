@@ -19,6 +19,25 @@
 - State in the architecture guide that the namespace and lifetime flags are a literal
   at the translation site rather than a field of `Plan`, so they sit outside
   `Plan.Validate` and are spelled out in three places derived from nothing.
+- `verify` no longer reports a difference in the environment that nothing could show.
+  The expected values reach the probe through JSON, and the JSON encoder rewrites
+  invalid UTF-8, so a host variable holding such a byte sequence could never match
+  its own round trip. Both sides of the comparison now pass through the same
+  transform. A real difference in bytes a user could read is still reported.
+- `profile`, `run`, `shell`, `work`, `inspect`, `verify` and the `profile`
+  subcommands all take the profile name and nothing else; the usage guide said
+  `inspect` and `verify` accept "no arguments after `--`", which read as if a lone
+  `--` were tolerated. It is an error there, as it is for `shell` and `work`.
+- State that a `profile create` refusal names the single path component it stopped
+  at, not the whole path, and that it stops at the first component that fails.
+  The guide said it "reports only the last component".
+- State what the binary archive actually contains: the whole `docs/` tree in both
+  languages, contributor documents included.
+- Packaging: the staging directory is removed again. A second `trap ... EXIT`
+  replaced the first one, so every run left its staging directory behind. Tracked
+  symlinks are now copied as symlinks instead of being followed, so a symlink in
+  the staged trees cannot pull the contents of a path outside the repository into a
+  release archive.
 
 (English and Russian.)
 

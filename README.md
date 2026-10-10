@@ -10,13 +10,18 @@ When you run an agent, the current project is mounted writable at `/workspace`. 
 
 - Linux. The published prebuilt binary is for x86-64 (`amd64`).
 - Run ABX as a regular user, without `sudo`.
-- Bubblewrap **0.12.0 or newer** installed at `/usr/bin/bwrap`, owned by root, not group- or world-writable and without setuid/setgid/sticky bits, with unprivileged user namespaces allowed by the host.
+- Bubblewrap **0.12.0 or newer**, installed at `/usr/bin/bwrap` and owned by root. The
+  binary must be a regular file, not group- or world-writable, and without
+  setuid, setgid or sticky bits.
+- Unprivileged user namespaces allowed by the host.
 - A local `/etc/passwd` entry for your UID, with a valid home directory and a usable login shell.
 - The runtime or package manager required by the agent you want to install, such as Bun or npm.
 
 ## Install
 
-Download the binary archive for the version you want:
+The project publishes no download page of its own. The archives reach you through
+whoever maintains a build for your platform, so there is no single URL to point
+you at — take the archive for the version you want:
 
 ```text
 abx-X.Y.Z-linux-amd64.tar.gz
@@ -71,46 +76,7 @@ abx run opencode
 
 `verify` is optional but useful after installation or host changes. It starts a real sandbox and checks the main isolation properties without requiring the agent executable itself.
 
-A profile can hold [Herdr](https://herdr.dev/) and several agent CLIs. For detach/reattach, use `work` so that leaving the client returns to a shell in the same sandbox.
-
-On the host, create a profile and open a shell for installation:
-
-```sh
-abx profile create herdr
-abx shell herdr
-```
-
-Inside ABX, install the tools, then return to the host:
-
-```sh
-curl -fsSL https://herdr.dev/install.sh | sh
-bun add -g opencode-ai
-# Install Pi or other agent CLIs with their normal installer.
-exit
-```
-
-On the host, enter the project and open its working shell:
-
-```sh
-cd "$HOME/code/my-project"
-abx work herdr
-```
-
-Inside ABX, start Herdr:
-
-```sh
-herdr
-```
-
-ABX mounts the host project at `/workspace`. If Herdr opens its first workspace in `/home/agent`, create a project workspace explicitly from inside ABX:
-
-```sh
-herdr workspace create --cwd /workspace --label project --focus
-```
-
-After detach, run `herdr` again in the remaining shell. `exit` from that shell ends the ABX session; the next `abx work` creates a new sandbox. Herdr and its agents share the profile and project; use separate profiles for separate state or credentials.
-
-For a direct launch without an outer shell, run `abx run herdr` on the host instead. See [working in a project](docs/usage.md#project-shell-work).
+A profile can hold [Herdr](https://herdr.dev/) and several agent CLIs, and `work` keeps the sandbox alive when a client detaches from it. The full walkthrough, including detach and reattach, is in [Multi-agent profile with Herdr](docs/usage.md#multi-agent-profile-with-herdr).
 
 ## Commands
 

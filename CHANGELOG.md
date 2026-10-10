@@ -7,6 +7,11 @@
   valid plan and mount an empty `/bin`, so the session started with no binaries
   and no message naming the cause. On a normal host, where the four links point
   into `/usr`, nothing changes.
+- The README no longer repeats the full Herdr walkthrough that the usage guide
+  already owns; it points there instead, and the Quick start now shows one setup
+  path rather than two. The download step now says plainly that the project has
+  no download page of its own, and the Bubblewrap requirement is split into one
+  condition per bullet. (English and Russian.)
 
 ## 0.8.23
 

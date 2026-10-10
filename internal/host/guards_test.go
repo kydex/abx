@@ -601,3 +601,36 @@ func TestCheckDataBaseOwnerRequiresInvokingUser(t *testing.T) {
 		t.Fatalf("regular file accepted as a data base ancestor: %v", err)
 	}
 }
+
+// Retaining the same path twice must keep one descriptor, not two. Without the
+// dedup the second open overwrites the map entry and the first descriptor is
+// lost: it stays open for the life of the process and never reaches Close.
+// This is observable, not internal bookkeeping — it is a descriptor leak.
+func TestRetainTwiceKeepsOneDescriptor(t *testing.T) {
+	before := countOpenFDs(t)
+	in := fixture(t)
+	path := filepath.Join(in.home, "retained")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	objectsBefore := len(in.objects)
+	if err := in.retain(path); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(in.objects) - objectsBefore; got != 1 {
+		t.Fatalf("one path added %d objects", got)
+	}
+	afterFirst := countOpenFDs(t)
+	if err := in.retain(path); err != nil {
+		t.Fatalf("second retain refused an already-retained path: %v", err)
+	}
+	if got := countOpenFDs(t); got != afterFirst {
+		t.Fatalf("second retain opened another descriptor: %d -> %d", afterFirst, got)
+	}
+	if err := in.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if after := countOpenFDs(t); after != before {
+		t.Fatalf("descriptor leaked past Close: %d -> %d", before, after)
+	}
+}

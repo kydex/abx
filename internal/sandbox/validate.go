@@ -71,6 +71,9 @@ func (p Plan) Validate() error {
 		if (m.Kind == ReadOnly && !cleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
 			return errors.New("invalid expected system source")
 		}
+		if m.Kind == Symlink && !compatibilitySourceKeptInUsr(m.Source) {
+			return fmt.Errorf("expected system link %q escapes /usr: %q", m.Target, m.Source)
+		}
 		if m.Size != 0 {
 			return fmt.Errorf("invalid expected system mount %q", m.Target)
 		}

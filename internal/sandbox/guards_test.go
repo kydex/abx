@@ -238,3 +238,54 @@ func TestBuildRequiresUsrInSystemLayout(t *testing.T) {
 		t.Fatalf("accepted a system layout without /usr: %v", err)
 	}
 }
+
+// The compatibility link text is read from the host, not written here, and the
+// sandbox mounts only /usr. A link pointing anywhere else resolves to a
+// directory the sandbox creates empty, so the agent would find no binaries and
+// nothing would say why.
+func TestCompatibilityLinkMustStayInUsr(t *testing.T) {
+	for _, src := range []string{
+		"usr/bin", "usr/sbin", "usr/lib", "usr/lib64",
+		"usr/bin/../lib", "./usr/bin",
+	} {
+		if !compatibilitySourceKeptInUsr(src) {
+			t.Errorf("rejected a link that stays in /usr: %q", src)
+		}
+	}
+	for _, src := range []string{
+		"/etc", "/bin", "../etc", "../../home/kdx/.ssh", "usr/../../etc",
+		"/", ".", "", "usr/../../../..",
+	} {
+		if compatibilitySourceKeptInUsr(src) {
+			t.Errorf("accepted a link that leaves /usr: %q", src)
+		}
+	}
+}
+
+func TestBuildRejectsCompatibilityLinkEscapingUsr(t *testing.T) {
+	in := testInput(t, Run)
+	for i := range in.System {
+		if in.System[i].Target == "/bin" {
+			in.System[i].Source = "../../home/kdx/.ssh"
+		}
+	}
+	if _, err := Build(in); err == nil || !strings.Contains(err.Error(), "escapes /usr") {
+		t.Fatalf("accepted a compatibility link outside /usr: %v", err)
+	}
+	// The same link reaching Validate alone must be refused there too: Validate
+	// is the barrier that stands between a built plan and Bubblewrap arguments.
+	p, err := build(testInput(t, Run))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Первые mounts — базовые каталоги, поэтому ищем по цели, а не по индексу.
+	p.expected.system[1].Source = "/etc"
+	for i := range p.mounts {
+		if p.mounts[i].Target == "/bin" {
+			p.mounts[i].Source = "/etc"
+		}
+	}
+	if err = p.Validate(); err == nil || !strings.Contains(err.Error(), "escapes /usr") {
+		t.Fatalf("Validate accepted a compatibility link outside /usr: %v", err)
+	}
+}

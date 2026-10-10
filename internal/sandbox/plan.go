@@ -123,6 +123,26 @@ func compatibilityTarget(target string) bool {
 	return target == "/bin" || target == "/sbin" || target == "/lib" || target == "/lib64"
 }
 
+// compatibilitySourceKeptInUsr reports whether a compatibility link still
+// points inside /usr once the sandbox mounts it.
+//
+// The link text is read from the host, not written here: /bin, /sbin, /lib and
+// /lib64 are conventionally relative links into /usr and the sandbox mounts
+// exactly that tree. A link that is absolute, or that climbs out with ..,
+// would resolve to a directory the sandbox creates empty, so the agent would
+// find no binaries and no error would say why. Refusing it here names the
+// cause instead of producing a silently broken sandbox.
+func compatibilitySourceKeptInUsr(source string) bool {
+	if source == "" || filepath.IsAbs(source) {
+		return false
+	}
+	rel, err := filepath.Rel("/usr", filepath.Clean(filepath.Join("/usr", source)))
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return false
+	}
+	return rel != "."
+}
+
 // Build varies only the writable project and command; namespace and system policy are shared.
 func Build(in Input) (Plan, error) {
 	p, err := build(in)

@@ -22,7 +22,7 @@ func runVerify(ctx context.Context, in *host.Inputs, home string, env []string, 
 	}
 	input.Command = []string{sandbox.ProbePath, "__probe", "{}"}
 	// The first build validates the shape before host resources exist; the
-	// second build below runs after the sentinel, link, and payload do.
+	// second build below runs after the sentinel and payload do.
 	if _, err = sandbox.BuildVerification(input); err != nil {
 		return 1, err
 	}

@@ -8,7 +8,37 @@ import (
 	"strings"
 )
 
+// systemLayout is the fixed set of host paths ABX exposes into the sandbox.
+// Production always uses hostSystemLayout; a test can supply its own so the
+// refusals below can be exercised against objects it controls instead of the
+// real /usr and /etc.
+type systemLayout struct {
+	// usr is required and must be a directory: without it the sandbox has no
+	// userspace to run anything in.
+	usr string
+	// compat are the compatibility directories. Each may be absent or a
+	// symlink to its real location.
+	compat []string
+	// etc are optional file and directory names under /etc.
+	etc []string
+}
+
+var hostSystemLayout = systemLayout{
+	usr:    "/usr",
+	compat: []string{"/bin", "/sbin", "/lib", "/lib64"},
+	etc: []string{
+		"hosts", "resolv.conf", "nsswitch.conf", "gai.conf", "passwd", "group",
+		"ssl", "ca-certificates", "pki", "ld.so.cache", "ld.so.conf",
+		"ld.so.conf.d", "localtime", "timezone", "os-release", "shells",
+		"alternatives",
+	},
+}
+
 func (in *Inputs) discoverSystem(root string) error {
+	return in.discoverLayout(root, hostSystemLayout)
+}
+
+func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 	// Discovered targets must stay within sandbox.allowedSystemTarget;
 	// anything else fails closed in plan.Build instead of widening the sandbox.
 	physical := func(p string) string { return filepath.Join(root, strings.TrimPrefix(p, "/")) }
@@ -26,13 +56,13 @@ func (in *Inputs) discoverSystem(root string) error {
 		in.system = append(in.system, Source{Path: resolved, Target: target})
 		return nil
 	}
-	if err := add(physical("/usr"), "/usr"); err != nil {
+	if err := add(physical(layout.usr), layout.usr); err != nil {
 		return err
 	}
-	if !in.objects[in.system[0].Path].info.IsDir() {
-		return errors.New("/usr is not a directory")
+	if !in.objects[in.system[len(in.system)-1].Path].info.IsDir() {
+		return fmt.Errorf("%s is not a directory", layout.usr)
 	}
-	for _, p := range []string{"/bin", "/sbin", "/lib", "/lib64"} {
+	for _, p := range layout.compat {
 		path := physical(p)
 		info, err := os.Lstat(path)
 		if errors.Is(err, os.ErrNotExist) {
@@ -59,7 +89,7 @@ func (in *Inputs) discoverSystem(root string) error {
 			return err
 		}
 	}
-	for _, name := range []string{"hosts", "resolv.conf", "nsswitch.conf", "gai.conf", "passwd", "group", "ssl", "ca-certificates", "pki", "ld.so.cache", "ld.so.conf", "ld.so.conf.d", "localtime", "timezone", "os-release", "shells", "alternatives"} {
+	for _, name := range layout.etc {
 		p := "/etc/" + name
 		path := physical(p)
 		if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {

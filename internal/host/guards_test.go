@@ -165,3 +165,71 @@ func TestCreateDirectoryAtReopensNonExclusiveDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// discoverLayout takes the host layout as data, so the refusal for a /usr that
+// is not a directory can be exercised against an object the test owns. The real
+// /usr is always a directory, which is why removing the check left the suite
+// green.
+func TestDiscoverSystemRejectsNonDirectoryUsr(t *testing.T) {
+	in := fixture(t)
+	root := t.TempDir()
+	usr := filepath.Join(root, "usr")
+	if err := os.WriteFile(usr, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := in.discoverLayout(root, systemLayout{usr: "/usr"})
+	if err == nil || !strings.Contains(err.Error(), "/usr is not a directory") {
+		t.Fatalf("a /usr that is not a directory was accepted: %v", err)
+	}
+}
+
+// A missing compatibility directory or /etc entry is skipped rather than
+// refused, and only /usr is mandatory. The layout is what decides which is
+// which, so this pins that distinction against a layout the test owns.
+func TestDiscoverLayoutAcceptsAbsentOptionalPaths(t *testing.T) {
+	in := fixture(t)
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "usr"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	layout := systemLayout{
+		usr:    "/usr",
+		compat: []string{"/bin", "/absent"},
+		etc:    []string{"hosts", "absent"},
+	}
+	if err := in.discoverLayout(root, layout); err != nil {
+		t.Fatalf("absent optional system paths refused: %v", err)
+	}
+	if len(in.system) != 1 || in.system[0].Target != "/usr" {
+		t.Fatalf("only /usr should survive: %+v", in.system)
+	}
+
+	// The same layout with the optional paths present must pick them up.
+	in2 := fixture(t)
+	if err := os.Mkdir(filepath.Join(root, "bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "etc"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "etc", "hosts"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := in2.discoverLayout(root, layout); err != nil {
+		t.Fatal(err)
+	}
+	for _, target := range []string{"/usr", "/bin", "/etc/hosts"} {
+		found := false
+		for _, s := range in2.system {
+			if s.Target == target {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("layout did not produce %q: %+v", target, in2.system)
+		}
+	}
+	if len(in2.system) != 3 {
+		t.Errorf("layout produced %d sources, want 3: %+v", len(in2.system), in2.system)
+	}
+}

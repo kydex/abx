@@ -32,13 +32,13 @@ func Identify(path string) (Identity, error) {
 }
 
 type Expected struct {
-	Profile, Project     Identity
-	Home, Sentinel, Link string
-	Namespaces           map[string]string
-	Objects              map[string]Identity
-	Environment          []string
-	ReadOnly             []string
-	Skills               bool
+	Profile, Project Identity
+	Home, Sentinel   string
+	Namespaces       map[string]string
+	Objects          map[string]Identity
+	Environment      []string
+	ReadOnly         []string
+	Skills           bool
 }
 
 const (
@@ -120,7 +120,7 @@ func decode(raw string) (Expected, error) {
 	if err := json.Unmarshal([]byte(raw), &e); err != nil {
 		return e, err
 	}
-	if !cleanPath(e.Home) || !cleanPath(e.Sentinel) || !cleanLink(e.Link) || len(e.Environment) == 0 || len(e.ReadOnly) == 0 {
+	if !cleanPath(e.Home) || !cleanPath(e.Sentinel) || len(e.Environment) == 0 || len(e.ReadOnly) == 0 {
 		return e, errors.New("incomplete probe inputs")
 	}
 	for _, target := range e.ReadOnly {
@@ -144,12 +144,6 @@ func decode(raw string) (Expected, error) {
 // cleanPath accepts only clean absolute host paths without NUL bytes.
 func cleanPath(p string) bool {
 	return filepath.IsAbs(p) && filepath.Clean(p) == p && !strings.ContainsRune(p, 0)
-}
-
-// cleanLink accepts only the fixed verification link layout: a canonical
-// path directly inside /workspace with the reserved file name prefix.
-func cleanLink(p string) bool {
-	return cleanPath(p) && filepath.Dir(p) == "/workspace" && strings.HasPrefix(filepath.Base(p), ".abx-verify-")
 }
 
 func report(out io.Writer, checks []Check) error {
@@ -185,7 +179,7 @@ func check(e Expected) []Check {
 	hostname, err := os.Hostname()
 	add("hostname", hostname == "abx", err, fmt.Sprintf("expected %q; observed %q", "abx", hostname))
 	checks = append(checks, checkEnvironment(os.Environ(), e.Environment))
-	for _, p := range []string{e.Sentinel, e.Link, "/etc/shadow"} {
+	for _, p := range []string{e.Sentinel, "/etc/shadow"} {
 		_, err := os.Stat(p)
 		if errors.Is(err, os.ErrNotExist) {
 			add("hidden "+p, true, nil, "")

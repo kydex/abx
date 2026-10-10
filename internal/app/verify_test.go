@@ -15,19 +15,15 @@ import (
 )
 
 func TestVerificationFilesCleanUpAfterSuccessOrLaterFailure(t *testing.T) {
-	home, project := t.TempDir(), t.TempDir()
+	home := t.TempDir()
 	for range 2 {
 		files := &probeFiles{}
-		sentinel, link, err := files.create(home, project)
+		sentinel, err := files.create(home)
 		if err != nil {
 			t.Fatal(err)
 		}
-		actual := filepath.Join(project, filepath.Base(link))
-		if target, err := os.Readlink(actual); err != nil || target != sentinel {
-			t.Fatal(target, err)
-		}
-		if !strings.HasPrefix(filepath.Base(link), ".abx-verify-") {
-			t.Fatalf("link %q left the reserved probe prefix", link)
+		if !strings.HasPrefix(filepath.Base(sentinel), ".abx-verify-") {
+			t.Fatalf("sentinel %q left the reserved probe prefix", sentinel)
 		}
 		if err = files.Close(); err != nil {
 			t.Fatal(err)
@@ -35,50 +31,45 @@ func TestVerificationFilesCleanUpAfterSuccessOrLaterFailure(t *testing.T) {
 		if err = files.Close(); err != nil {
 			t.Fatal(err)
 		}
-		for _, dir := range []string{home, project} {
-			entries, err := os.ReadDir(dir)
-			if err != nil || len(entries) != 0 {
-				t.Fatal("probe residue", err)
-			}
+		if entries, err := os.ReadDir(home); err != nil || len(entries) != 0 {
+			t.Fatal("probe residue", err)
 		}
 	}
 	files := &probeFiles{}
-	if _, _, err := files.create(home, filepath.Join(project, "missing")); err == nil {
-		t.Fatal("accepted nonexistent project")
+	if _, err := files.create(filepath.Join(home, "missing")); err == nil {
+		t.Fatal("accepted a nonexistent home")
 	}
 	if err := files.Close(); err != nil {
 		t.Fatal(err)
 	}
-	entries, err := os.ReadDir(home)
-	if err != nil || len(entries) != 0 {
-		t.Fatal("sentinel left after link failure", err)
+	if entries, err := os.ReadDir(home); err != nil || len(entries) != 0 {
+		t.Fatal("sentinel left behind by a failed create", err)
 	}
 }
 
 func TestVerificationCleanupDoesNotDeleteReplacement(t *testing.T) {
-	home, project := t.TempDir(), t.TempDir()
+	home := t.TempDir()
 	files := &probeFiles{}
-	_, link, err := files.create(home, project)
+	sentinel, err := files.create(home)
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(project, filepath.Base(link))
 	// Retain the old inode so this test doesn't depend on inode reuse timing.
-	if err = os.Rename(path, path+"-saved"); err != nil {
+	if err = os.Rename(sentinel, sentinel+"-saved"); err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(path, []byte("keep"), 0o600); err != nil {
+	if err = os.WriteFile(sentinel, []byte("keep"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err = files.Close(); err == nil || !strings.Contains(err.Error(), "replaced") {
 		t.Fatal("replacement cleanup was silent", err)
 	}
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(sentinel)
 	if err != nil || string(raw) != "keep" {
 		t.Fatal("replacement removed", err)
 	}
 	entries, err := os.ReadDir(home)
-	if err != nil || len(entries) != 0 {
+	if err != nil || len(entries) == 0 {
 		t.Fatal("other cleanup abandoned", err)
 	}
 }
@@ -88,12 +79,10 @@ func TestObserveHostCollectsSandboxPayload(t *testing.T) {
 	profile := t.TempDir()
 	project := t.TempDir()
 	input := sandbox.Input{
-		Home:    profile,
-		Project: project,
-		Mode:    sandbox.Run,
-		System: []sandbox.Mount{
-			{Kind: sandbox.ReadOnly, Source: "/sys", Target: "/usr"},
-		},
+		Home:        profile,
+		Project:     project,
+		Mode:        sandbox.Run,
+		System:      []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/sys", Target: "/usr"}},
 		Environment: []sandbox.Entry{{Name: "A", Value: "1"}},
 		Command:     []string{sandbox.ProbePath, "__probe", "{}"},
 	}
@@ -150,9 +139,10 @@ func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
 	if err != nil || len(entries) != 0 {
 		t.Fatal("sentinel created before tool check", err)
 	}
+	// Verification must not leave anything behind in the user's project either.
 	entries, err = os.ReadDir(in.Project())
 	if err != nil || len(entries) != 0 {
-		t.Fatal("link created before tool check", err)
+		t.Fatal("project touched before tool check", err)
 	}
 	if _, err = os.Lstat(filepath.Join(in.Home(), ".agents")); !os.IsNotExist(err) {
 		t.Fatal("skills target prepared before tool check", err)
@@ -160,37 +150,34 @@ func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
 }
 
 func TestVerificationCleanupAggregatesFailuresAndContinues(t *testing.T) {
-	home, project := t.TempDir(), t.TempDir()
+	home := t.TempDir()
 	files := &probeFiles{}
-	first, firstLink, err := files.create(home, project)
+	first, err := files.create(home)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, secondLink, err := files.create(home, project)
+	second, err := files.create(home)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Remove(first); err != nil {
 		t.Fatal(err)
 	}
-	replaced := filepath.Join(project, filepath.Base(secondLink))
 	// Keep the old object alive to avoid depending on inode reuse.
-	if err := os.Rename(replaced, replaced+"-saved"); err != nil {
+	if err := os.Rename(second, second+"-saved"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(replaced, []byte("keep"), 0o600); err != nil {
+	if err := os.WriteFile(second, []byte("keep"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	err = files.Close()
-	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "replaced") || !strings.Contains(err.Error(), first) || !strings.Contains(err.Error(), replaced) {
+	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "replaced") || !strings.Contains(err.Error(), first) || !strings.Contains(err.Error(), second) {
 		t.Fatalf("lost cleanup failure: %v", err)
 	}
-	for _, path := range []string{second, filepath.Join(project, filepath.Base(firstLink))} {
-		if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
-			t.Fatalf("cleanup abandoned %s: %v", path, err)
-		}
+	if _, err := os.Lstat(first); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("cleanup abandoned %s: %v", first, err)
 	}
-	if raw, err := os.ReadFile(replaced); err != nil || string(raw) != "keep" {
+	if raw, err := os.ReadFile(second); err != nil || string(raw) != "keep" {
 		t.Fatalf("replacement damaged: %q %v", raw, err)
 	}
 	if err := files.Close(); err != nil {

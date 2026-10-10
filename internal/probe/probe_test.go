@@ -95,7 +95,7 @@ func TestPrivateProbeRejectsHostExecution(t *testing.T) {
 	// Well-formed input that passes decode must still not run on the host:
 	// /abx-probe is a read-only mount of this binary only inside the sandbox.
 	// The positive path (inside the sandbox) is covered by live verify tests.
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Link":"/workspace/.abx-verify-test","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
 	var out bytes.Buffer
 	err := Run(valid, &out)
 	if err == nil || !strings.Contains(err.Error(), "only available inside the sandbox") || out.Len() != 0 {
@@ -289,7 +289,7 @@ func TestReadOnlyDiagnosticsDistinguishMissingAndWritableMount(t *testing.T) {
 }
 
 func TestDecodeRequiresEveryNamespaceAndHostIdentity(t *testing.T) {
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Link":"/workspace/.abx-verify-test","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
 	if _, err := decode(valid); err != nil {
 		t.Fatalf("valid fixture rejected: %v", err)
 	}
@@ -333,12 +333,8 @@ func TestDecodeRequiresEveryNamespaceAndHostIdentity(t *testing.T) {
 }
 
 func TestDecodeRejectsNonCanonicalProbePaths(t *testing.T) {
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Link":"/workspace/.abx-verify-test","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
 	for _, tc := range []struct{ field, value string }{
-		{"Link", "/workspace/.abx-verify-test/../../etc/shadow"},
-		{"Link", "/tmp/.abx-verify-test"},
-		{"Link", "/workspace/other-name"},
-		{"Link", "/workspace/.abx-verify-test\x00"},
 		{"Home", "/host-home\x00"},
 		{"Home", "/host-home/"},
 		{"Sentinel", "/host-home/probe/../other"},
@@ -365,7 +361,7 @@ func TestDecodeRejectsNonCanonicalProbePaths(t *testing.T) {
 }
 
 func TestDecodeRejectsNonCleanReadOnlyTargets(t *testing.T) {
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Link":"/workspace/.abx-verify-test","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
 	for _, targets := range [][]string{{"relative"}, {"/usr/"}, {"/usr\x00"}, {""}, {"/usr", "relative"}} {
 		t.Run(strings.Join(targets, ","), func(t *testing.T) {
 			var input map[string]json.RawMessage

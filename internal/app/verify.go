@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/kydex/abx/internal/bwrap"
@@ -46,7 +45,7 @@ func runVerify(ctx context.Context, in *host.Inputs, home string, env []string, 
 	}
 	files := &probeFiles{}
 	defer finishClose(&status, &result, files.Close)
-	expected.Sentinel, expected.Link, err = files.create(home, in.Project())
+	expected.Sentinel, err = files.create(home)
 	if err != nil {
 		return 1, err
 	}
@@ -127,30 +126,21 @@ type probeFile struct {
 }
 type probeFiles struct{ files []probeFile }
 
-func (p *probeFiles) create(home, project string) (string, string, error) {
+func (p *probeFiles) create(home string) (string, error) {
 	f, err := os.CreateTemp(home, ".abx-verify-*")
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	p.files = append(p.files, probeFile{f.Name(), nil})
 	info, err := f.Stat()
 	if err != nil {
-		return "", "", errors.Join(err, f.Close())
+		return "", errors.Join(err, f.Close())
 	}
 	p.files[len(p.files)-1].info = info
 	if err = f.Close(); err != nil {
-		return "", "", err
+		return "", err
 	}
-	target := filepath.Join(project, filepath.Base(f.Name()))
-	if err = os.Symlink(f.Name(), target); err != nil {
-		return "", "", err
-	}
-	info, err = os.Lstat(target)
-	if err != nil {
-		return "", "", errors.Join(err, os.Remove(target))
-	}
-	p.files = append(p.files, probeFile{target, info})
-	return f.Name(), filepath.Join("/workspace", filepath.Base(target)), nil
+	return f.Name(), nil
 }
 
 func (p *probeFiles) Close() error {

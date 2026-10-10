@@ -20,7 +20,6 @@ func TestCheckProducesEveryObservation(t *testing.T) {
 	checks := check(Expected{
 		Environment: []string{"HOME=/home/agent"},
 		Sentinel:    dir + "/sentinel",
-		Link:        dir + "/link",
 		ReadOnly:    []string{"/usr"},
 	})
 	got := make([]string, len(checks))
@@ -29,7 +28,7 @@ func TestCheckProducesEveryObservation(t *testing.T) {
 	}
 	want := []string{
 		"working directory", "hostname", "exact environment",
-		"hidden " + dir + "/sentinel", "hidden " + dir + "/link", "hidden /etc/shadow",
+		"hidden " + dir + "/sentinel", "hidden /etc/shadow",
 		"selected /home/agent", "selected /workspace", "host home hidden",
 		"user namespace", "mnt namespace", "pid namespace", "ipc namespace", "uts namespace",
 		"private /tmp", "private /var/tmp", "private /run", "private /dev",

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- `verify` no longer reports an observation it could not fail. It created a
+  temporary marker in the passwd home and a symlink in the project pointing at
+  that marker, then checked both were unreachable from inside the sandbox. The
+  symlink target was an absolute host path, and host paths are never mounted
+  inside, so the second check could only fail when the first one already did: it
+  verified the project's reachability by a route the project's own mount is not
+  part of. Removing it takes the duplicated line out of the output and stops
+  `verify` from creating anything in the user's project. The property it stood
+  for — the passwd home is unreachable from inside — is still checked, directly,
+  against the marker itself.
 - The live integration gate now records which Bubblewrap it built. The workflow
   cloned `v0.12.0` by name and installed the result as `/usr/bin/bwrap`, which
   `abx` then trusts on the single ground that it is root-owned — nothing kept the

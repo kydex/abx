@@ -59,6 +59,10 @@ func TestShellWorkingDirectory(t *testing.T) {
 func TestSessionRejectsInvalidStructure(t *testing.T) {
 	for _, tc := range []struct{ username, shell, cwd string }{
 		{"", "/bin/bash", "/workspace"},
+		// An empty shell is what host.resolve would carry if it stopped acting on
+		// an unresolved login shell. The refusal lives here, one layer down, and
+		// it is this table that has to hold it.
+		{"tester", "", "/workspace"},
 		{"tester", "bash", "/workspace"},
 		{"tester", "/bin//bash", "/workspace"},
 		{"tester", "/bin/bash", "/tmp"},

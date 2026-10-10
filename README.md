@@ -116,18 +116,18 @@ For a direct launch without an outer shell, run `abx run herdr` on the host inst
 
 | Command | Purpose |
 |---|---|
-| `abx profile create <name>` | Create an empty persistent profile |
-| `abx profile show <name>` | Show profile path, entrypoint status, and shared-skills status |
+| `abx profile create <profile>` | Create an empty persistent profile |
+| `abx profile show <profile>` | Show profile path, entrypoint status, and shared-skills status |
 | `abx profile list` | List profiles |
-| `abx shell <name>` | Open the profile's login shell without mounting a project |
-| `abx work <name>` | Open a login shell with the current project at `/workspace`; no matching executable required |
-| `abx run <name> [-- <argument>...]` | Run the matching profile entry point with the current directory as `/workspace` |
-| `abx inspect <name>` | Show the `run` plan without starting Bubblewrap; requires the matching profile executable |
-| `abx verify <name>` | Start a test sandbox and verify the main isolation properties |
+| `abx shell <profile>` | Open the profile's login shell without mounting a project |
+| `abx work <profile>` | Open a login shell with the current project at `/workspace`; no matching executable required |
+| `abx run <profile> [-- <argument>...]` | Run the matching profile entry point with the current directory as `/workspace` |
+| `abx inspect <profile>` | Show the `run` plan without starting Bubblewrap; requires the matching profile executable |
+| `abx verify <profile>` | Start a test sandbox and verify the main isolation properties |
 | `abx help`, `-h`, `--help` | Show CLI help |
 | `abx version`, `-v`, `--version` | Show the ABX version |
 
-Profiles are stored under `.local/share/abx/profiles` in the home directory from `/etc/passwd` (not `$HOME`) by default. An absolute `XDG_DATA_HOME` changes the storage base. Use `abx profile show <name>` when you need the exact profile path.
+Profiles are stored under `.local/share/abx/profiles` in the home directory from `/etc/passwd` (not `$HOME`) by default. An absolute `XDG_DATA_HOME` changes the storage base. Use `abx profile show <profile>` when you need the exact profile path.
 
 ## Documentation
 

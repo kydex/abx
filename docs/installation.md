@@ -140,6 +140,6 @@ rm -i "$HOME/.local/bin/abx"
 
 This removes only the launcher. Profiles and shared skills remain on disk.
 
-Use `abx profile show <name>` before uninstalling if you need the exact profile location. Removing a profile directory manually removes that profile's installed programs, settings, caches, and saved authentication. ABX has no automatic profile-delete command.
+Use `abx profile show <profile>` before uninstalling if you need the exact profile location. Removing a profile directory manually removes that profile's installed programs, settings, caches, and saved authentication. ABX has no automatic profile-delete command.
 
 Do not remove the whole `XDG_DATA_HOME`: it may contain data belonging to unrelated applications.

@@ -116,18 +116,18 @@ herdr workspace create --cwd /workspace --label project --focus
 
 | Команда | Назначение |
 |---|---|
-| `abx profile create <name>` | Создать пустой постоянный профиль |
-| `abx profile show <name>` | Показать путь профиля, состояние основного исполняемого файла и shared skills |
+| `abx profile create <profile>` | Создать пустой постоянный профиль |
+| `abx profile show <profile>` | Показать путь профиля, состояние основного исполняемого файла и shared skills |
 | `abx profile list` | Показать список профилей |
-| `abx shell <name>` | Открыть login shell профиля без подключения проекта |
-| `abx work <name>` | Открыть login shell с текущим проектом в `/workspace`; одноимённый executable не требуется |
-| `abx run <name> [-- <argument>...]` | Запустить одноимённый основной исполняемый файл профиля с текущим каталогом как `/workspace` |
-| `abx inspect <name>` | Показать план `run` без запуска Bubblewrap; требуется одноимённый executable профиля |
-| `abx verify <name>` | Запустить тестовую песочницу и проверить основные свойства изоляции |
+| `abx shell <profile>` | Открыть login shell профиля без подключения проекта |
+| `abx work <profile>` | Открыть login shell с текущим проектом в `/workspace`; одноимённый executable не требуется |
+| `abx run <profile> [-- <argument>...]` | Запустить одноимённый основной исполняемый файл профиля с текущим каталогом как `/workspace` |
+| `abx inspect <profile>` | Показать план `run` без запуска Bubblewrap; требуется одноимённый executable профиля |
+| `abx verify <profile>` | Запустить тестовую песочницу и проверить основные свойства изоляции |
 | `abx help`, `-h`, `--help` | Показать справку CLI |
 | `abx version`, `-v`, `--version` | Показать версию ABX |
 
-По умолчанию профили находятся в `.local/share/abx/profiles` в домашнем каталоге из `/etc/passwd` (не `$HOME`). Абсолютный `XDG_DATA_HOME` меняет базовый каталог хранения. Точный путь профиля можно посмотреть через `abx profile show <name>`.
+По умолчанию профили находятся в `.local/share/abx/profiles` в домашнем каталоге из `/etc/passwd` (не `$HOME`). Абсолютный `XDG_DATA_HOME` меняет базовый каталог хранения. Точный путь профиля можно посмотреть через `abx profile show <profile>`.
 
 ## Документация
 

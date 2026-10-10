@@ -18,7 +18,7 @@ Every command takes exactly the profile name and nothing else: `run`, `shell`, a
 
 ## Profiles
 
-A profile is a persistent home directory for an agent or a related toolchain. `abx run <name>` still launches an executable with the same name as the profile; that entry point may start other agent CLIs installed in the same profile.
+A profile is a persistent home directory for an agent or a related toolchain. `abx run <profile>` still launches an executable with the same name as the profile; that entry point may start other agent CLIs installed in the same profile.
 
 ```sh
 abx profile create opencode
@@ -318,7 +318,7 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | `must not run as root` | Run without `sudo` |
 | Bubblewrap missing or too old | Check `/usr/bin/bwrap --version`; ABX requires 0.12.0+ |
 | Sandbox cannot start | Check that the host permits unprivileged user namespaces |
-| Profile not found | Check `abx profile show <name>` and the `XDG_DATA_HOME` used for that command |
+| Profile not found | Check `abx profile show <profile>` and the `XDG_DATA_HOME` used for that command |
 | `private directory "<path>" must have exact mode 0700` | Run `chmod 700` on the storage root and `shared` (see Shared skills) |
 | `unsafe Bubblewrap executable` | The binary must be a regular file, executable, without setuid/setgid/sticky bits, not writable by group/other, and owned by root |
 | `Command: unavailable` / agent not found | For `run` and `inspect`, install an executable matching the profile name. This status alone does not prevent `shell` or `work` |

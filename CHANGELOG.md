@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Correct a 0.8.22 claim: packaging drops the three stale archives of the
+  version being built, not everything in `dist/`. Older builds of other versions
+  are left alone on purpose, so the wording "cleans `dist/`" overstated what the
+  script does.
+- The profile argument is spelled `<profile>` everywhere now. `cli.Usage`, the
+  README command tables and the guides had drifted between `<name>` and
+  `<profile>` for the same argument. (English and Russian.)
+
 - `verify` no longer reports an observation it could not fail. It created a
   temporary marker in the passwd home and a symlink in the project pointing at
   that marker, then checked both were unreachable from inside the sandbox. The

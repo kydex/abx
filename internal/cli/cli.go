@@ -30,8 +30,8 @@ type Command struct {
 }
 
 const Usage = `abx:
-  abx profile create <name>
-  abx profile show <name>
+  abx profile create <profile>
+  abx profile show <profile>
   abx profile list
   abx run <profile> [-- <argument>...]
   abx shell <profile>

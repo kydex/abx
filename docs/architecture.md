@@ -25,7 +25,7 @@ The important boundary is:
 host state -> host.Inputs -> sandbox.Plan -> bwrap translation/execution
 ```
 
-`host` decides which host objects are eligible. `sandbox` decides how eligible objects are exposed. `bwrap` implements that plan and should not invent policy of its own.
+`host` decides which host objects are eligible. `sandbox` decides how eligible objects are exposed. `bwrap` implements that plan and does not add host-level policy of its own. The process-level namespace and lifetime flags are the exception: they are a literal at the translation site (`--unshare-user --disable-userns --unshare-pid --unshare-ipc --unshare-uts --hostname abx --die-with-parent --clearenv`), not a field of `Plan`. They are therefore outside the reach of `Plan.Validate`, and they are spelled out in three places — that literal, the `inspect` summary, and the `verify` namespace list — none derived from the others.
 
 ## Normal `run` / `shell` / `work` flow
 

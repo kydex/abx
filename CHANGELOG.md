@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Correct the documented signal behaviour. A terminal `Ctrl+C` in `shell` or `work`
+  reaches the payload and the Bubblewrap monitor at the same time: the monitor
+  installs a handler only for `SIGCHLD`, so it dies by the default action, and the
+  resulting parent-death signal kills the sandbox with `SIGKILL` before a shutdown
+  handler can finish. The session exits `130` and unsaved work is lost. The previous
+  text promised that an interactive session "reacts to Ctrl+C normally"; it never did.
+- State that `--die-with-parent` covers the initial sandbox process and pid 1 of the
+  sandbox, but not processes they spawn — a background job started inside the sandbox
+  can outlive the session. The previous text implied it terminated every sandbox
+  process.
+- Document that the account database is read by two routes, NSS for the account
+  record and a literal `/etc/passwd` for the login shell, and that only the second is
+  covered by the trust checks: a host resolving `passwd` through `sss` or `ldap` is
+  refused even though `id` and `getent` report the account correctly.
+- State in the architecture guide that the namespace and lifetime flags are a literal
+  at the translation site rather than a field of `Plan`, so they sit outside
+  `Plan.Validate` and are spelled out in three places derived from nothing.
+
+(English and Russian.)
+
 ## 0.8.22
 
 Hardening of host trust checks, packaging gates, and a documentation pass driven by

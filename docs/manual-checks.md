@@ -278,7 +278,7 @@ The command waits without output. After a couple of seconds, press **Ctrl+C once
 printf 'exit=%s\n' "$?"
 ```
 
-Expected: `exit=130`. Do not enter another command between return and reading `$?`. Note: only the launcher exit code is checked here; the payload receives the terminal signal directly as part of the foreground process group.
+Expected: `exit=130`. Do not enter another command between return and reading `$?`. Note: only the launcher exit code is checked here; the payload receives the terminal signal directly as part of the foreground process group, but the Bubblewrap monitor has no handler for `SIGINT` and dies on it, so the sandbox is then killed with `SIGKILL`. Do not read this check as evidence that a shutdown handler inside the sandbox completed.
 
 ### 5.2 TERM
 

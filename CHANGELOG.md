@@ -6,6 +6,13 @@
   version being built, not everything in `dist/`. Older builds of other versions
   are left alone on purpose, so the wording "cleans `dist/`" overstated what the
   script does.
+- Correct a 0.8.22 claim about exit codes. "Cleanup failures no longer overwrite a
+  non-zero exit status" holds inside the session: `finishClose` only raises a zero
+  status to 1. Through the CLI it is still not observable, because a joined
+  cleanup error comes back from `runSession` as a non-nil error and `Run` turns
+  any error into status 1. A child that failed with its own status and left
+  cleanup residue behind therefore still reports 1. The published entry stays as
+  written — it is history — and the correction goes here.
 - The profile argument is spelled `<profile>` everywhere now. `cli.Usage`, the
   README command tables and the guides had drifted between `<name>` and
   `<profile>` for the same argument. (English and Russian.)

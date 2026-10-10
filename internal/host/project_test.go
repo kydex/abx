@@ -270,3 +270,33 @@ func TestSiblingOutsideHomeWithSymlinkedHomeRoot(t *testing.T) {
 		t.Error("own project rejected under symlinked home root")
 	}
 }
+
+// docs/security.md names a sibling home as a rejected project, and the rule
+// lives in resolveProject rather than in the predicate. resolveProject scopes it
+// to the literal /home so that isolated trees under /tmp keep working, so the
+// case has to be built there: an integration test anywhere else would pass
+// without ever reaching the check.
+func TestProjectRejectsSiblingHome(t *testing.T) {
+	root, err := os.MkdirTemp("/home", "abx-sibling-")
+	if err != nil {
+		t.Skipf("cannot build a test tree under /home: %v", err)
+	}
+	defer func() {
+		if e := os.RemoveAll(root); e != nil {
+			t.Errorf("remove test tree: %v", e)
+		}
+	}()
+	alice, bobProj, own := filepath.Join(root, "alice"), filepath.Join(root, "bob", "proj"), filepath.Join(root, "alice", "proj")
+	for _, p := range []string{alice, own, filepath.Dir(bobProj), bobProj} {
+		if err := os.MkdirAll(p, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	data := filepath.Join(root, "data", "abx")
+	if _, err := resolveProject(bobProj, alice, data, nil); err == nil {
+		t.Error("accepted a project in another user's home")
+	}
+	if got, err := resolveProject(own, alice, data, nil); err != nil || got != own {
+		t.Fatalf("own project rejected: %q, %v", got, err)
+	}
+}

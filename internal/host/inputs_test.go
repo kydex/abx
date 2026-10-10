@@ -218,8 +218,13 @@ func TestSkillsTargetsRejectSymlinksBeforeMutation(t *testing.T) {
 			}
 		})
 	}
-	// The flag under test is RESOLVE_NO_SYMLINKS: an inside-home target must
-	// fail too, not just outside-home ones (RESOLVE_BENEATH alone allows them).
+	// The flag under test is RESOLVE_NO_SYMLINKS: a target inside the home must
+	// fail too, not just one outside it. The target has to be RELATIVE for that
+	// to hold — RESOLVE_BENEATH alone already rejects an absolute target with
+	// EXDEV, so an absolute symlink here would keep the test green with the
+	// flag removed. A relative target passes RESOLVE_BENEATH and is rejected
+	// only by RESOLVE_NO_SYMLINKS, so this subtest is what actually pins the
+	// flag.
 	for _, target := range []string{".agents", ".agents/skills"} {
 		t.Run("inside-home-"+target, func(t *testing.T) {
 			in := fixture(t)
@@ -232,7 +237,12 @@ func TestSkillsTargetsRejectSymlinksBeforeMutation(t *testing.T) {
 			if e := os.Mkdir(inside, 0o700); e != nil {
 				t.Fatal(e)
 			}
-			if e := os.Symlink(inside, filepath.Join(in.home, target)); e != nil {
+			link := filepath.Join(in.home, target)
+			relative, e := filepath.Rel(filepath.Dir(link), inside)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if e := os.Symlink(relative, link); e != nil {
 				t.Fatal(e)
 			}
 			if e := in.observeSkills(); e == nil {

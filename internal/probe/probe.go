@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"syscall"
+	"unicode/utf8"
 
 	"golang.org/x/sys/unix"
 )
@@ -280,8 +281,38 @@ func checkNamespaces(host map[string]string, readlink func(string) (string, erro
 }
 
 // checkEnvironment compares full assignments, including duplicates, but discloses only variable names.
+
+// sanitizeEnvironment puts both sides of the comparison through the same lossy
+// transform. The expected values reach the probe by being marshalled to JSON,
+// and the JSON encoder replaces every byte of an invalid UTF-8 sequence with
+// U+FFFD; without this the host value and its own round trip would differ
+// forever, and verify would report a difference that no rendering of the
+// environment could show. Anything that still differs afterwards differs in the
+// bytes a user could read.
+func sanitizeEnvironment(entries []string) []string {
+	out := make([]string, len(entries))
+	for i, entry := range entries {
+		if utf8.ValidString(entry) {
+			out[i] = entry
+			continue
+		}
+		var b strings.Builder
+		b.Grow(len(entry) + 3)
+		for j := 0; j < len(entry); {
+			c, size := utf8.DecodeRuneInString(entry[j:])
+			if c == utf8.RuneError && size == 1 {
+				b.WriteRune(utf8.RuneError)
+			} else {
+				b.WriteString(entry[j : j+size])
+			}
+			j += size
+		}
+		out[i] = b.String()
+	}
+	return out
+}
 func checkEnvironment(actual, expected []string) Check {
-	actual, expected = slices.Clone(actual), slices.Clone(expected)
+	actual, expected = sanitizeEnvironment(actual), sanitizeEnvironment(expected)
 	slices.Sort(actual)
 	slices.Sort(expected)
 	if slices.Equal(actual, expected) {

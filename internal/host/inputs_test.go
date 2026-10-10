@@ -387,6 +387,7 @@ func TestResolveFailureDoesNotReturnOwner(t *testing.T) {
 }
 
 func TestShellResolutionDoesNotRequireProjectOrAgent(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := fixture(t)
 	got, e := Resolve(in.account, in.paths, "demo", "/definitely/missing/project", Shell, nil)
 	if e != nil {
@@ -443,6 +444,7 @@ func TestAgentXOKAsInvokingUser(t *testing.T) {
 }
 
 func TestVerificationResolvesRunProjectWithoutAgent(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := fixture(t)
 	project := t.TempDir()
 	got, err := ResolveVerification(in.account, in.paths, "demo", project)
@@ -486,6 +488,7 @@ func TestCloseReportsDescriptorFailureAndReleasesOwnership(t *testing.T) {
 }
 
 func TestWorkResolvesProjectWithoutAgentAndRetainsSource(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := fixture(t)
 	project := filepath.Join(in.account.Home, "project")
 	if err := os.Mkdir(project, 0o700); err != nil {

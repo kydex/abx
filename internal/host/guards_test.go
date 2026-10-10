@@ -32,6 +32,7 @@ func TestResolveRejectsUnknownSessionMode(t *testing.T) {
 }
 
 func TestResolveRequiresAgentForRun(t *testing.T) {
+	requireTrustedPasswd(t)
 	home, project := t.TempDir(), t.TempDir()
 	root := filepath.Join(home, "data")
 	paths := Paths{Root: root, Profiles: filepath.Join(root, "profiles")}
@@ -526,9 +527,7 @@ func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
 // owned by root; where that is not the case the whole run is refused earlier
 // and the test says so rather than passing silently.
 func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
-	if err := checkPasswdOwner("/etc/passwd"); err != nil {
-		t.Skipf("host account database is not trusted here: %v", err)
-	}
+	requireTrustedPasswd(t)
 	home, project := t.TempDir(), t.TempDir()
 	root := filepath.Join(home, "data")
 	paths := Paths{Root: root, Profiles: filepath.Join(root, "profiles")}
@@ -570,5 +569,35 @@ func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
 	}
 	if err = got.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// checkDataBaseOwner's owner rule lost its only coverage when the session
+// tests started skipping on hosts whose passwd database is not root-owned, so
+// it is pinned directly here. The uid is a parameter, so no chown is needed.
+func TestCheckDataBaseOwnerRequiresInvokingUser(t *testing.T) {
+	base := t.TempDir()
+	uid := os.Getuid()
+	if err := checkDataBaseOwner(base, uid); err != nil {
+		t.Fatalf("data base owned by the invoking user refused: %v", err)
+	}
+	// A data base under an ancestor owned by somebody else would let that
+	// somebody replace the storage root, so the walk must refuse it.
+	if err := checkDataBaseOwner(base, uid+1); err == nil ||
+		!strings.Contains(err.Error(), "not owned by the invoking user") {
+		t.Fatalf("foreign-owned data base ancestor accepted: %v", err)
+	}
+	if err := checkDataBaseOwner(base, uid+1); err == nil &&
+		strings.Contains(err.Error(), "world-writable") {
+		t.Fatal("owner rule reported a mode problem")
+	}
+	// A regular file is not a valid ancestor either.
+	file := filepath.Join(base, "plain")
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkDataBaseOwner(file, uid); err == nil ||
+		!strings.Contains(err.Error(), "not a directory") {
+		t.Fatalf("regular file accepted as a data base ancestor: %v", err)
 	}
 }

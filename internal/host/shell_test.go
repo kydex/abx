@@ -9,6 +9,20 @@ import (
 	"testing"
 )
 
+// requireTrustedPasswd skips a test that reads the real account database.
+//
+// Those tests go through ResolveShell, and ABX now refuses to start when
+// /etc/passwd is not owned by root. On a real host it is, and the tests run. In
+// a container that remaps user namespaces the database shows up owned by an
+// unprivileged uid, so there is nothing to test: the skip says which host
+// property is missing instead of reporting a failure that looks like a bug.
+func requireTrustedPasswd(t *testing.T) {
+	t.Helper()
+	if err := checkPasswdOwner("/etc/passwd"); err != nil {
+		t.Skipf("host account database is not trusted here: %v", err)
+	}
+}
+
 func TestShellFromPasswd(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "passwd")
 	data := "root:x:0:0:root:/root:/bin/bash\ntester:x:1000:1000::/home/tester:/usr/bin/fish\n"
@@ -99,6 +113,7 @@ func TestVisibleInSandboxBoundaries(t *testing.T) {
 }
 
 func TestResolveUsesHostPasswd(t *testing.T) {
+	requireTrustedPasswd(t)
 	selection := ResolveShell(os.Getuid())
 	if selection.Path == "" {
 		t.Fatalf("Resolve = %#v", selection)

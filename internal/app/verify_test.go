@@ -128,6 +128,7 @@ func TestVerifySuccessReportsCleanup(t *testing.T) {
 }
 
 func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := inputs(t, host.Run)
 	home := t.TempDir()
 	want := errors.New("tool not available")

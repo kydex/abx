@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/kydex/abx/internal/bwrap"
@@ -46,7 +47,29 @@ func inputs(t *testing.T, mode host.Mode) *host.Inputs {
 	return in
 }
 
+// requireTrustedPasswd skips a test that starts a real session, because
+// ABX now refuses to start when /etc/passwd is not owned by root. On a real
+// host it is and the test runs; in a container that remaps user namespaces the
+// database shows up owned by an unprivileged uid and there is nothing to test.
+// The rule is restated here rather than exported from host, so that adding it
+// never widens the production API for a test's benefit.
+func requireTrustedPasswd(t *testing.T) {
+	t.Helper()
+	info, err := os.Stat("/etc/passwd")
+	if err != nil {
+		t.Skipf("host account database is unavailable: %v", err)
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		t.Skip("host account database owner is unreadable")
+	}
+	if st.Uid != 0 {
+		t.Skipf("host account database is owned by uid %d, not root: ABX refuses to start", st.Uid)
+	}
+}
+
 func TestSessionToolFailureNeverPreparesMountpoint(t *testing.T) {
+	requireTrustedPasswd(t)
 	for _, mode := range []host.Mode{host.Run, host.Shell, host.Work} {
 		in := inputs(t, mode)
 		plan, e := buildPlan(in, []string{"HOME=/host", "LD_PRELOAD=bad"})
@@ -231,6 +254,7 @@ func TestVersionCommand(t *testing.T) {
 }
 
 func TestExecuteSessionPreparesRetainedInputsBeforeExecution(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := inputs(t, host.Run)
 	plan, err := buildPlan(in, nil)
 	if err != nil {
@@ -271,6 +295,7 @@ func TestExecuteSessionPreparesRetainedInputsBeforeExecution(t *testing.T) {
 }
 
 func TestExecuteSessionChangedInputNeverExecutes(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := inputs(t, host.Run)
 	plan, err := buildPlan(in, nil)
 	if err != nil {
@@ -299,6 +324,7 @@ func TestExecuteSessionChangedInputNeverExecutes(t *testing.T) {
 }
 
 func TestExecuteSessionLateSkillsSymlinkNeverExecutes(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := inputs(t, host.Run)
 	plan, err := buildPlan(in, nil)
 	if err != nil {
@@ -333,6 +359,7 @@ func TestExecuteSessionLateSkillsSymlinkNeverExecutes(t *testing.T) {
 }
 
 func TestExecuteSessionPropagatesExecutorFailure(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := inputs(t, host.Run)
 	plan, err := buildPlan(in, nil)
 	if err != nil {
@@ -380,6 +407,7 @@ func TestFinishClosePreservesOperationAndCleanupFailures(t *testing.T) {
 }
 
 func TestInspectDoesNotPreparePersistentRuntimeState(t *testing.T) {
+	requireTrustedPasswd(t)
 	account := host.Account{UID: os.Getuid(), Username: "tester", Home: t.TempDir()}
 	data := filepath.Join(t.TempDir(), "data")
 	paths, err := host.ResolvePaths(account, data)
@@ -440,6 +468,7 @@ func TestValueUsesLastEnvironmentAssignment(t *testing.T) {
 }
 
 func TestWorkPlanUsesShellInProject(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := inputs(t, host.Work)
 	plan, err := buildPlan(in, []string{"PWD=/host", "HOME=/host", "LD_PRELOAD=bad"})
 	if err != nil {
@@ -480,6 +509,7 @@ func TestWorkPlanUsesShellInProject(t *testing.T) {
 }
 
 func TestWorkProjectReplacementNeverExecutes(t *testing.T) {
+	requireTrustedPasswd(t)
 	in := inputs(t, host.Work)
 	plan, err := buildPlan(in, nil)
 	if err != nil {

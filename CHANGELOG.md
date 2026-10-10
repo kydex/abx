@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- The live integration gate now records which Bubblewrap it built. The workflow
+  cloned `v0.12.0` by name and installed the result as `/usr/bin/bwrap`, which
+  `abx` then trusts on the single ground that it is root-owned — nothing kept the
+  commit anywhere. A tag is only a name and can be moved, so the gate now fails
+  unless the checkout resolves to the expected commit.
+- The host requirements list a mounted `/proc`. ABX inventories inherited file
+  descriptors through `/proc/self/fd` and has always failed without it; the
+  requirement was simply never written down.
+- State plainly in the release procedure that the workflow creates no release page
+  and that adding one is out of scope, instead of a hypothetical sentence about
+  "another public channel" that left the step ambiguous. (English and Russian.)
+
 - A dangling symlink among the sensitive home trees (`~/.config`, `~/.ssh`,
   `~/.aws`, `~/.netrc`, `~/.mozilla` and the rest) no longer takes down every
   command. ABX checks seventeen paths under the passwd home; the path existed as

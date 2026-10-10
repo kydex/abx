@@ -22,6 +22,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apparmor bubblewrap meson ninja-build pkg-config libcap-dev libselinux1-dev xsltproc docbook-xsl docbook-xml
           git clone --depth 1 --branch v0.12.0 https://github.com/containers/bubblewrap.git "$RUNNER_TEMP/bubblewrap"
+          # A tag is only a name and can be moved. This is the only runtime
+          # gate the project has, and abx trusts /usr/bin/bwrap for ever after
+          # purely because it is root-owned, so record what was actually built.
+          expected=2a76602a8c71f36c1527cf9fc3417d9149822e0c
+          actual=$(git -C "$RUNNER_TEMP/bubblewrap" rev-parse HEAD)
+          if [ "$actual" != "$expected" ]; then
+            echo "bubblewrap v0.12.0 resolved to $actual, expected $expected" >&2
+            exit 1
+          fi
           meson setup "$RUNNER_TEMP/bubblewrap-build" "$RUNNER_TEMP/bubblewrap" --prefix=/usr
           meson compile -C "$RUNNER_TEMP/bubblewrap-build"
           sudo install -o root -g root -m 0755 "$RUNNER_TEMP/bubblewrap-build/bwrap" /usr/bin/bwrap

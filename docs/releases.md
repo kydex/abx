@@ -54,7 +54,7 @@ CI is development/release infrastructure, not an installation interface.
 - `.github/workflows/live.yml` runs the real Bubblewrap test suite on the CI runner.
 - `.github/workflows/release.yml` runs for `v*` tags, requires both check and live jobs, runs `scripts/package.sh`, and uploads the resulting `dist/*` files as a workflow artifact.
 
-The workflow artifact is for maintainer validation and distribution. The current workflow does **not** create a GitHub Release page by itself. If the project distributes binaries through a release page or another public channel, publish the verified `dist/*` files there so users can follow the normal installation guide without interacting with Actions.
+The workflow artifact is for maintainer validation and distribution. The workflow does **not** create a release page, and adding release publication is out of scope for this project — see the rule in `AGENTS.md`. Step 7 therefore says "the project's release channel" without naming a service: whichever channel you publish through, the deliverable is the same three files and their SHA-256, and a user should be able to follow [Installation](installation.md) without interacting with Actions.
 
 ## Publish a version
 
@@ -72,7 +72,7 @@ git push origin "$tag"
 ```
 
 6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. Download its workflow artifact: the archive files inside keep their `abx-X.Y.Z-*` names, so `(cd <downloaded> && sha256sum -c "abx-X.Y.Z-SHA256SUMS")` verifies them as-is. Then smoke-test the binary.
-7. Publish the verified binary archive, source archive, and checksum manifest through the project's user-facing release channel.
+7. Publish the verified binary archive, source archive, and checksum manifest through the project's release channel — see the note above on what that means. Report the SHA-256 values.
 
 Local packaging can be rehearsed at any time with `make package-smoke` against existing `dist/` files; `make package` itself requires the tag, so run it after step 5.
 

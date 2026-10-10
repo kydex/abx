@@ -57,6 +57,7 @@ Every user-visible change gets a `CHANGELOG.md` entry under `Unreleased` **in th
 ## Documentation and delivery
 
 - Keep README.md and docs/*.md in English, with README.ru.md and docs/ru/*.md synchronized Russian translations. Keep AGENTS.ru.md aligned with this file. Language links must work in packaged artifacts. AGENTS.md and AGENTS.ru.md belong only in source archives; user installation and usage examples use the executable name abx.
+- Verify each factual claim a document makes against the implementation, in the same commit that changes the code. A separate documentation pass finds markedly less: in the review behind 0.8.24, every real defect sat in a document that had just been edited, and the largest document, which nobody had touched, had none.
 - Keep CHANGELOG.md in English only and preserve published history. On release, move the entries into the version section and update `internal/app/VERSION`, the single release-version source.
 - [Releases](docs/releases.md) is the release procedure, including why a version tag must never be pushed with `--force`.
 - Documentation commands must use POSIX sh syntax and sh code fences. Keep one-off logs, test projects, and generated binaries out of the source archive.

@@ -81,7 +81,7 @@ func accountFromPasswd(uid int, username, home string) (Account, error) {
 	if !info.IsDir() {
 		return Account{}, fmt.Errorf("passwd home %q is not a directory", canonical)
 	}
-	if err := checkHomeWritable(info, canonical, uid); err != nil {
+	if err := checkHomeTrust(info, canonical, uid); err != nil {
 		return Account{}, err
 	}
 	return Account{UID: uid, Username: username, Home: canonical}, nil
@@ -155,12 +155,13 @@ func canonicalizeExisting(path string) (string, error) {
 	}
 }
 
-// checkHomeWritable rejects an account home that any local user may write.
-// Ownership IS required: the home is read from the passwd database, so a home
-// owned by someone else means a home somebody else can replace. Containers
-// that hand the process a root-owned home are no longer supported: ABX is for
-// real hosts, where the home belongs to the invoking user.
-func checkHomeWritable(info os.FileInfo, home string, uid int) error {
+// checkHomeTrust pins both preconditions for the account home: no local user
+// may write it, and it must belong to the invoking user. The home is named by
+// the passwd database and holds the profile and the writable sandbox home, so a
+// home owned by somebody else is one somebody else can replace. Containers that
+// hand the process a root-owned home are no longer supported: ABX is for real
+// hosts, where the home belongs to the invoking user.
+func checkHomeTrust(info os.FileInfo, home string, uid int) error {
 	if info.Mode().Perm()&0o002 != 0 {
 		return fmt.Errorf("passwd home %q is world-writable", home)
 	}

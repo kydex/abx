@@ -21,12 +21,17 @@ type Selection struct {
 	Reason string
 }
 
+// passwdPath is the account database ABX trusts. The owner rule and the parser
+// must name the same file: two literals here would let the check drift onto one
+// file while the other is read.
+const passwdPath = "/etc/passwd"
+
 // ResolveShell reads /etc/passwd and validates the selected shell.
 func ResolveShell(uid int) Selection {
-	if err := checkPasswdOwner("/etc/passwd"); err != nil {
+	if err := checkPasswdOwner(passwdPath); err != nil {
 		return Selection{Reason: err.Error()}
 	}
-	return resolveShellFrom(uid, "/etc/passwd")
+	return resolveShellFrom(uid, passwdPath)
 }
 
 // resolveShellFrom is the deterministic passwd-file test seam.

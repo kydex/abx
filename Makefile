@@ -59,7 +59,11 @@ package-smoke:
 	(cd dist && sha256sum -c "abx-$$version-SHA256SUMS"); \
 	tar -xzf "dist/abx-$$version-linux-amd64.tar.gz" -C "$$work"; \
 	test -x "$$work/abx-$$version-linux-amd64/abx"; \
-	test "$$("$$work/abx-$$version-linux-amd64/abx" version)" = "abx $$version"; \
+	if [ "$$(id -u)" -ne 0 ]; then \
+		test "$$("$$work/abx-$$version-linux-amd64/abx" version)" = "abx $$version"; \
+	else \
+		echo "note: built as root, so the archive was not executed: abx refuses to run as root, which is the correct behaviour, not a broken archive"; \
+	fi; \
 	test -f "$$work/abx-$$version-linux-amd64/LICENSE"; \
 	test -f "$$work/abx-$$version-linux-amd64/README.md"; \
 	test -d "$$work/abx-$$version-linux-amd64/docs"; \

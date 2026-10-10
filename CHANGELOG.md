@@ -17,6 +17,10 @@
   0.8.23; the table, which the document offers as the complete list, was not
   updated with it. A reader relying on the table would have learned of the check
   only from the accepted-trade-offs section near the end. (English and Russian.)
+- The installation guide now says to run the checksum command from the directory
+  holding the archive. `--ignore-missing` skips absent files without failing, so from
+  the wrong directory `sha256sum --check` still exits 0 and reports only that nothing
+  was verified -- an integrity check that looks like a pass. (English and Russian.)
 
 ## 0.8.23
 

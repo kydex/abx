@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Compatibility links `/bin`, `/sbin`, `/lib` and `/lib64` are now required to
+  point inside `/usr`. A host whose `/bin` pointed elsewhere used to build a
+  valid plan and mount an empty `/bin`, so the session started with no binaries
+  and no message naming the cause. On a normal host, where the four links point
+  into `/usr`, nothing changes.
+
 ## 0.8.23
 
 Tightened what ABX trusts before it starts: the account home, the storage root, the

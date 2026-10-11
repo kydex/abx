@@ -36,7 +36,7 @@ host state -> host.Inputs -> sandbox.Plan -> bwrap translation/execution
 5. `app` opens and validates `/usr/bin/bwrap` and retains that executable too.
 6. Optional mountpoint preparation runs, then selected host sources are revalidated.
 7. `bwrap.Translate` validates the `Plan` again, maps retained sources to `--ro-bind-fd` / `--bind-fd`, and builds the remaining Bubblewrap arguments.
-8. Bubblewrap is executed through its retained descriptor. Standard streams are connected directly; INT/TERM/HUP are forwarded.
+8. Bubblewrap is executed through its retained descriptor. Standard streams are connected directly; INT/TERM/HUP/QUIT are forwarded.
 9. `app` closes owned resources. Cleanup failures are not hidden by an otherwise successful child exit.
 
 `run` mounts the project and starts the agent. `shell` omits the project and starts the passwd login shell. `work` mounts the project and starts the same login shell at `/workspace`. Their isolation policy otherwise comes from the same plan construction. An explicit mode is retained in `host.Inputs`; `app` maps it to `sandbox.Input` mode and selects a consistent `PWD`. `Plan` retains a distinct `planWork` that checks expected sources, mounts, and cwd; host/app tests check shell argv selection.

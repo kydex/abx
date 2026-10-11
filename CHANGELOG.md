@@ -89,6 +89,11 @@
   shell and now gets the same remaining checks; it previously stopped after the execute
   test, so an agent an equivalent shell would refuse was accepted. An agent installed with a
   group-writable bit (`chmod 775`) now needs `chmod 755`.
+- Fixed: `Ctrl+\` no longer crashes the launcher. `SIGQUIT` is forwarded to the sandbox like
+  `Ctrl+C`, `SIGTERM` and `SIGHUP` already were. Previously the terminal's `SIGQUIT` took ABX
+  by the default action: a dump of every internal goroutine and exit status `2`, the status
+  documented for a CLI syntax error, with no signal reaching the agent. Measured on a host
+  process: unhandled `SIGQUIT` produces 156 lines of dump and status `2`.
 
 ## 0.8.23
 

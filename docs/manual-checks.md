@@ -389,6 +389,24 @@ Wait for the new prompt before copying the next block.
 
 No more commands are needed in B. Continue in A on the host.
 
+### 5.4 Ctrl+\
+
+**Terminal A · host · ONE COMMAND — run separately**
+
+```sh
+abx run smoke -- wait
+```
+
+The command waits without output. After a couple of seconds, press **Ctrl+\** — Ctrl together with the backslash key, immediately right of Enter on a standard layout. When the host prompt returns, immediately run:
+
+**Terminal A · host · ONE COMMAND — run separately**
+
+```sh
+printf 'exit=%s\n' "$?"
+```
+
+Expected: `exit=131`, and **no goroutine dump** above the prompt. A dump means ABX itself took the signal by the default action, which is exactly what this check exists to catch: the launcher then dies with status `2` and the agent inside the sandbox is never told the session ended.
+
 ## 6. Verify and shared skills
 
 **Terminal A · host · ONE COMMAND — run separately**

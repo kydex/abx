@@ -376,13 +376,16 @@ func TestForwardsSignals(t *testing.T) {
 		{"interrupt", syscall.SIGINT},
 		{"terminate", syscall.SIGTERM},
 		{"hangup", syscall.SIGHUP},
+		// Ctrl+\ at a terminal. Forwarded like the rest: unhandled it dumped
+		// the launcher's goroutines and exited 2 instead of interrupting.
+		{"quit", syscall.SIGQUIT},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 			result := filepath.Join(dir, "result")
 			ready := filepath.Join(dir, "ready")
-			script := writeScript(t, `trap 'printf signal > "$1"; exit 0' INT TERM HUP
+			script := writeScript(t, `trap 'printf signal > "$1"; exit 0' INT TERM HUP QUIT
 printf ready > "$2"
 while :; do sleep 1; done`)
 			helper := exec.Command(os.Args[0], "-test.run=^TestForwardsSignals$")

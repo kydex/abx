@@ -93,6 +93,7 @@ package-smoke:
 	test -f "$$work/abx-$$version-source/.gitignore"; \
 	test -f "$$work/abx-$$version-source/.golangci.yml"; \
 	test "$$(cat "$$work/abx-$$version-source/internal/app/VERSION")" = "$$version"; \
+	(cd "$$work/abx-$$version-source" && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./cmd/abx); \
 	printf 'package smoke ok: %s\n' "$$version"
 
 clean:

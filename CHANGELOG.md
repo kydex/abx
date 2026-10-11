@@ -31,6 +31,10 @@
   the account home, the storage and profile directories, and the profile executable. The
   paragraph above the table no longer reads as an exhaustive list it did not deliver.
   (English and Russian.)
+- `make package-smoke` now compiles the unpacked source archive. The gate confirmed that
+  `internal/` was present but never built it, so a source archive missing a Go file passed
+  with `package smoke ok` -- and the installation guide tells users they can build the binary
+  from it. A shipped source tree that cannot be built was shipped.
 
 ## 0.8.23
 

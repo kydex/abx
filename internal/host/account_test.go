@@ -103,14 +103,25 @@ func TestResolveAccountLookupPaths(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		user *user.User
+		want string
 	}{
-		{name: "nil result", user: nil},
-		{name: "malformed uid", user: &user.User{Uid: "not-a-uid", Username: "tester", HomeDir: home}},
-		{name: "mismatched uid", user: &user.User{Uid: strconv.Itoa(uid + 1), Username: "tester", HomeDir: home}},
+		{name: "nil result", user: nil, want: "empty result"},
+		{name: "malformed uid", user: &user.User{Uid: "not-a-uid", Username: "tester", HomeDir: home}, want: "parse passwd uid"},
+		{name: "mismatched uid", user: &user.User{Uid: strconv.Itoa(uid + 1), Username: "tester", HomeDir: home}, want: "does not match invoking uid"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := resolveAccount(1000, func(string) (*user.User, error) { return tc.user, nil }); err == nil {
+			// The invoking uid is the real one, not a constant: a mismatched uid
+			// built as uid+1 has to stay mismatched on every host, including
+			// one whose uid happens to be 999.
+			_, err := resolveAccount(uid, func(string) (*user.User, error) { return tc.user, nil })
+			if err == nil {
 				t.Fatalf("accepted passwd lookup result %#v", tc.user)
+			}
+			// Any refusal will do only if it is the refusal this case is about.
+			// The mismatched-uid case used to be satisfied by the home-ownership
+			// check that runs later, so deleting the uid comparison left it green.
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("refused for the wrong reason: %v, want %q", err, tc.want)
 			}
 		})
 	}

@@ -41,6 +41,20 @@ Whitespace errors in uncommitted changes are a local convenience, not a gate: `m
 
 The race detector requires a supported Go platform and a working C toolchain. `make test` is the faster option while iterating.
 
+### Mutation sweep
+
+`scripts/mutation-sweep.sh` is not a gate and nothing in `make check` runs it. It replaces each `if <cond> {` guard in the protective files with `if false {`, runs that package's tests, and restores the file. A guard whose deletion no test notices is reported as surviving, which means it can be removed without anything failing.
+
+It takes roughly half an hour, so it is a deliberate run rather than part of the loop:
+
+```sh
+scripts/mutation-sweep.sh
+```
+
+Read the skip report it prints before trusting the numbers. A skipped test does not fail, so a guard whose only test skips looks exactly like an uncovered guard. That is not hypothetical: on a host where `/etc/passwd` is not owned by root, which includes any container, the resolve tests used to skip and the guards below them were reported as uncovered although CI and an ordinary host run them. The script prints the count and names so a survival list is never mistaken for a property of the code rather than of the machine.
+
+Two distinctions the output depends on. A build or vet failure is *not applicable*, not a kill: the guard cannot be neutered that way. And the classification reads the output text, not the exit code, because `go test` exits non-zero both for a build failure and for a failing test. A word in a test message can change the measurement — `unreachable` matches the build-failure pattern.
+
 ## Live sandbox tests
 
 On a regular-user Linux host with Bubblewrap 0.12.0+ at `/usr/bin/bwrap` and working unprivileged user namespaces.

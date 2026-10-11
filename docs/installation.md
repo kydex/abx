@@ -16,7 +16,7 @@ ABX requires:
 - a local `/etc/passwd` entry for the invoking UID;
 - an absolute, existing home directory that is a directory, is not world-writable, and is owned by your UID; ABX is for real hosts, and a home owned by somebody else is one somebody else can replace;
 - a usable login shell from that passwd entry: a regular file executable by you, not writable by group or other, and without setuid/setgid/sticky bits;
-- a `/etc/passwd` that is a regular file not writable by group or other, without setuid/setgid/sticky bits, and owned by root: it names the home every session runs against.
+- a `/etc/passwd` that is a regular file not writable by group or other, without setuid/setgid/sticky bits: it names the home every session runs against. ABX does not require it to be owned by root.
 
 The published prebuilt binary targets `linux/amd64` (`x86_64`). Other Linux architectures can be built from source if the Go toolchain and dependencies support them. Cross-compiling to other operating systems is unsupported: the codebase uses Linux-only APIs and fails at compile time elsewhere.
 

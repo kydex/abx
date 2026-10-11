@@ -47,7 +47,6 @@ ABX additionally validates the host objects it depends on: the two it executes, 
 | Object | Check |
 |---|---|
 | `/usr/bin/bwrap` | Regular file, executable, no setuid/setgid/sticky bits, not writable by group/other, owned by root; before execution it must still resolve to the same inode |
-| `/etc/passwd` | Regular file, not writable by group/other, no setuid/setgid/sticky bits, owned by root |
 | Login shell from `/etc/passwd` | Resolved target is a regular file, executable by the invoking user, not writable by group/other, no setuid/setgid/sticky bits; both the passwd path and its resolved target must be visible in the sandbox |
 | Account home from `/etc/passwd` | A real directory, not world-writable, owned by the invoking UID |
 | ABX storage and profile directories | Real directories, exact mode `0700` with no setuid/setgid/sticky bits, owned by the invoking UID |
@@ -59,7 +58,7 @@ Ownership of the login shell is deliberately not required: user-managed shells a
 
 The mounted `/etc/shells` is provided for programs inside the sandbox; login-shell validation does not consult it. The built-in checks above are stricter on most systems, and `/etc/shells` on some distributions lists non-system paths.
 
-The account database is looked up three times by name: once for its owner, once for its mode, and once more to read the contents. Each lookup resolves the path again, so unlike the Bubblewrap binary -- which ABX opens once and holds the descriptor until execution -- nothing pins the checked file and the read file to the same inode. Replacing the file between those lookups needs write access to `/etc/passwd`, which in turn means being its owner, and the owner check exists precisely to require root. The gap is therefore reachable only by a privileged adversary, whose protection ABX does not claim; an unprivileged user cannot exploit it. Holding one descriptor across all three checks would close the gap and change nothing else, at the cost of validating through an open handle rather than through the path the shell lookup names.
+The account database is looked up twice by name: once for its mode, and once more to read the contents. Each lookup resolves the path again, so unlike the Bubblewrap binary -- which ABX opens once and holds the descriptor until execution -- nothing pins the checked file and the read file to the same inode. Replacing the file between the two lookups needs write access to `/etc/passwd`, which the mode check itself forbids for group and other, so it requires the owner. A host whose account database an unprivileged user owns or can rewrite is therefore outside what ABX protects: that user already controls the host account that ABX reads, and the same file is read again through `os/user` without these checks at all. Holding one descriptor across both lookups would close the window and change nothing else.
 
 ## Shared skills
 

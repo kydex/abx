@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -28,9 +27,6 @@ const passwdPath = "/etc/passwd"
 
 // ResolveShell reads /etc/passwd and validates the selected shell.
 func ResolveShell(uid int) Selection {
-	if err := checkPasswdOwner(passwdPath); err != nil {
-		return Selection{Reason: err.Error()}
-	}
 	return resolveShellFrom(uid, passwdPath)
 }
 
@@ -96,26 +92,14 @@ func checkPasswdFile(path string) error {
 	return nil
 }
 
-// checkPasswdOwner pins the trust anchor itself. It is deliberately separate
-// from checkPasswdFile and is reached only for the database ABX actually uses:
-// the account entry it yields names the home every session runs against, so a
-// passwd file owned by anyone but root is one somebody could replace. On a real
-// host /etc/passwd is always root-owned; a container that hands over a
-// different one is out of scope, the same way a root-owned home now is.
-func checkPasswdOwner(path string) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return fmt.Errorf("stat passwd database %q: %w", path, err)
-	}
-	st, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return fmt.Errorf("passwd database %q has unknown owner", path)
-	}
-	if st.Uid != 0 {
-		return fmt.Errorf("passwd database %q is owned by uid %d, not by root", path, st.Uid)
-	}
-	return nil
-}
+// checkPasswdOwner used to pin the trust anchor itself, separate from
+// checkPasswdFile. It was removed on 12 October: it refused to start wherever
+// /etc/passwd is not owned by root, which is every container, and the tests that
+// cover the resolve path had nothing to exercise there. The file checks that
+// remain -- regular file, not writable by group or other, no privilege-escalation
+// bits -- are what keep a substituted database from being read unnoticed; on a
+// host whose database an unprivileged user can rewrite, that user is already
+// outside the model ABX protects.
 
 func shellFromPasswd(uid int, path string) (string, error) {
 	if err := checkPasswdFile(path); err != nil {

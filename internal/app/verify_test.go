@@ -130,7 +130,6 @@ func TestVerifySuccessReportsCleanup(t *testing.T) {
 }
 
 func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
-	requireTrustedPasswd(t)
 	in := inputs(t, host.Run)
 	home := t.TempDir()
 	want := errors.New("tool not available")
@@ -196,7 +195,6 @@ func TestVerificationCleanupAggregatesFailuresAndContinues(t *testing.T) {
 // status. Every control below is the behaviour the code claims, and each one is
 // something a regression would otherwise change silently.
 func TestVerifyRunCycle(t *testing.T) {
-	requireTrustedPasswd(t)
 	neverExecute := func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
 		t.Error("execute ran without a usable tool")
 		return 0, nil

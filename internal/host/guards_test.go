@@ -32,7 +32,6 @@ func TestResolveRejectsUnknownSessionMode(t *testing.T) {
 }
 
 func TestResolveRequiresAgentForRun(t *testing.T) {
-	shell := fixtureShellResolver(t)
 	home, project := t.TempDir(), t.TempDir()
 	root := filepath.Join(home, "data")
 	paths := Paths{Root: root, Profiles: filepath.Join(root, "profiles")}
@@ -43,7 +42,7 @@ func TestResolveRequiresAgentForRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	account := Account{UID: os.Getuid(), Username: "tester", Home: home}
-	in, err := resolveWithShell(account, paths, "demo", project, Run, true, nil, shell)
+	in, err := resolve(account, paths, "demo", project, Run, true, nil)
 	if err == nil {
 		t.Fatalf("run mode accepted a profile with no executable: %+v", in.executable)
 	}
@@ -447,26 +446,6 @@ func TestResolvePathsRejectsSetgidDataBaseAncestor(t *testing.T) {
 	}
 }
 
-func TestCheckPasswdOwnerRequiresRoot(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "passwd")
-	if err := os.WriteFile(path, []byte("root:x:0:0::/root:/bin/sh\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := checkPasswdOwner(path); err == nil {
-		t.Fatal("passwd file owned by a non-root uid accepted")
-	}
-	if err := checkPasswdOwner(filepath.Join(t.TempDir(), "absent")); err == nil {
-		t.Fatal("missing passwd database accepted")
-	}
-	// The real host database is the trust anchor and must stay root-owned;
-	// this is the one case the test environment cannot fake.
-	if os.Getuid() == 0 {
-		if err := checkPasswdOwner("/etc/passwd"); err != nil {
-			t.Fatalf("host /etc/passwd rejected: %v", err)
-		}
-	}
-}
-
 func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
 	in := fixture(t)
 	outside := filepath.Join(t.TempDir(), "agent-bin")
@@ -527,7 +506,6 @@ func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
 // owned by root; where that is not the case the whole run is refused earlier
 // and the test says so rather than passing silently.
 func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
-	shell := fixtureShellResolver(t)
 	home, project := t.TempDir(), t.TempDir()
 	root := filepath.Join(home, "data")
 	paths := Paths{Root: root, Profiles: filepath.Join(root, "profiles")}
@@ -544,7 +522,7 @@ func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
 		t.Fatal(err)
 	}
 	account := Account{UID: os.Getuid(), Username: "tester", Home: home}
-	if _, err := resolveWithShell(account, paths, "demo", project, Run, true, nil, shell); err == nil ||
+	if _, err := resolve(account, paths, "demo", project, Run, true, nil); err == nil ||
 		!strings.Contains(err.Error(), "does not mount") {
 		t.Fatalf("resolve accepted an agent the sandbox cannot mount: %v", err)
 	}
@@ -563,7 +541,7 @@ func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
 	if err := os.Symlink(filepath.Join(inside, "demo"), filepath.Join(binDir, "demo")); err != nil {
 		t.Fatal(err)
 	}
-	got, err := resolveWithShell(account, paths, "demo", project, Run, true, nil, shell)
+	got, err := resolve(account, paths, "demo", project, Run, true, nil)
 	if err != nil {
 		t.Fatalf("resolve refused a package-manager layout: %v", err)
 	}

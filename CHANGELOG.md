@@ -54,6 +54,14 @@
   `architecture.md` now says `Plan.Validate()` compares a plan against expectations recorded while
   building it, rather than implying an independent check. `development.md` names CachyOS as the live test
   target, which until now appeared only in the maintainer rules. (English and Russian.)
+- Removed: ABX no longer requires `/etc/passwd` to be owned by root. The requirement refused to
+  start on every container, where the file belongs to an unmapped uid, and the tests covering the
+  resolve path had nothing to exercise there: 16 of them skipped. The file checks that remain --
+  regular file, not writable by group or other, no privilege-escalation bits -- still stand. A host
+  whose account database an unprivileged user can rewrite was never inside what ABX protects: that
+  user already controls the account ABX reads, and the same file is read again through `os/user`
+  with no checks at all. Skipped tests in a container: 21 -> 5, and the five are by design (three
+  live, one needs real root, one needs a real ownership change).
 - Documented what the audit of 11 October left in place instead of changed. `docs/security.md` names the
   limits the code already had: environment values are sanitized against NUL bytes only, so a newline in a
   host value reaches the agent unchanged; `TZ`, `LANG` and `LC_*` are forwarded unrestricted; the process

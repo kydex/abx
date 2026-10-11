@@ -21,7 +21,7 @@ func TestCheckProducesEveryObservation(t *testing.T) {
 		Environment: []string{"HOME=/home/agent"},
 		Sentinel:    dir + "/sentinel",
 		ReadOnly:    []string{"/usr"},
-	})
+	}, hostObserver())
 	got := make([]string, len(checks))
 	for i, c := range checks {
 		got[i] = c.Name

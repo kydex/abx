@@ -70,7 +70,7 @@ func Run(raw string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return report(out, check(e))
+	return report(out, check(e, hostObserver()))
 }
 
 // probePath must match sandbox.ProbePath: the fixed mountpoint of this
@@ -169,18 +169,51 @@ func report(out io.Writer, checks []Check) error {
 	return nil
 }
 
-func check(e Expected) []Check {
+// observer supplies the sandbox state that check reads. At run time it is
+// hostObserver, which reads the real process. Tests pass substitutes, so every
+// predicate can be checked against an input it can actually produce: on an
+// ordinary host no set of real observations can pass, because /workspace is not
+// the working directory and /tmp is not a private tmpfs.
+type observer struct {
+	getwd      func() (string, error)
+	hostname   func() (string, error)
+	environ    func() []string
+	stat       func(string) (os.FileInfo, error)
+	identify   func(string) (Identity, error)
+	readlink   func(string) (string, error)
+	statfs     func(string, *unix.Statfs_t) error
+	statDevice func(string, *unix.Stat_t) error
+	mountinfo  func() ([]byte, error)
+	writeProbe func(string) error
+}
+
+func hostObserver() observer {
+	return observer{
+		getwd:      os.Getwd,
+		hostname:   os.Hostname,
+		environ:    os.Environ,
+		stat:       os.Stat,
+		identify:   Identify,
+		readlink:   os.Readlink,
+		statfs:     unix.Statfs,
+		statDevice: unix.Stat,
+		mountinfo:  func() ([]byte, error) { return os.ReadFile("/proc/self/mountinfo") },
+		writeProbe: writeAndRemove,
+	}
+}
+
+func check(e Expected, obs observer) []Check {
 	var checks []Check
 	add := func(name string, ok bool, err error, detail string) {
 		checks = append(checks, observation(name, ok, err, detail))
 	}
-	cwd, err := os.Getwd()
+	cwd, err := obs.getwd()
 	add("working directory", cwd == "/workspace", err, fmt.Sprintf("expected %q; observed %q", "/workspace", cwd))
-	hostname, err := os.Hostname()
+	hostname, err := obs.hostname()
 	add("hostname", hostname == "abx", err, fmt.Sprintf("expected %q; observed %q", "abx", hostname))
-	checks = append(checks, checkEnvironment(os.Environ(), e.Environment))
+	checks = append(checks, checkEnvironment(obs.environ(), e.Environment))
 	for _, p := range []string{e.Sentinel, "/etc/shadow"} {
-		_, err := os.Stat(p)
+		_, err := obs.stat(p)
 		if errors.Is(err, os.ErrNotExist) {
 			add("hidden "+p, true, nil, "")
 		} else {
@@ -191,26 +224,26 @@ func check(e Expected) []Check {
 		path string
 		id   Identity
 	}{{"/home/agent", e.Profile}, {"/workspace", e.Project}} {
-		id, err := Identify(target.path)
+		id, err := obs.identify(target.path)
 		add("selected "+target.path, id == target.id, err, fmt.Sprintf("expected device=%d inode=%d; observed device=%d inode=%d", target.id.Device, target.id.Inode, id.Device, id.Inode))
 	}
-	id, err := Identify(e.Home)
+	id, err := obs.identify(e.Home)
 	if errors.Is(err, os.ErrNotExist) {
 		add("host home hidden", true, nil, "")
 	} else {
 		add("host home hidden", id != e.Objects[e.Home], err, "expected host home to be hidden; observed the host home filesystem object")
 	}
-	checks = append(checks, checkNamespaces(e.Namespaces, os.Readlink)...)
+	checks = append(checks, checkNamespaces(e.Namespaces, obs.readlink)...)
 	for _, p := range []string{"/tmp", "/var/tmp", "/run", "/dev"} {
-		id, err := Identify(p)
+		id, err := obs.identify(p)
 		add("private "+p, id != e.Objects[p], err, "expected a private filesystem object; observed the host object")
 	}
 	for _, p := range []string{"/tmp", "/var/tmp", "/run"} {
 		var fs unix.Statfs_t
-		err := unix.Statfs(p, &fs)
+		err := obs.statfs(p, &fs)
 		add("tmpfs "+p, fs.Type == unix.TMPFS_MAGIC, err, fmt.Sprintf("expected tmpfs type=%#x; observed type=%#x", unix.TMPFS_MAGIC, fs.Type))
 	}
-	info, err := os.Stat("/run/user")
+	info, err := obs.stat("/run/user")
 	ok := err == nil && info.IsDir() && info.Mode().Perm() == 0o700 && info.Mode()&(os.ModeSticky|os.ModeSetuid|os.ModeSetgid) == 0
 	detail := ""
 	if err == nil {
@@ -218,9 +251,9 @@ func check(e Expected) []Check {
 	}
 	add("runtime directory mode", ok, err, detail)
 	var st unix.Stat_t
-	err = unix.Stat("/dev/null", &st)
+	err = obs.statDevice("/dev/null", &st)
 	add("null device", st.Mode&unix.S_IFMT == unix.S_IFCHR && unix.Major(st.Rdev) == 1 && unix.Minor(st.Rdev) == 3, err, fmt.Sprintf("expected character device 1:3; observed file type=%#o device=%d:%d", st.Mode&unix.S_IFMT, unix.Major(st.Rdev), unix.Minor(st.Rdev)))
-	raw, err := os.ReadFile("/proc/self/mountinfo")
+	raw, err := obs.mountinfo()
 	for _, target := range e.ReadOnly {
 		detail := readOnlyDetail(string(raw), target)
 		add("read-only "+target, detail == "", err, detail)
@@ -229,7 +262,7 @@ func check(e Expected) []Check {
 		checks = append(checks, Check{Name: "shared skills", State: stateNA, Detail: "not configured"})
 	}
 	for _, p := range []string{"/home/agent", "/workspace"} {
-		err := writeAndRemove(p)
+		err := obs.writeProbe(p)
 		add("write and cleanup "+p, err == nil, err, "")
 	}
 	return checks

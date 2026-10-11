@@ -1,6 +1,29 @@
 # Changelog
 
 ## Unreleased
+
+## 0.8.24
+
+Closed the third audit round: 102 findings, and from this release every one of them
+carries a recorded decision rather than a silent gap. Five code findings were fixed
+and two documented with the reason they are safe. `Ctrl+\` now interrupts a session
+instead of dumping the launcher and exiting with the status this file assigns to a
+CLI syntax error. ABX no longer refuses to start when `/etc/passwd` is not owned by
+root, which is every container, and which had been skipping sixteen tests.
+
+The mutation sweep that produced those numbers is now in the repository rather than
+in a scratch directory — and it lied three ways before it did: it read build errors
+out of test output by matching words, it discarded 79 measurable guards as
+unmeasurable, and it ran files of one package in parallel, which silently dropped
+four documented debts from its own report. Fixed, and its claims now cross-checked
+by hand. Two guards it had been reporting as uncovered turned out to be reachable
+after all, one of them behind a test that had been green for the wrong reason.
+
+Aggregate coverage moved from 83.7% to 90.8%, almost entirely from tests that had
+been skipping. Four refusals for file metadata that cannot be unreadable on Linux
+are gone, matching the other eighty-eight assertions in the tree that never had
+them. Seven documentation claims that outran the code are corrected.
+
 - Compatibility links `/bin`, `/sbin`, `/lib` and `/lib64` are now required to
   point inside `/usr`. A host whose `/bin` pointed elsewhere used to build a
   valid plan and mount an empty `/bin`, so the session started with no binaries

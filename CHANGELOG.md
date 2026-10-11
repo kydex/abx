@@ -54,6 +54,13 @@
   `architecture.md` now says `Plan.Validate()` compares a plan against expectations recorded while
   building it, rather than implying an independent check. `development.md` names CachyOS as the live test
   target, which until now appeared only in the maintainer rules. (English and Russian.)
+- Documented what the audit of 11 October left in place instead of changed. `docs/security.md` names the
+  limits the code already had: environment values are sanitized against NUL bytes only, so a newline in a
+  host value reaches the agent unchanged; `TZ`, `LANG` and `LC_*` are forwarded unrestricted; the process
+  identity inside the sandbox is unchecked; the account home is not checked for setuid or setgid unlike the
+  storage ancestor beside it. `usage.md` now states that `profile list` stops at the first profile with an
+  unsafe layout instead of reporting it as usable, which the code has always done. `development.md` gains a
+  short list of rough edges we accept and why, so the next reader does not reopen them. (English and Russian.)
 
 ## 0.8.23
 

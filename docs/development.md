@@ -80,4 +80,24 @@ For diagnosis with disposable profiles, use the [optional manual checks](manual-
 - Keep `README.md` / `README.ru.md` and each English/Russian guide pair synchronized.
 - Keep `CHANGELOG.md` in English.
 
+## Rough edges we accept
+
+These were found, cost something to weigh, and were left as they are. They are
+here so nobody starts the same discussion from scratch.
+
+- `Plan.Validate()` stays one long function. It sits between a built plan and the
+  Bubblewrap arguments; splitting it risks that barrier to buy readability.
+- Nine identifiers are exported although only their own package uses them.
+  Unexporting them would make the compiler stop catching misspelled names across
+  package boundaries, for no gain here.
+- The fuzz harnesses in `internal/probe` are built and vetted but never fuzzed in
+  CI. They document the input shape; running them on a schedule is a separate
+  decision.
+- The orchestrator in `internal/app` is knowingly under-covered. The code is
+  correct where it was checked; closing the gap needs test seams that the
+  project's own rules discourage. The mutation sweep behind this list measured
+  the size of the gap: one of eleven orchestrator mutations is caught.
+- `profile list` stops at the first profile with an unsafe layout instead of
+  listing the rest. Documented in [Usage](usage.md) rather than changed.
+
 For the maintainer release workflow and CI details, see [Maintainer releases and CI](releases.md).

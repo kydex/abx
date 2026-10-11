@@ -19,8 +19,7 @@
 # conditional, and this script says so rather than letting the numbers speak.
 set -uo pipefail
 
-ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-cd "$ROOT" || exit 1
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd) || exit 1
 
 FILES="
 internal/host/project.go internal/host/inputs.go internal/host/profiles.go
@@ -29,6 +28,35 @@ internal/host/skills.go internal/sandbox/validate.go internal/sandbox/plan.go
 internal/sandbox/environment.go internal/bwrap/bwrap.go
 internal/profile/name.go internal/cli/cli.go
 "
+
+# Naming files narrows the run. The whole sweep re-executes a package's test
+# suite once per guard and there are around three hundred guards, so a full run
+# is half an hour; a single file is a minute or two and is enough to check that
+# the sweep itself still works.
+if [ "$#" -gt 0 ]; then
+  FILES="$*"
+fi
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+mkdir "$work/repo"
+
+# Every mutation below rewrites a source file. Doing that in the repository means
+# a killed run leaves it modified -- a trap cannot help against SIGKILL -- and a
+# tool that edits the working tree on every run is a tool nobody should run
+# without reading it first. So nothing is written where you keep your work.
+# HEAD is exported to a scratch directory, which has no .git at all, and that is
+# where the sweep happens.
+git -C "$ROOT" archive HEAD | tar -x -C "$work/repo" || {
+  echo 'error: could not export HEAD' >&2
+  exit 1
+}
+cd "$work/repo" || exit 1
+
+if ! git -C "$ROOT" diff --quiet || ! git -C "$ROOT" diff --cached --quiet; then
+  echo 'note: the working tree has uncommitted changes; the sweep measures HEAD, not them.'
+fi
+
 
 # Guards that are not refusals: format switches and constant comparisons that
 # cannot be neutered by replacing the condition.
@@ -43,13 +71,8 @@ is_build_failure() {
   grep -qE 'build failed|declared and not used|syntax error|missing return|unreachable|cannot use|undefined:|assignment mismatch|too many arguments|not enough arguments|imported and not used' "$1"
 }
 
-tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"; git -C "$ROOT" checkout -- $FILES 2>/dev/null' EXIT HUP INT TERM
-
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo 'error: the tree is dirty; the sweep rewrites files and restores them' >&2
-  exit 1
-fi
+tmp="$work/out"
+mkdir "$tmp"
 
 echo '== база =='
 skips=$(go test -count=1 ./... -v 2>&1 | grep -c '^--- SKIP' || true)

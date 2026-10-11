@@ -43,12 +43,20 @@ The race detector requires a supported Go platform and a working C toolchain. `m
 
 ### Mutation sweep
 
-`scripts/mutation-sweep.sh` is not a gate and nothing in `make check` runs it. It replaces each `if <cond> {` guard in the protective files with `if false {`, runs that package's tests, and restores the file. A guard whose deletion no test notices is reported as surviving, which means it can be removed without anything failing.
+`scripts/mutation-sweep.sh` is not a gate and nothing in `make check` runs it. It replaces each `if <cond> {` guard in the protective files with `if false {` and runs that package's tests. A guard whose deletion no test notices is reported as surviving, which means it can be removed without anything failing.
 
-It takes roughly half an hour, so it is a deliberate run rather than part of the loop:
+The script never writes to your repository. It exports `HEAD` into a scratch directory with no `.git` in it and does the rewriting there, so a killed run cannot leave a source file modified and nothing has to be restored. If the working tree has uncommitted changes the script says so and measures `HEAD` rather than them.
+
+A full run re-executes a package's whole test suite once per guard, around three hundred guards, so it takes about half an hour:
 
 ```sh
 scripts/mutation-sweep.sh
+```
+
+Naming files narrows it to a minute or two, which is enough to confirm the sweep itself still behaves:
+
+```sh
+scripts/mutation-sweep.sh internal/host/account.go
 ```
 
 Read the skip report it prints before trusting the numbers. A skipped test does not fail, so a guard whose only test skips looks exactly like an uncovered guard. That is not hypothetical: until the root-ownership requirement on `/etc/passwd` was removed on 12 October, the resolve tests skipped on every container, and the guards below them were reported as uncovered although CI and an ordinary host ran them. The script prints the count and names so a survival list is never mistaken for a property of the code rather than of the machine.

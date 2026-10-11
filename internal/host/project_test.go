@@ -3,6 +3,7 @@ package host
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -41,20 +42,30 @@ func TestResolveRejectsProtectedSystemTrees(t *testing.T) {
 }
 
 func TestResolveRejectsExactWorldWritableRoots(t *testing.T) {
-	root := t.TempDir()
-	home := filepath.Join(root, "home")
+	// The home must sit outside /tmp, and it does not have to exist: the refusal
+	// is decided by path arithmetic alone. With a t.TempDir home every case below
+	// was already refused by another rule -- /tmp as an ancestor of the home,
+	// /var/tmp and /dev/shm as overlapping /var and /dev -- so the loop never
+	// ran and the guard it covers was uncovered while this test stayed green.
+	const home = "/opt/abx-exact-root-fixture"
 	data := filepath.Join(home, ".local", "share", "abx")
-	if err := os.MkdirAll(home, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	// Pinned literals: changing exactProtectedRoots requires updating this list too.
+
 	for _, exact := range []string{"/tmp", "/var/tmp", "/dev/shm"} {
-		if _, err := os.Stat(exact); err != nil {
-			t.Skipf("protected root %s is absent on this host", exact)
+		_, err := ResolveProject(exact, home, data)
+		if err == nil {
+			t.Fatalf("accepted exact protected root %s", exact)
 		}
-		if _, err := ResolveProject(exact, home, data); err == nil {
-			t.Errorf("accepted exact protected root %s", exact)
+		// The specific refusal, not merely any: a different rule answering here
+		// is what made the earlier version of this test say nothing.
+		if !strings.Contains(err.Error(), "protected system path") {
+			t.Errorf("root %s refused by the wrong rule: %v", exact, err)
 		}
+	}
+	// Sanity check on the fixture itself: an overlap is still an overlap, so a
+	// failure above cannot be blamed on the synthetic home.
+	if _, err := ResolveProject("/etc", home, data); err == nil ||
+		strings.Contains(err.Error(), "protected system path") {
+		t.Errorf("fixture home does not isolate the exact rule: %v", err)
 	}
 }
 

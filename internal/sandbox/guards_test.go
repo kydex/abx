@@ -289,3 +289,35 @@ func TestBuildRejectsCompatibilityLinkEscapingUsr(t *testing.T) {
 		t.Fatalf("Validate accepted a compatibility link outside /usr: %v", err)
 	}
 }
+
+// Build refuses a command argument carrying NUL on its own, before Validate
+// ever sees the plan. Validate refuses it too, with a different message, so a
+// test that only expects any error proves nothing about this layer: disabling
+// the check here leaves the refusal standing and the test green. The mutation
+// sweep reported it uncovered for exactly that reason. Asserting the message
+// this layer produces is what pins it.
+//
+// The case in the Validate table cannot do this: it edits a plan after
+// construction, so it exercises only the second check.
+func TestBuildRejectsNULInCommandArgument(t *testing.T) {
+	for _, mode := range []Mode{Run, Shell, Work} {
+		in := testInput(t, mode)
+		in.Command = append(append([]string{}, in.Command...), "bad\x00arg")
+		_, err := Build(in)
+		if err == nil {
+			t.Fatalf("mode %v accepted a NUL in a command argument", mode)
+		}
+		// "plan command argument contains NUL" is Validate's wording; this layer
+		// says "command argument contains NUL" and nothing more.
+		if got := err.Error(); got != "command argument contains NUL" {
+			t.Fatalf("mode %v: NUL refused, but not by this check: %q", mode, got)
+		}
+	}
+	// The same argument without NUL must still build, so the refusal above comes
+	// from the byte and not from the argument count.
+	in := testInput(t, Run)
+	in.Command = append(append([]string{}, in.Command...), "ordinary-arg")
+	if _, err := Build(in); err != nil {
+		t.Fatalf("ordinary extra argument refused: %v", err)
+	}
+}

@@ -43,20 +43,20 @@ The race detector requires a supported Go platform and a working C toolchain. `m
 
 ### Mutation sweep
 
-`scripts/mutation-sweep.sh` is not a gate and nothing in `make check` runs it. It replaces each `if <cond> {` guard in the protective files with `if false {` and runs that package's tests. A guard whose deletion no test notices is reported as surviving, which means it can be removed without anything failing.
+`scripts/mutation-sweep.py` is not a gate and nothing in `make check` runs it. It neutralises each `if <cond> {` guard in the protective files and runs that package's tests. The condition becomes `false && (<cond>)` rather than a plain `false`, so the compiler still sees every variable it uses: replacing the line outright produced "declared and not used" on guards that were perfectly measurable, and those were filed as not applicable when they were not. Whether the package still compiles is decided by compiling it on its own, never by searching the test output for error words -- a test message containing a word that also appears in a compiler diagnostic turned a kill into a silent not-applicable. A guard whose deletion no test notices is reported as surviving, which means it can be removed without anything failing.
 
 The script never writes to your repository. It exports `HEAD` into a scratch directory with no `.git` in it and does the rewriting there, so a killed run cannot leave a source file modified and nothing has to be restored. If the working tree has uncommitted changes the script says so and measures `HEAD` rather than them.
 
-A full run re-executes a package's whole test suite once per guard, around three hundred guards, so it takes about half an hour:
+A full run re-executes a package's whole test suite once per guard, so it is slow on one package and quick on the rest; packages run in parallel, because a package's tests see every file in it and two files of the same package must not be rewritten at once:
 
 ```sh
-scripts/mutation-sweep.sh
+scripts/mutation-sweep.py
 ```
 
 Naming files narrows it to a minute or two, which is enough to confirm the sweep itself still behaves:
 
 ```sh
-scripts/mutation-sweep.sh internal/host/account.go
+scripts/mutation-sweep.py internal/host/account.go
 ```
 
 Read the skip report it prints before trusting the numbers. A skipped test does not fail, so a guard whose only test skips looks exactly like an uncovered guard. That is not hypothetical: until the root-ownership requirement on `/etc/passwd` was removed on 12 October, the resolve tests skipped on every container, and the guards below them were reported as uncovered although CI and an ordinary host ran them. The script prints the count and names so a survival list is never mistaken for a property of the code rather than of the machine.

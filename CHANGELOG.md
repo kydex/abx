@@ -54,6 +54,13 @@
   `architecture.md` now says `Plan.Validate()` compares a plan against expectations recorded while
   building it, rather than implying an independent check. `development.md` names CachyOS as the live test
   target, which until now appeared only in the maintainer rules. (English and Russian.)
+- Fixed: `internal/sandbox`: a command argument containing NUL is refused by the build step
+  itself, not only by the later validation. Both refuse it, so the check was
+  never exercised on its own; a test asserting the build step's own wording pins it.
+- Fixed: `internal/host`: refusing an exact world-writable root such as `/tmp` as the project
+  is now covered. The existing test built its home under `/tmp`, so every case was already
+  refused by another rule and this one never ran -- green while saying nothing. The test uses
+  a home outside `/tmp` and asserts which rule answered.
 - Removed: ABX no longer requires `/etc/passwd` to be owned by root. The requirement refused to
   start on every container, where the file belongs to an unmapped uid, and the tests covering the
   resolve path had nothing to exercise there: 16 of them skipped. The file checks that remain --

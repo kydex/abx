@@ -35,6 +35,12 @@
   `internal/` was present but never built it, so a source archive missing a Go file passed
   with `package smoke ok` -- and the installation guide tells users they can build the binary
   from it. A shipped source tree that cannot be built was shipped.
+- The mode rule for trusted host objects -- group- or other-writable permissions and
+  setuid, setgid or sticky bits -- is stated once in `internal/host` and reused by the
+  account database and login shell checks, instead of being written out at each. The
+  Bubblewrap copy is deliberately independent, since `bwrap` must not depend on `host` and
+  its rule adds the execute bit; both copies are now pinned by the same table of modes in
+  each package, so weakening one shows up as a failing row rather than a silent gap.
 
 ## 0.8.23
 

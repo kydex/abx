@@ -68,6 +68,15 @@ func (t *Tool) Revalidate() error {
 // additionally requires identity via os.SameFile. Neither subsumes the
 // other by design: rechecking ownership would add nothing (changing an
 // inode owner requires privileges), while entry must verify it once.
+//
+// This duplicates the trusted-object mode rule that internal/host applies to
+// /etc/passwd and the login shell. The duplication is deliberate: bwrap
+// executes and must not depend on host, and the two rules are not the same --
+// this one adds the execute bit, because its objects are executed. The shared
+// half is pinned by TestUnsafeModeReason in both packages, so weakening either
+// copy shows up as a failing table rather than as a silent gap. If the rules
+// ever do diverge, that is the moment to reconsider, and to update both tables
+// in the same commit.
 func unsafeModeReason(mode os.FileMode) string {
 	switch {
 	case mode.Perm()&0o111 == 0:

@@ -58,6 +58,26 @@ func resolveFrom(uid int, passwdPath string, visible func(string) bool) Selectio
 	return Selection{Reason: fmt.Sprintf("login shell %q is outside read-only system mounts", path)}
 }
 
+// unsafeModeReason reports why a trusted host object may not be used, for the
+// two conditions every such object shares: permissions group or other can
+// rewrite, and privilege-escalation bits. Objects that are executed add the
+// execute-bit test on top -- see validateExecutable -- and directories that
+// ABX owns use an exact mode instead -- see privateInfo.
+//
+// One predicate, three call sites. Written three times over it drifted once:
+// internal/bwrap carries its own copy, deliberately and without a shared
+// package, because bwrap must not depend on host.
+func unsafeModeReason(mode os.FileMode) string {
+	switch {
+	case mode.Perm()&0o022 != 0:
+		return "is writable by group or other"
+	case mode&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0:
+		return "has setuid, setgid, or sticky bit"
+	default:
+		return ""
+	}
+}
+
 // checkPasswdFile pins the trust assumptions on the account database file:
 // a regular file without privilege-escalation bits that group and other
 // cannot rewrite. The account lookup path (resolveAccount) goes through NSS
@@ -70,11 +90,8 @@ func checkPasswdFile(path string) error {
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("passwd database %q is not a regular file", path)
 	}
-	if info.Mode().Perm()&0o022 != 0 {
-		return fmt.Errorf("passwd database %q is writable by group or other", path)
-	}
-	if info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
-		return fmt.Errorf("passwd database %q has setuid, setgid, or sticky bit", path)
+	if reason := unsafeModeReason(info.Mode()); reason != "" {
+		return fmt.Errorf("passwd database %q %s", path, reason)
 	}
 	return nil
 }
@@ -149,11 +166,8 @@ func validateExecutable(path string) (string, error) {
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 || unix.Access(path, unix.X_OK) != nil {
 		return "", fmt.Errorf("login shell %q is not a regular file executable by the invoking user", path)
 	}
-	if info.Mode().Perm()&0o022 != 0 {
-		return "", fmt.Errorf("login shell %q is writable by group or other", path)
-	}
-	if info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
-		return "", fmt.Errorf("login shell %q has setuid, setgid, or sticky bit", path)
+	if reason := unsafeModeReason(info.Mode()); reason != "" {
+		return "", fmt.Errorf("login shell %q %s", path, reason)
 	}
 	return resolved, nil
 }

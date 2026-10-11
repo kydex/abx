@@ -62,7 +62,7 @@ The workflow artifact is for maintainer validation and distribution. The workflo
 2. Change `internal/app/VERSION` to the same `X.Y.Z`.
 3. Run `make check` and the appropriate live tests.
 4. Commit and push the release changes.
-5. After branch CI succeeds, create and push an annotated tag:
+5. Once branch CI is green, create and push an annotated tag:
 
 ```sh
 version=$(cat internal/app/VERSION)
@@ -70,6 +70,13 @@ tag="v$version"
 git tag -a "$tag" -m "ABX $version"
 git push origin "$tag"
 ```
+
+Waiting for branch CI is a recommendation, not an enforced precondition: nothing
+in this repository or in the workflows verifies that the tagged commit was ever
+green on the branch. The guarantee arrives in the next step, where the tag
+workflow re-runs both check and live against the tagged commit itself and
+packages nothing unless both pass. A tag pushed early is therefore not a
+publication risk, only a wasted run.
 
 6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. Download its workflow artifact: the archive files inside keep their `abx-X.Y.Z-*` names, so `(cd <downloaded> && sha256sum -c "abx-X.Y.Z-SHA256SUMS")` verifies them as-is. Then smoke-test the binary.
 7. Publish the verified binary archive, source archive, and checksum manifest through the project's release channel — see the note above on what that means. Report the SHA-256 values.

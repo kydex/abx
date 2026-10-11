@@ -124,6 +124,20 @@ func ResolveVerification(account Account, paths Paths, name, project string) (*I
 }
 
 func resolve(account Account, paths Paths, name, project string, mode Mode, needAgent bool, args []string) (in *Inputs, err error) {
+	return resolveWithShell(account, paths, name, project, mode, needAgent, args, ResolveShell)
+}
+
+// resolveWithShell replaces the single step that reads the host account
+// database. Production passes ResolveShell, which checks that the database is
+// root-owned before reading it. Tests pass a resolver backed by their own
+// fixture, so the guards below this line are exercised everywhere: inside a
+// user namespace /etc/passwd belongs to an unmapped uid, and every test that
+// reached this code would otherwise skip with the reason that ABX itself
+// refuses to start there.
+//
+// The owner check is not lost -- checkPasswdOwner is tested on its own against
+// fixture files, see TestCheckPasswdOwnerRequiresRoot.
+func resolveWithShell(account Account, paths Paths, name, project string, mode Mode, needAgent bool, args []string, shell func(int) Selection) (in *Inputs, err error) {
 	if mode != Run && mode != Shell && mode != Work {
 		return nil, errors.New("invalid session mode")
 	}
@@ -148,7 +162,7 @@ func resolve(account Account, paths Paths, name, project string, mode Mode, need
 	if err = in.discoverSystem("/"); err != nil {
 		return nil, err
 	}
-	selection := ResolveShell(account.UID)
+	selection := shell(account.UID)
 	if selection.Path == "" {
 		return nil, errors.New(selection.Reason)
 	}

@@ -32,7 +32,7 @@ func TestResolveRejectsUnknownSessionMode(t *testing.T) {
 }
 
 func TestResolveRequiresAgentForRun(t *testing.T) {
-	requireTrustedPasswd(t)
+	shell := fixtureShellResolver(t)
 	home, project := t.TempDir(), t.TempDir()
 	root := filepath.Join(home, "data")
 	paths := Paths{Root: root, Profiles: filepath.Join(root, "profiles")}
@@ -43,7 +43,7 @@ func TestResolveRequiresAgentForRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	account := Account{UID: os.Getuid(), Username: "tester", Home: home}
-	in, err := resolve(account, paths, "demo", project, Run, true, nil)
+	in, err := resolveWithShell(account, paths, "demo", project, Run, true, nil, shell)
 	if err == nil {
 		t.Fatalf("run mode accepted a profile with no executable: %+v", in.executable)
 	}
@@ -527,7 +527,7 @@ func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
 // owned by root; where that is not the case the whole run is refused earlier
 // and the test says so rather than passing silently.
 func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
-	requireTrustedPasswd(t)
+	shell := fixtureShellResolver(t)
 	home, project := t.TempDir(), t.TempDir()
 	root := filepath.Join(home, "data")
 	paths := Paths{Root: root, Profiles: filepath.Join(root, "profiles")}
@@ -544,7 +544,7 @@ func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
 		t.Fatal(err)
 	}
 	account := Account{UID: os.Getuid(), Username: "tester", Home: home}
-	if _, err := resolve(account, paths, "demo", project, Run, true, nil); err == nil ||
+	if _, err := resolveWithShell(account, paths, "demo", project, Run, true, nil, shell); err == nil ||
 		!strings.Contains(err.Error(), "does not mount") {
 		t.Fatalf("resolve accepted an agent the sandbox cannot mount: %v", err)
 	}
@@ -563,7 +563,7 @@ func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
 	if err := os.Symlink(filepath.Join(inside, "demo"), filepath.Join(binDir, "demo")); err != nil {
 		t.Fatal(err)
 	}
-	got, err := resolve(account, paths, "demo", project, Run, true, nil)
+	got, err := resolveWithShell(account, paths, "demo", project, Run, true, nil, shell)
 	if err != nil {
 		t.Fatalf("resolve refused a package-manager layout: %v", err)
 	}
@@ -662,5 +662,44 @@ func TestSiblingHomeRuleDoesNotDependOnHomeLayout(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// These three refusals are plain input checks, reachable by calling the
+// functions with what a broken account database would hand over. The mutation
+// sweep reported all three as uncovered because nothing called them that way:
+// every existing test builds its fixture from os.Getuid() and a real home, so
+// the guards were never on the path being exercised.
+func TestAccountEntryMustNameARealNonRootUser(t *testing.T) {
+	uid := os.Getuid()
+	for _, tc := range []struct {
+		name     string
+		uid      int
+		username string
+		home     string
+		want     string
+	}{
+		{"zero uid", 0, "tester", "/home/tester", "invalid non-root uid"},
+		{"negative uid", -1, "tester", "/home/tester", "invalid non-root uid"},
+		{"empty username", uid, "", "/home/tester", "empty username"},
+		{"relative home", uid, "tester", "home/tester", "not absolute"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := accountFromPasswd(tc.uid, tc.username, tc.home); err == nil ||
+				!strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("accepted %s: %v", tc.name, err)
+			}
+		})
+	}
+	if _, err := accountFromPasswd(uid, "tester", t.TempDir()); err != nil {
+		t.Fatalf("ordinary entry refused: %v", err)
+	}
+}
+
+func TestResolvePathsRequiresAbsoluteHome(t *testing.T) {
+	for _, home := range []string{"relative/home", "", ".", "home/../.."} {
+		if _, err := ResolvePaths(Account{UID: os.Getuid(), Username: "tester", Home: home}, ""); err == nil {
+			t.Fatalf("accepted home %q", home)
+		}
 	}
 }

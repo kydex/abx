@@ -387,9 +387,9 @@ func TestResolveFailureDoesNotReturnOwner(t *testing.T) {
 }
 
 func TestShellResolutionDoesNotRequireProjectOrAgent(t *testing.T) {
-	requireTrustedPasswd(t)
+	shell := fixtureShellResolver(t)
 	in := fixture(t)
-	got, e := Resolve(in.account, in.paths, "demo", "/definitely/missing/project", Shell, nil)
+	got, e := resolveWithShell(in.account, in.paths, "demo", "/definitely/missing/project", Shell, false, nil, shell)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -444,10 +444,10 @@ func TestAgentXOKAsInvokingUser(t *testing.T) {
 }
 
 func TestVerificationResolvesRunProjectWithoutAgent(t *testing.T) {
-	requireTrustedPasswd(t)
+	shell := fixtureShellResolver(t)
 	in := fixture(t)
 	project := t.TempDir()
-	got, err := ResolveVerification(in.account, in.paths, "demo", project)
+	got, err := resolveWithShell(in.account, in.paths, "demo", project, Run, false, nil, shell)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +455,7 @@ func TestVerificationResolvesRunProjectWithoutAgent(t *testing.T) {
 	if got.Project() != project || len(got.Command()) != 0 {
 		t.Fatal("verify selected an agent or wrong project")
 	}
-	if _, err = ResolveVerification(in.account, in.paths, "demo", in.account.Home); err == nil {
+	if _, err = resolveWithShell(in.account, in.paths, "demo", in.account.Home, Run, false, nil, shell); err == nil {
 		t.Fatal("verify bypassed protected project checks")
 	}
 }
@@ -488,18 +488,18 @@ func TestCloseReportsDescriptorFailureAndReleasesOwnership(t *testing.T) {
 }
 
 func TestWorkResolvesProjectWithoutAgentAndRetainsSource(t *testing.T) {
-	requireTrustedPasswd(t)
+	shell := fixtureShellResolver(t)
 	in := fixture(t)
 	project := filepath.Join(in.account.Home, "project")
 	if err := os.Mkdir(project, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	got, err := Resolve(in.account, in.paths, "demo", project, Work, nil)
+	got, err := resolveWithShell(in.account, in.paths, "demo", project, Work, false, nil, shell)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer got.Close()
-	selection := ResolveShell(in.account.UID)
+	selection := shell(in.account.UID)
 	if got.Mode() != Work || got.Project() != project || got.executable != "" || !slices.Equal(got.Command(), selection.Argv) {
 		t.Fatalf("work: mode=%v project=%q command=%q", got.Mode(), got.Project(), got.Command())
 	}
@@ -527,9 +527,13 @@ func TestWorkResolvesProjectWithoutAgentAndRetainsSource(t *testing.T) {
 }
 
 func TestWorkRejectsUnsafeProjectAndArguments(t *testing.T) {
+	// Without a fixture this test passed for the wrong reason: it expects
+	// refusals and got them from the host account database being unusable
+	// rather than from the guards it names.
+	shell := fixtureShellResolver(t)
 	in := fixture(t)
 	for _, project := range []string{"/", in.account.Home, in.paths.Root, filepath.Join(in.account.Home, "missing")} {
-		got, err := Resolve(in.account, in.paths, "demo", project, Work, nil)
+		got, err := resolveWithShell(in.account, in.paths, "demo", project, Work, false, nil, shell)
 		if got != nil {
 			got.Close()
 		}
@@ -538,7 +542,7 @@ func TestWorkRejectsUnsafeProjectAndArguments(t *testing.T) {
 		}
 	}
 	for _, mode := range []Mode{0, Shell, Work} {
-		got, err := Resolve(in.account, in.paths, "demo", "", mode, []string{"-c", "echo bad"})
+		got, err := resolveWithShell(in.account, in.paths, "demo", "", mode, false, []string{"-c", "echo bad"}, shell)
 		if got != nil {
 			got.Close()
 		}

@@ -2,6 +2,7 @@
 package host
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -21,6 +22,27 @@ func requireTrustedPasswd(t *testing.T) {
 	if err := checkPasswdOwner("/etc/passwd"); err != nil {
 		t.Skipf("host account database is not trusted here: %v", err)
 	}
+}
+
+// fixtureShellResolver returns a resolver backed by a throwaway account
+// database naming the current uid and /bin/sh. Nothing else changes: the same
+// shellFromPasswd parses it and the same validateExecutable accepts /bin/sh,
+// which is a regular executable under /bin and therefore visible in the
+// sandbox. Only the file being read is the test's own.
+//
+// It exists so the guards in resolveWithShell are exercised where the host
+// database is unusable -- inside a user namespace /etc/passwd belongs to an
+// unmapped uid, and ABX refuses to start, so a test reading it has nothing to
+// exercise.
+func fixtureShellResolver(t *testing.T) func(int) Selection {
+	t.Helper()
+	uid := os.Getuid()
+	path := filepath.Join(t.TempDir(), "passwd")
+	line := fmt.Sprintf("tester:x:%d:%d::/home/tester:/bin/sh\n", uid, uid)
+	if e := os.WriteFile(path, []byte(line), 0o600); e != nil {
+		t.Fatal(e)
+	}
+	return func(got int) Selection { return resolveShellFrom(got, path) }
 }
 
 func TestShellFromPasswd(t *testing.T) {

@@ -106,8 +106,8 @@ func privateInfo(path string, info os.FileInfo, uid int) error {
 	if info.Mode().Perm() != 0o700 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
 		return fmt.Errorf("private directory %q must have exact mode 0700", path)
 	}
-	st, ok := info.Sys().(*syscall.Stat_t)
-	if !ok || int64(st.Uid) != int64(uid) {
+	st := info.Sys().(*syscall.Stat_t)
+	if int64(st.Uid) != int64(uid) {
 		return fmt.Errorf("private directory %q has wrong owner", path)
 	}
 	return nil

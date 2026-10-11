@@ -65,6 +65,7 @@ FILES = [
     "internal/sandbox/plan.go",
     "internal/sandbox/environment.go",
     "internal/bwrap/bwrap.go",
+    "internal/probe/probe.go",
     "internal/profile/name.go",
     "internal/cli/cli.go",
 ]

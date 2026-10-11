@@ -54,6 +54,14 @@
   `architecture.md` now says `Plan.Validate()` compares a plan against expectations recorded while
   building it, rather than implying an independent check. `development.md` names CachyOS as the live test
   target, which until now appeared only in the maintainer rules. (English and Russian.)
+- Removed: four unreachable refusals for file metadata that cannot be unreadable on
+  Linux. `info.Sys().(*syscall.Stat_t)` always yields that type and nothing else, so a
+  `!ok` branch after it cannot be taken; the remaining 88 type assertions in the tree
+  never had one. The branches promised a handled failure that no input could produce,
+  and a failed assertion would have panicked rather than returned the named error.
+  Behaviour is unchanged: a project and a home are still checked for ownership, the
+  Bubblewrap binary still for root ownership, and a signalled child still reports
+  `128 + signal`. (Also in `probe`, whose package was absent from the sweep list.)
 - Fixed: `internal/sandbox`: a command argument containing NUL is refused by the build step
   itself, not only by the later validation. Both refuse it, so the check was
   never exercised on its own; a test asserting the build step's own wording pins it.

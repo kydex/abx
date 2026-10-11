@@ -110,15 +110,12 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	if err != nil {
 		return nil, fmt.Errorf("stat Bubblewrap executable %q: %w", resolved, err)
 	}
-	st, ok := info.Sys().(*syscall.Stat_t)
+	st := info.Sys().(*syscall.Stat_t)
 	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: not a regular file", resolved)
 	}
 	if reason := unsafeModeReason(info.Mode()); reason != "" {
 		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: %s", resolved, reason)
-	}
-	if !ok {
-		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: unavailable file metadata", resolved)
 	}
 	if system && st.Uid != 0 {
 		return nil, fmt.Errorf("unsafe Bubblewrap executable %q: not owned by root (uid %d)", resolved, st.Uid)
@@ -401,10 +398,7 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	if !errors.As(err, &exited) {
 		return 1, err
 	}
-	status, ok := exited.Sys().(syscall.WaitStatus)
-	if !ok {
-		return 1, errors.New("unknown child status")
-	}
+	status := exited.Sys().(syscall.WaitStatus)
 	if status.Signaled() {
 		return 128 + int(status.Signal()), nil
 	}

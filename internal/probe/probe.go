@@ -24,10 +24,7 @@ func Identify(path string) (Identity, error) {
 	if err != nil {
 		return Identity{}, err
 	}
-	st, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return Identity{}, errors.New("filesystem identity unavailable")
-	}
+	st := info.Sys().(*syscall.Stat_t)
 	return Identity{uint64(st.Dev), st.Ino}, nil
 }
 

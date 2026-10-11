@@ -165,10 +165,7 @@ func checkHomeTrust(info os.FileInfo, home string, uid int) error {
 	if info.Mode().Perm()&0o002 != 0 {
 		return fmt.Errorf("passwd home %q is world-writable", home)
 	}
-	st, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return fmt.Errorf("passwd home %q has unknown owner", home)
-	}
+	st := info.Sys().(*syscall.Stat_t)
 	if int(st.Uid) != uid {
 		return fmt.Errorf("passwd home %q is owned by uid %d, not by uid %d", home, st.Uid, uid)
 	}
@@ -191,10 +188,7 @@ func checkDataBaseOwner(canonicalBase string, uid int) error {
 			if !info.IsDir() {
 				return fmt.Errorf("data base ancestor %q is not a directory", current)
 			}
-			st, ok := info.Sys().(*syscall.Stat_t)
-			if !ok {
-				return fmt.Errorf("data base ancestor %q has unknown owner", current)
-			}
+			st := info.Sys().(*syscall.Stat_t)
 			if int(st.Uid) != uid {
 				return fmt.Errorf("data base ancestor %q is not owned by the invoking user", current)
 			}

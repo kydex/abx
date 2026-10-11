@@ -154,13 +154,13 @@ def sweep_file(repo: pathlib.Path, rel: str) -> None:
                 _survivors.append((rel, n, cond))
             _done += 1
             print(
-                f"\r   {_done:>4}/{_total}  убито {_tally[KILLED]:>3}"
-                f"  выжило {_tally[SURVIVED]:>3}  неприменимо {_tally[NA]:>3}   ",
+                f"\r   {_done:>4}/{_total}  killed {_tally[KILLED]:>3}"
+                f"  survived {_tally[SURVIVED]:>3}  not applicable {_tally[NA]:>3}   ",
                 end="",
                 flush=True,
             )
 
-    print(f"\r   {rel}: {len(found)} проверок" + " " * 40, flush=True)
+    print(f"\r   {rel}: {len(found)} guards" + " " * 40, flush=True)
 
 
 def main() -> int:
@@ -199,18 +199,18 @@ def main() -> int:
             for rel in files
         )
 
-        print("== база ==")
+        print("== baseline ==")
         code, out = run(["go", "test", "-count=1", "./...", "-v"], repo)
         skips = re.findall(r"(?m)^--- SKIP: (\S+)", out)
         if code != 0:
             print("error: the baseline is red, a survival number would mean nothing", file=sys.stderr)
             return 1
-        print(f"   тесты зелёные; пропущено {len(skips)}")
+        print(f"   tests green; {len(skips)} skipped")
         if skips:
             print()
-            print(f"   ВНИМАНИЕ: {len(skips)} тестов пропущено. Пропуск не падает, поэтому")
-            print("   охваченная им проверка выглядит непокрытой. Список выживших ниже")
-            print("   верен для этого окружения и только для него.")
+            print(f"   WARNING: {len(skips)} tests skipped. A skip does not fail, so a")
+            print("   guard whose only test skips looks exactly like an uncovered one.")
+            print("   The survivor list below is true of this machine and only of it.")
             for name in skips:
                 print(f"     {name}")
             print()
@@ -224,21 +224,21 @@ def main() -> int:
             concurrent.futures.as_completed(futures)
 
         print()
-        print("== итог ==")
-        print(f"   убито тестами      {_tally[KILLED]}")
-        print(f"   ВЫЖИЛО (долг)      {_tally[SURVIVED]}")
-        print(f"   неприменимо        {_tally[NA]}")
+        print("== summary ==")
+        print(f"   killed by tests    {_tally[KILLED]}")
+        print(f"   SURVIVED (debt)    {_tally[SURVIVED]}")
+        print(f"   not applicable     {_tally[NA]}")
 
         if _survivors:
             survivors = sorted(_survivors)
             print()
-            print("== выжившие ==")
+            print("== survivors ==")
             for rel, n, cond in survivors:
                 print(f"   {rel}:{n}\t{cond[:86]}")
             # Redirect stdout to keep the machine-readable form, which the layout
             # above mangles only by its leading spaces.
             print()
-            print("== выжившие, TSV ==")
+            print("== survivors, TSV ==")
             for rel, n, cond in survivors:
                 print(f"{rel}\t{n}\t{cond}")
         return 0

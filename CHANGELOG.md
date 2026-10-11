@@ -17,14 +17,11 @@
   0.8.23; the table, which the document offers as the complete list, was not
   updated with it. A reader relying on the table would have learned of the check
   only from the accepted-trade-offs section near the end. (English and Russian.)
-- The installation guide now says to run the checksum command from the directory
-  holding the archive. `--ignore-missing` skips absent files without failing, so from
-  the wrong directory `sha256sum --check` still exits 0 and reports only that nothing
-  was verified -- an integrity check that looks like a pass. (English and Russian.)
-- The development guide lists what `make check` runs as a single list again. The
-  `go vet` entry had been pushed below a paragraph, so it rendered as a stray
-  one-item list with no visible connection to the six items above it. The Russian
-  version was already correct. (English.)
+- The installation guide now says what the checksum command does when the archive
+  is not in the current directory: it exits `1` with no `OK` line, rather than
+  passing quietly as an earlier version of this entry claimed. `--ignore-missing`
+  skips only the archives you did not download, so a partial download verifies
+  cleanly. (English and Russian.)
 
 ## 0.8.23
 

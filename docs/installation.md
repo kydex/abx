@@ -48,7 +48,7 @@ abx_version=X.Y.Z
 sha256sum --check --ignore-missing "abx-$abx_version-SHA256SUMS"
 ```
 
-The check prints `OK` next to every archive that matched. Run it from the directory holding the archive you downloaded: `--ignore-missing` skips absent files without failing, so from the wrong directory the command still exits `0` and reports only that nothing was verified. A verified archive always produces a line naming it.
+The check prints `OK` next to every archive that matched, and exits `1` without printing a single `OK` line when none of the archives listed in the manifest is present in the current directory. Run it from the directory holding what you downloaded: `--ignore-missing` skips the archives you did not download, so a partial download verifies cleanly while the ones left out stay unverified.
 
 Install it into your user-local binary directory:
 

@@ -73,6 +73,17 @@
   covers the sandbox root's pid 1; measured on a live host, it kills the command Bubblewrap started while
   a process put in the background beforehand keeps running, which is what the paragraph already
   concluded. The conclusion was right and the explanation was not. (English and Russian.)
+- Fixed: a project under another user's home is now refused on hosts where your own
+  home is not under `/home`. The rule required that arrangement before it applied at all,
+  so `/var/lib/users/alice` or a container root switched it off entirely and
+  `/home/bob/proj` mounted writable. Home layout is irrelevant to the rule, and projects
+  outside `/home` are unaffected either way.
+- Documented why looking the account database up three times is safe: replacing
+  `/etc/passwd` between the lookups needs ownership of it, which the owner check requires
+  root to have, and ABX does not claim protection against a privileged adversary.
+  Documented the same reasoning for revalidation depth in the architecture guide: full
+  checks where the invoking user can break the assumption, identity alone for root-owned
+  system trees, link text for symlinks.
 
 ## 0.8.23
 

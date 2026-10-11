@@ -43,6 +43,8 @@ host state -> host.Inputs -> sandbox.Plan -> bwrap translation/execution
 
 Shared-skills discovery and mountpoint preparation live in `internal/host/skills.go`; descriptor ownership remains in `host.Inputs`. Structural plan validation lives in `internal/sandbox/validate.go` and still runs after construction and before Bubblewrap translation.
 
+Revalidation in step 6 is deliberately not uniform, and its depth follows who is able to change the object. Every selected source is re-`Lstat`ed and compared against the inode captured at resolution time, so a source swapped for a different file is caught whatever it is. On top of that, the account home and the three ABX storage directories are re-checked for being a directory, for the exact mode `0700`, and for being owned by the invoking user: those four are the ones ABX itself requires to be private, and only their owner can loosen them. A source under a system tree such as `/usr/bin` gets the identity check alone, because the mode of a root-owned file can only be changed by root and ABX does not claim protection against a privileged adversary. Symlinks are the third shape and get the loosest check of all -- only that the link text is still what it was, because a link is a name rather than a file, and the file it names is covered as a source in its own right. The asymmetry is the point: re-check in full exactly where the invoking user is the one who can break the assumption.
+
 ## `inspect`
 
 `inspect` resolves the normal run inputs and builds the same `Plan`, then formats it without opening Bubblewrap or preparing mountpoints. The filesystem summary is derived from the plan. Namespace/network text is covered by a regression test against the Bubblewrap translation flags.

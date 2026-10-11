@@ -59,6 +59,8 @@ Ownership of the login shell is deliberately not required: user-managed shells a
 
 The mounted `/etc/shells` is provided for programs inside the sandbox; login-shell validation does not consult it. The built-in checks above are stricter on most systems, and `/etc/shells` on some distributions lists non-system paths.
 
+The account database is looked up three times by name: once for its owner, once for its mode, and once more to read the contents. Each lookup resolves the path again, so unlike the Bubblewrap binary -- which ABX opens once and holds the descriptor until execution -- nothing pins the checked file and the read file to the same inode. Replacing the file between those lookups needs write access to `/etc/passwd`, which in turn means being its owner, and the owner check exists precisely to require root. The gap is therefore reachable only by a privileged adversary, whose protection ABX does not claim; an unprivileged user cannot exploit it. Holding one descriptor across all three checks would close the gap and change nothing else, at the cost of validating through an open handle rather than through the path the shell lookup names.
+
 ## Shared skills
 
 If `<ABX storage>/shared/agents/skills` exists and passes validation, it is mounted read-only at `/home/agent/.agents/skills`.

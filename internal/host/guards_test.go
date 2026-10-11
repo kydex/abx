@@ -634,3 +634,33 @@ func TestRetainTwiceKeepsOneDescriptor(t *testing.T) {
 		t.Fatalf("descriptor leaked past Close: %d -> %d", before, after)
 	}
 }
+
+// The rule against mounting another user's home used to require that the
+// caller's own home sit under /home. Everywhere else -- /var/lib/users/alice, a
+// container root -- the rule was silently off and /home/bob/proj mounted
+// writable. The home arrangement is irrelevant to the rule, so the cases below
+// vary it and expect the same answer.
+func TestSiblingHomeRuleDoesNotDependOnHomeLayout(t *testing.T) {
+	for _, homeLayout := range []string{
+		"/home/alice",          // the ordinary arrangement
+		"/var/lib/users/alice", // a system that stores homes elsewhere
+		"/root",                // a container running as root's neighbour
+	} {
+		t.Run(homeLayout, func(t *testing.T) {
+			// Whoever I am, a directory under /home that is not my own home is
+			// another user's and must be refused.
+			for _, project := range []string{"/home/bob/project", "/home/bob"} {
+				if !siblingOutsideHome(homeLayout, project, "/home") {
+					t.Errorf("accepted another user's home %s with own home %s", project, homeLayout)
+				}
+			}
+			// Outside the shared home root the rule has nothing to say, whatever
+			// my own home looks like.
+			for _, project := range []string{"/tmp/build/project", "/homework/project", homeLayout + "/code/mine"} {
+				if siblingOutsideHome(homeLayout, project, "/home") {
+					t.Errorf("refused %s with own home %s", project, homeLayout)
+				}
+			}
+		})
+	}
+}

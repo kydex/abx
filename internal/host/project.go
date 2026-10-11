@@ -101,11 +101,17 @@ func overlaps(a, b string) bool { return within(a, b) || within(b, a) }
 // siblingOutsideHome reports a project under the shared home root but outside
 // the invoking user's home. homeRoot is canonicalized once so a symlinked
 // /home does not silently disable the rule.
+//
+// The invoking user's own home does not have to live under homeRoot. Scoping
+// the rule to that arrangement switched it off entirely wherever the home is
+// arranged differently -- /var/lib/users/alice, or a container root -- and on
+// those hosts /home/bob/proj mounted writable. The condition is now simply that
+// the project sits under homeRoot and not under the caller's own home.
 func siblingOutsideHome(realHome, project, homeRoot string) bool {
 	if resolved, err := filepath.EvalSymlinks(homeRoot); err == nil {
 		homeRoot = resolved
 	}
-	return within(realHome, homeRoot) && within(project, homeRoot) && !within(project, realHome)
+	return within(project, homeRoot) && !within(project, realHome)
 }
 
 func within(path, root string) bool {

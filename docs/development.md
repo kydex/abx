@@ -97,6 +97,15 @@ here so nobody starts the same discussion from scratch.
   correct where it was checked; closing the gap needs test seams that the
   project's own rules discourage. The mutation sweep behind this list measured
   the size of the gap: one of eleven orchestrator mutations is caught.
+- The aggregate coverage floor is 74.0% against an actual 83.6%, and `internal/app` is 311 of the
+  1607 statements. Halving that package's own coverage still leaves the aggregate at 82.2%, so the
+  gate stays silent; only dropping it to zero trips the gate, at 72.5%. The aggregate catches gross
+  regressions and nothing finer. A coverage drop with every test still green means tests were deleted
+  or skipped, and the skip path is the one worth watching.
+  `host.ResolveAccount` is the one function in that package no test reaches: it is a single
+  line over `resolveAccount(os.Getuid(), user.LookupId)`, and reaching it needs a real root-owned
+  `/etc/passwd`. The seam exists below it and is tested; the wrapper is left uncovered rather than
+  given a seam of its own.
 - `profile list` stops at the first profile with an unsafe layout instead of
   listing the rest. Documented in [Usage](usage.md) rather than changed.
 

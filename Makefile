@@ -25,6 +25,7 @@ security:
 
 build-check:
 	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./cmd/abx
+	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./internal/app/testdata
 
 coverage-check:
 	@set -eu; \

@@ -272,7 +272,11 @@ mkdir -p "$abx_root/shared/agents/skills"
 chmod 700 "$abx_root" "$abx_root/shared"
 ```
 
-The `shared`, `agents`, and `skills` path components must be real directories where ABX requires them; unsafe symlink redirection is rejected. The `shared` directory must belong to the invoking user and have exact mode `0700`. The storage root itself (`$abx_root`) must also belong to the invoking user and have exact mode `0700`; `mkdir -p` creates missing parents with the default mode, so set it explicitly — otherwise `profile`, `run`, `shell`, `work`, `inspect`, and `verify` fail with `private directory "<component>" must have exact mode 0700`, naming the single path component it stopped at rather than the full path (`profile create` walks the components in order and stops at the first one that does not qualify). `help` and `version` keep working.
+The `shared`, `agents`, and `skills` path components must be real directories where ABX requires them; unsafe symlink redirection is rejected. The `shared` directory must belong to the invoking user and have exact mode `0700`. The storage root itself (`$abx_root`) must also belong to the invoking user and have exact mode `0700`; `mkdir -p` creates missing parents with the default mode, so set it explicitly — otherwise `profile`, `run`, `shell`, `work`, `inspect`, and `verify` fail with `private directory "<path>" must have exact mode 0700`. The
+  quoted path is the full path in every command except `profile create`,
+  which walks the storage components in order, stops at the first one that
+  does not qualify, and names that single component rather than the path
+  leading to it. `help` and `version` keep working.
 
 When skills are used, ABX may create `.agents` and an empty `.agents/skills` mountpoint inside a profile. These are mount preparation directories, not copies of the shared skills.
 

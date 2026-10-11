@@ -61,6 +61,18 @@
   storage ancestor beside it. `usage.md` now states that `profile list` stops at the first profile with an
   unsafe layout instead of reporting it as usable, which the code has always done. `development.md` gains a
   short list of rough edges we accept and why, so the next reader does not reopen them. (English and Russian.)
+- `make check` now compiles the live-test fixture in `internal/app/testdata`, which Go leaves out of
+  `go build ./...`. Only `make live` built it, so a broken fixture passed every branch check.
+- `inspect` names every mount kind: the table pins all seven plus what an unknown kind prints. The
+  function had no test at all, so a renamed kind would print `unknown` with nothing failing.
+- Three claims corrected. The storage guide said the `private directory` message names one path
+  component; it names the full path in every command but `profile create`, which walks components.
+  The security model listed the close-on-exec exemptions as the retained mount sources when the code
+  exempts everything passed to the child, and it left out the sandbox root, for which ABX sets no size:
+  only its three own tmpfs mounts get the 4 GiB cap. The parent-death paragraph said `--die-with-parent`
+  covers the sandbox root's pid 1; measured on a live host, it kills the command Bubblewrap started while
+  a process put in the background beforehand keeps running, which is what the paragraph already
+  concluded. The conclusion was right and the explanation was not. (English and Russian.)
 
 ## 0.8.23
 

@@ -22,6 +22,15 @@
   passing quietly as an earlier version of this entry claimed. `--ignore-missing`
   skips only the archives you did not download, so a partial download verifies
   cleanly. (English and Russian.)
+- `make package-smoke` now checks the binary archive's documentation contents: the Russian
+  README, `THIRD_PARTY_LICENSES`, `CHANGELOG.md` and `docs/ru` must be present, and `AGENTS.md`
+  and `AGENTS.ru.md` must be absent. The build already produced the right archives -- the gate
+  simply did not look. An archive missing the Russian README or carrying the maintainer
+  instructions passed with `package smoke ok`. (English and Russian.)
+- The security model lists every host object ABX validates, not the three it named before:
+  the account home, the storage and profile directories, and the profile executable. The
+  paragraph above the table no longer reads as an exhaustive list it did not deliver.
+  (English and Russian.)
 
 ## 0.8.23
 

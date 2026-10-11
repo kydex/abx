@@ -66,8 +66,14 @@ package-smoke:
 		echo "note: built as root, so the archive was not executed: abx refuses to run as root, which is the correct behaviour, not a broken archive"; \
 	fi; \
 	test -f "$$work/abx-$$version-linux-amd64/LICENSE"; \
+	test -f "$$work/abx-$$version-linux-amd64/THIRD_PARTY_LICENSES"; \
 	test -f "$$work/abx-$$version-linux-amd64/README.md"; \
+	test -f "$$work/abx-$$version-linux-amd64/README.ru.md"; \
+	test -f "$$work/abx-$$version-linux-amd64/CHANGELOG.md"; \
 	test -d "$$work/abx-$$version-linux-amd64/docs"; \
+	test -d "$$work/abx-$$version-linux-amd64/docs/ru"; \
+	! test -e "$$work/abx-$$version-linux-amd64/AGENTS.md"; \
+	! test -e "$$work/abx-$$version-linux-amd64/AGENTS.ru.md"; \
 	tar -xzf "dist/abx-$$version-source.tar.gz" -C "$$work"; \
 	test -d "$$work/abx-$$version-source/cmd"; \
 	test -d "$$work/abx-$$version-source/internal"; \

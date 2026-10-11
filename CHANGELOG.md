@@ -1,50 +1,52 @@
 # Changelog
 
 ## Unreleased
-
 - Compatibility links `/bin`, `/sbin`, `/lib` and `/lib64` are now required to
   point inside `/usr`. A host whose `/bin` pointed elsewhere used to build a
   valid plan and mount an empty `/bin`, so the session started with no binaries
   and no message naming the cause. On a normal host, where the four links point
   into `/usr`, nothing changes.
+
 - The README no longer repeats the full Herdr walkthrough that the usage guide
   already owns; it points there instead, and the Quick start now shows one setup
   path rather than two. The download step now says plainly that the project has
   no download page of its own, and the Bubblewrap requirement is split into one
   condition per bullet. (English and Russian.)
-- The security model now lists the root-ownership requirement for `/etc/passwd`
-  in the table of validated host objects. The check has been in the code since
-  0.8.23; the table, which the document offers as the complete list, was not
-  updated with it. A reader relying on the table would have learned of the check
-  only from the accepted-trade-offs section near the end. (English and Russian.)
+
 - The installation guide now says what the checksum command does when the archive
   is not in the current directory: it exits `1` with no `OK` line, rather than
   passing quietly as an earlier version of this entry claimed. `--ignore-missing`
   skips only the archives you did not download, so a partial download verifies
   cleanly. (English and Russian.)
+
 - `make package-smoke` now checks the binary archive's documentation contents: the Russian
   README, `THIRD_PARTY_LICENSES`, `CHANGELOG.md` and `docs/ru` must be present, and `AGENTS.md`
   and `AGENTS.ru.md` must be absent. The build already produced the right archives -- the gate
   simply did not look. An archive missing the Russian README or carrying the maintainer
   instructions passed with `package smoke ok`. (English and Russian.)
+
 - The security model lists every host object ABX validates, not the three it named before:
   the account home, the storage and profile directories, and the profile executable. The
   paragraph above the table no longer reads as an exhaustive list it did not deliver.
   (English and Russian.)
+
 - `make package-smoke` now compiles the unpacked source archive. The gate confirmed that
   `internal/` was present but never built it, so a source archive missing a Go file passed
   with `package smoke ok` -- and the installation guide tells users they can build the binary
   from it. A shipped source tree that cannot be built was shipped.
+
 - The mode rule for trusted host objects -- group- or other-writable permissions and
   setuid, setgid or sticky bits -- is stated once in `internal/host` and reused by the
   account database and login shell checks, instead of being written out at each. The
   Bubblewrap copy is deliberately independent, since `bwrap` must not depend on `host` and
   its rule adds the execute bit; both copies are now pinned by the same table of modes in
   each package, so weakening one shows up as a failing row rather than a silent gap.
+
 - `profile show` and `profile list` no longer report an agent that `abx run` refuses. Both went
   through the resolver without the placement check that `run` performs, so a symlink ending outside
   the profile and outside every mounted system source showed up as an available command. (English and
   Russian not needed: no user-visible text changed.)
+
 - Three claims no longer outrun the code. `verify` on timeout may leave the check lines it already
   printed, since the probe writes as it runs; a non-zero probe status is reported as 128 plus the signal
   number, not as an exit code; and the security model lists the descriptors ABX actually exempts from
@@ -54,10 +56,7 @@
   `architecture.md` now says `Plan.Validate()` compares a plan against expectations recorded while
   building it, rather than implying an independent check. `development.md` names CachyOS as the live test
   target, which until now appeared only in the maintainer rules. (English and Russian.)
-- Fixed: `verify` now has a test for the branch that rewrites invalid bytes in a session
-  environment value. The existing test fed `sanitizeEnvironment` valid strings only, so
-  that branch never ran. `internal/probe` was absent from the sweep's file list, so nothing
-  had measured it; it is listed now.
+
 - Removed: four unreachable refusals for file metadata that cannot be unreadable on
   Linux. `info.Sys().(*syscall.Stat_t)` always yields that type and nothing else, so a
   `!ok` branch after it cannot be taken; the remaining 88 type assertions in the tree
@@ -66,13 +65,7 @@
   Behaviour is unchanged: a project and a home are still checked for ownership, the
   Bubblewrap binary still for root ownership, and a signalled child still reports
   `128 + signal`. (Also in `probe`, whose package was absent from the sweep list.)
-- Fixed: `internal/sandbox`: a command argument containing NUL is refused by the build step
-  itself, not only by the later validation. Both refuse it, so the check was
-  never exercised on its own; a test asserting the build step's own wording pins it.
-- Fixed: `internal/host`: refusing an exact world-writable root such as `/tmp` as the project
-  is now covered. The existing test built its home under `/tmp`, so every case was already
-  refused by another rule and this one never ran -- green while saying nothing. The test uses
-  a home outside `/tmp` and asserts which rule answered.
+
 - Removed: ABX no longer requires `/etc/passwd` to be owned by root. The requirement refused to
   start on every container, where the file belongs to an unmapped uid, and the tests covering the
   resolve path had nothing to exercise there: 16 of them skipped. The file checks that remain --
@@ -81,6 +74,7 @@
   user already controls the account ABX reads, and the same file is read again through `os/user`
   with no checks at all. Skipped tests in a container: 21 -> 5, and the five are by design (three
   live, one needs real root, one needs a real ownership change).
+
 - Documented what the audit of 11 October left in place instead of changed. `docs/security.md` names the
   limits the code already had: environment values are sanitized against NUL bytes only, so a newline in a
   host value reaches the agent unchanged; `TZ`, `LANG` and `LC_*` are forwarded unrestricted; the process
@@ -88,10 +82,13 @@
   storage ancestor beside it. `usage.md` now states that `profile list` stops at the first profile with an
   unsafe layout instead of reporting it as usable, which the code has always done. `development.md` gains a
   short list of rough edges we accept and why, so the next reader does not reopen them. (English and Russian.)
+
 - `make check` now compiles the live-test fixture in `internal/app/testdata`, which Go leaves out of
   `go build ./...`. Only `make live` built it, so a broken fixture passed every branch check.
+
 - `inspect` names every mount kind: the table pins all seven plus what an unknown kind prints. The
   function had no test at all, so a renamed kind would print `unknown` with nothing failing.
+
 - Three claims corrected. The storage guide said the `private directory` message names one path
   component; it names the full path in every command but `profile create`, which walks components.
   The security model listed the close-on-exec exemptions as the retained mount sources when the code
@@ -100,22 +97,23 @@
   covers the sandbox root's pid 1; measured on a live host, it kills the command Bubblewrap started while
   a process put in the background beforehand keeps running, which is what the paragraph already
   concluded. The conclusion was right and the explanation was not. (English and Russian.)
+
 - Fixed: a project under another user's home is now refused on hosts where your own
   home is not under `/home`. The rule required that arrangement before it applied at all,
   so `/var/lib/users/alice` or a container root switched it off entirely and
   `/home/bob/proj` mounted writable. Home layout is irrelevant to the rule, and projects
   outside `/home` are unaffected either way.
-- Documented why looking the account database up three times is safe: replacing
-  `/etc/passwd` between the lookups needs ownership of it, which the owner check requires
-  root to have, and ABX does not claim protection against a privileged adversary.
-  Documented the same reasoning for revalidation depth in the architecture guide: full
-  checks where the invoking user can break the assumption, identity alone for root-owned
-  system trees, link text for symlinks.
+
+- Documented why looking the account database up twice is safe: replacing
+  `/etc/passwd` between the lookups needs write access to it, which the mode check
+  itself forbids for group and other, so it requires the owner.
+
 - Fixed: a profile executable is refused when its group can rewrite it or when it carries
   setuid, setgid or sticky bits. The agent runs in the same launcher position as the login
   shell and now gets the same remaining checks; it previously stopped after the execute
   test, so an agent an equivalent shell would refuse was accepted. An agent installed with a
   group-writable bit (`chmod 775`) now needs `chmod 755`.
+
 - Fixed: `Ctrl+\` no longer crashes the launcher. `SIGQUIT` is forwarded to the sandbox like
   `Ctrl+C`, `SIGTERM` and `SIGHUP` already were. Previously the terminal's `SIGQUIT` took ABX
   by the default action: a dump of every internal goroutine and exit status `2`, the status

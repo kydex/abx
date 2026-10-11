@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // check forms the entire verdict of abx verify. On a host it is reachable only
@@ -106,5 +107,35 @@ func TestCheckEnvironmentIgnoresJSONOnlyDifference(t *testing.T) {
 	}
 	if c := checkEnvironment([]string{"SHELL=/bin/sh"}, []string{"SHELL=/bin/bash"}); c.State != stateFail {
 		t.Errorf("real difference accepted: %q", c.State)
+	}
+}
+
+// sanitizeEnvironment leaves valid entries alone and rewrites invalid bytes to
+// U+FFFD, so that verify compares like with like: a value the host could not
+// have rendered is replaced by the one the sandbox reports. The idempotency test
+// above feeds it valid strings only, so this branch never ran there.
+func TestSanitizeEnvironmentRewritesInvalidBytes(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"valid untouched", "PATH=/usr/bin", "PATH=/usr/bin"},
+		{"valid multibyte untouched", "MSG=привет", "MSG=привет"},
+		{"invalid byte becomes replacement", "V=a\xffb", "V=a�b"},
+		{"lone continuation byte", "V=\x80", "V=�"},
+		{"truncated sequence", "V=\xe2\x82", "V=��"},
+		{"empty stays empty", "", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := sanitizeEnvironment([]string{tc.in})[0]
+			if got != tc.want {
+				t.Fatalf("sanitize(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+			if !utf8.ValidString(got) {
+				t.Fatalf("sanitize(%q) left invalid output %q", tc.in, got)
+			}
+		})
 	}
 }

@@ -54,6 +54,10 @@
   `architecture.md` now says `Plan.Validate()` compares a plan against expectations recorded while
   building it, rather than implying an independent check. `development.md` names CachyOS as the live test
   target, which until now appeared only in the maintainer rules. (English and Russian.)
+- Fixed: `verify` now has a test for the branch that rewrites invalid bytes in a session
+  environment value. The existing test fed `sanitizeEnvironment` valid strings only, so
+  that branch never ran. `internal/probe` was absent from the sweep's file list, so nothing
+  had measured it; it is listed now.
 - Removed: four unreachable refusals for file metadata that cannot be unreadable on
   Linux. `info.Sys().(*syscall.Stat_t)` always yields that type and nothing else, so a
   `!ok` branch after it cannot be taken; the remaining 88 type assertions in the tree

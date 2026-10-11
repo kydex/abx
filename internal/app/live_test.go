@@ -91,6 +91,14 @@ func TestLiveShellRunAndWork(t *testing.T) {
 	if output, e := build.CombinedOutput(); e != nil {
 		t.Fatalf("build fixture: %v %s", e, output)
 	}
+	// go build gives -o the mode 0777 & ~umask, so on a host with umask 002 the
+	// agent comes out group-writable and resolveAgent refuses it. That refusal
+	// is correct, and it would only make this fixture lie about the host it
+	// runs on, so the mode is pinned instead of inherited.
+	fixtureAgent := filepath.Join(profile, ".local/bin/demo")
+	if e := os.Chmod(fixtureAgent, 0o755); e != nil {
+		t.Fatalf("pin fixture agent mode: %v", e)
+	}
 	t.Setenv("ABX_TEST_HOST_LEAK", "should-not-pass")
 	t.Setenv("SSH_AUTH_SOCK", "/not-a-real-socket")
 	t.Chdir(project)

@@ -580,3 +580,59 @@ func TestDiagnosticReasonsForInvalidProfileObjects(t *testing.T) {
 		t.Fatalf("directory executable: %v", err)
 	}
 }
+
+// The agent is executed in the same trust position as the login shell, so the
+// shell's remaining two checks apply to it too: an agent the user's group can
+// rewrite, or one carrying setuid, is refused the way an equivalent shell is.
+// Mode 0o4755 does not express setuid in an os.FileMode -- the bit needs
+// os.ModeSetuid -- so the test sets it through Chmod and reads it back.
+func TestProfileExecutableCheckedLikeLoginShell(t *testing.T) {
+	in := fixture(t)
+	home := in.home
+	dir := filepath.Join(home, ".local/bin")
+	if e := os.MkdirAll(dir, 0o700); e != nil {
+		t.Fatal(e)
+	}
+	p := filepath.Join(dir, "demo")
+	if e := os.WriteFile(p, []byte("#!/bin/sh\n"), 0o755); e != nil {
+		t.Fatal(e)
+	}
+	if _, err := resolveAgent(home, "demo"); err != nil {
+		t.Fatalf("plain 0755 agent refused: %v", err)
+	}
+	for _, tc := range []struct {
+		name string
+		mode os.FileMode
+		want string
+	}{
+		{"group-writable", 0o775, "writable by group or other"},
+		{"world-writable", 0o757, "writable by group or other"},
+		{"setuid", os.ModeSetuid | 0o755, "setuid"},
+		{"setgid", os.ModeSetgid | 0o755, "setgid"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if e := os.Chmod(p, tc.mode); e != nil {
+				t.Skipf("filesystem refuses the mode: %v", e)
+			}
+			info, e := os.Stat(p)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if info.Mode() != tc.mode {
+				t.Skipf("filesystem dropped the mode bits, got %v", info.Mode())
+			}
+			if _, err := resolveAgent(home, "demo"); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("accepted %s agent: %v", tc.name, err)
+			}
+			// Restoring the ordinary mode makes the same lookup succeed
+			// again, so the refusal above came from the mode and not from
+			// some earlier one left behind.
+			if e := os.Chmod(p, 0o755); e != nil {
+				t.Fatal(e)
+			}
+			if _, err := resolveAgent(home, "demo"); err != nil {
+				t.Fatalf("agent refused after restoring 0755: %v", err)
+			}
+		})
+	}
+}

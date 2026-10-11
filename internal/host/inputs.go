@@ -244,6 +244,16 @@ func resolveAgent(home, name string) (string, error) {
 				err = fmt.Errorf("access profile executable %q: %w", p, accessErr)
 			}
 		}
+		// The agent is executed by the same launcher, in the same trust
+		// position, as the login shell, so it gets the shell's remaining two
+		// checks as well. It used to stop after the execute test: an agent that
+		// the user's group can rewrite, or one carrying setuid, was accepted
+		// while an equivalent shell was refused.
+		if err == nil {
+			if reason := unsafeModeReason(info.Mode()); reason != "" {
+				err = fmt.Errorf("profile executable %q %s", p, reason)
+			}
+		}
 		if err != nil {
 			if invalid == nil {
 				invalid = err

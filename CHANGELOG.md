@@ -84,6 +84,11 @@
   Documented the same reasoning for revalidation depth in the architecture guide: full
   checks where the invoking user can break the assumption, identity alone for root-owned
   system trees, link text for symlinks.
+- Fixed: a profile executable is refused when its group can rewrite it or when it carries
+  setuid, setgid or sticky bits. The agent runs in the same launcher position as the login
+  shell and now gets the same remaining checks; it previously stopped after the execute
+  test, so an agent an equivalent shell would refuse was accepted. An agent installed with a
+  group-writable bit (`chmod 775`) now needs `chmod 755`.
 
 ## 0.8.23
 

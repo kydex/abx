@@ -74,7 +74,10 @@ func runVerify(ctx context.Context, in *host.Inputs, home string, env []string, 
 		return 1, err
 	}
 	if status != 0 {
-		return 1, fmt.Errorf("verification process exited with status %d", status)
+		// Execute reports a child killed by a signal as 128 plus the signal
+		// number, not as an exit code. Saying "exited with status" would send
+		// a reader looking for exit code 137, which never existed.
+		return 1, fmt.Errorf("verification process ended with status %d, where a kill by signal counts as 128 plus its signal number", status)
 	}
 	// Final success is printed only after outer resource and temporary-file cleanup.
 	return 0, nil

@@ -41,6 +41,19 @@
   Bubblewrap copy is deliberately independent, since `bwrap` must not depend on `host` and
   its rule adds the execute bit; both copies are now pinned by the same table of modes in
   each package, so weakening one shows up as a failing row rather than a silent gap.
+- `profile show` and `profile list` no longer report an agent that `abx run` refuses. Both went
+  through the resolver without the placement check that `run` performs, so a symlink ending outside
+  the profile and outside every mounted system source showed up as an available command. (English and
+  Russian not needed: no user-visible text changed.)
+- Three claims no longer outrun the code. `verify` on timeout may leave the check lines it already
+  printed, since the probe writes as it runs; a non-zero probe status is reported as 128 plus the signal
+  number, not as an exit code; and the security model lists the descriptors ABX actually exempts from
+  the close-on-exec sweep, which is everything handed to the child, not the retained mount sources. The
+  account-database paragraph now says that with `CGO_ENABLED=0` -- the shipped build -- both routes read
+  the same literal `/etc/passwd`, and that the asymmetry it described only exists in a cgo build.
+  `architecture.md` now says `Plan.Validate()` compares a plan against expectations recorded while
+  building it, rather than implying an independent check. `development.md` names CachyOS as the live test
+  target, which until now appeared only in the maintainer rules. (English and Russian.)
 
 ## 0.8.23
 

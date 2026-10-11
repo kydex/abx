@@ -54,6 +54,16 @@ func ShowProfile(account Account, paths Paths, name string) (status ProfileStatu
 	}
 	status.Exists = true
 	status.Executable, status.AgentError = resolveAgent(in.home, name)
+	if status.AgentError == nil {
+		// resolveAgent alone accepts a link that ends outside the profile and
+		// outside every mounted system source; run refuses such a link at
+		// checkAgentPlacement. Reporting it as available here made `profile
+		// show` and `profile list` promise a command that `abx run` rejects.
+		in.executable = status.Executable
+		if err := in.checkAgentPlacement(); err != nil {
+			status.Executable, status.AgentError = "", err
+		}
+	}
 	status.SkillsError = in.observeSkills()
 	switch {
 	case status.SkillsError != nil:

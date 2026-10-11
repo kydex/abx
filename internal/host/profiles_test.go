@@ -268,3 +268,52 @@ func TestCreateErrorIncludesFullDirectoryPath(t *testing.T) {
 		t.Fatalf("missing full path or error classification: %v", err)
 	}
 }
+
+// profile show and profile list go through ShowProfile, which resolved the
+// agent but stopped before the placement check that run performs. A link ending
+// outside the profile and outside every mounted system source therefore showed
+// up as an available command, and `abx run` refused the same profile.
+func TestShowProfileRefusesAgentThatRunWouldRefuse(t *testing.T) {
+	a, p := profileStorage(t)
+	if _, err := CreateProfile(a, p, "demo"); err != nil {
+		t.Fatal(err)
+	}
+	// A real executable outside the profile, reached by a relative link from
+	// the search directory: resolveAgent accepts it, checkAgentPlacement does not.
+	outside := filepath.Join(a.Home, "agent-bin")
+	if err := os.WriteFile(outside, []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(p.Profiles, "demo", ".local", "bin")
+	if err := os.MkdirAll(bin, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	// An absolute link to a real executable outside the profile: resolveAgent
+	// accepts it (a regular executable is what a package manager produces),
+	// and checkAgentPlacement refuses it because nothing mounts that path
+	// inside the sandbox.
+	link := filepath.Join(bin, "demo")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Fatal(err)
+	}
+	status, err := ShowProfile(a, p, "demo")
+	if err != nil {
+		t.Fatalf("show: %v", err)
+	}
+	if status.Executable != "" {
+		t.Fatalf("show reports the agent as available at %q, run would refuse it", status.Executable)
+	}
+	if status.AgentError == nil {
+		t.Fatal("show accepted an agent run refuses, and named no reason")
+	}
+	list, err := ListProfiles(a, p)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("list returned %d entries", len(list))
+	}
+	if list[0].Executable != "" || list[0].AgentError == nil {
+		t.Fatalf("list reports %+v, show reported %+v", list[0], status)
+	}
+}

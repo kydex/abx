@@ -60,6 +60,9 @@ The probe reports observations from inside the sandbox. `app` also owns temporar
 - Keep public syntax in `cli`, host eligibility in `host`, sandbox visibility/environment in `sandbox`, and process execution in `bwrap`.
 - Keep ownership of files/processes explicit and close them in the layer that owns them.
 - Do not replace retained-FD mounts with a second pathname lookup after validation.
-- Treat `Plan.Validate()` as a final structural boundary before backend translation.
+- Treat `Plan.Validate()` as a final structural boundary before backend translation. It
+  compares the built plan against the expectations recorded while building it, so it
+  catches a plan that does not match what was asked for; it is not an independent
+  second opinion, because both come from the same input.
 - Add abstractions only when they solve a concrete problem; avoid package/interface layers that only rename existing operations.
 - Update English and Russian documentation together when behavior changes.

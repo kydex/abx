@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/kydex/abx/internal/bwrap"
 	"github.com/kydex/abx/internal/host"
+	"github.com/kydex/abx/internal/probe"
 	"github.com/kydex/abx/internal/sandbox"
 )
 
@@ -132,7 +134,10 @@ func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
 	in := inputs(t, host.Run)
 	home := t.TempDir()
 	want := errors.New("tool not available")
-	status, err := runVerify(context.Background(), in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard}, func(context.Context) (*bwrap.Tool, error) { return nil, want })
+	status, err := runVerify(context.Background(), in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard}, func(context.Context) (*bwrap.Tool, error) { return nil, want }, func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+		t.Error("execute ran after the tool failure")
+		return 0, nil
+	})
 	if status != 1 || !errors.Is(err, want) {
 		t.Fatal(status, err)
 	}
@@ -184,4 +189,96 @@ func TestVerificationCleanupAggregatesFailuresAndContinues(t *testing.T) {
 	if err := files.Close(); err != nil {
 		t.Fatalf("second close retried failed cleanup: %v", err)
 	}
+}
+
+// The whole verification cycle used to be untested: runVerify went straight to
+// bwrap.Execute, so nothing observed what it passed in or how it read the
+// status. Every control below is the behaviour the code claims, and each one is
+// something a regression would otherwise change silently.
+func TestVerifyRunCycle(t *testing.T) {
+	requireTrustedPasswd(t)
+	neverExecute := func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+		t.Error("execute ran without a usable tool")
+		return 0, nil
+	}
+	t.Run("sentinel is created before execute and marshalled into the command", func(t *testing.T) {
+		in := inputs(t, host.Run)
+		home := t.TempDir()
+		var payload string
+		status, err := runVerify(context.Background(), in, home, nil,
+			bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+			openStubTool(t),
+			func(_ context.Context, _ *bwrap.Tool, plan sandbox.Plan, _ func(string) (*os.File, error), _ bwrap.Stdio) (int, error) {
+				payload = plan.Command()[2]
+				// The sentinel must already exist when Execute is called: the
+				// probe deletes it and verify then checks that it is gone.
+				entries, readErr := os.ReadDir(home)
+				if readErr != nil || len(entries) != 1 {
+					t.Errorf("sentinel present at Execute: %d entries, %v", len(entries), readErr)
+				}
+				return 0, nil
+			})
+		if err != nil || status != 0 {
+			t.Fatalf("successful run = status %d, %v", status, err)
+		}
+		var expected probe.Expected
+		if json.Unmarshal([]byte(payload), &expected) != nil {
+			t.Errorf("command payload %q is not the marshalled expectation", payload)
+		} else if expected.Sentinel == "" {
+			t.Errorf("marshalled expectation carries no sentinel path: %s", payload)
+		}
+		entries, readErr := os.ReadDir(home)
+		if readErr != nil || len(entries) != 0 {
+			t.Errorf("sentinel left behind: %d entries, %v", len(entries), readErr)
+		}
+	})
+	t.Run("non-zero exit status is a failure", func(t *testing.T) {
+		in := inputs(t, host.Run)
+		home := t.TempDir()
+		status, err := runVerify(context.Background(), in, home, nil,
+			bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+			openStubTool(t),
+			func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+				return 3, nil
+			})
+		if err == nil || status != 1 || !strings.Contains(err.Error(), "status 3") {
+			t.Fatalf("non-zero payload status = %d, %v", status, err)
+		}
+	})
+	t.Run("execute error is a failure and leaves nothing behind", func(t *testing.T) {
+		in := inputs(t, host.Run)
+		home := t.TempDir()
+		want := errors.New("execute failed")
+		status, err := runVerify(context.Background(), in, home, nil,
+			bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+			openStubTool(t),
+			func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+				return 0, want
+			})
+		if err == nil || status != 1 || !errors.Is(err, want) {
+			t.Fatalf("execute error = status %d, %v", status, err)
+		}
+		entries, readErr := os.ReadDir(home)
+		if readErr != nil || len(entries) != 0 {
+			t.Errorf("sentinel left behind after execute error: %d entries, %v", len(entries), readErr)
+		}
+	})
+	t.Run("tool failure never reaches execute", func(t *testing.T) {
+		in := inputs(t, host.Run)
+		home := t.TempDir()
+		want := errors.New("tool not available")
+		status, err := runVerify(context.Background(), in, home, nil,
+			bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+			func(context.Context) (*bwrap.Tool, error) { return nil, want }, neverExecute)
+		if err == nil || status != 1 || !errors.Is(err, want) {
+			t.Fatalf("tool failure = status %d, %v", status, err)
+		}
+	})
+}
+
+// openStubTool hands back a Tool that exists but is never used: runVerify only
+// passes it to the execute stub, which these tests replace.
+func openStubTool(t *testing.T) func(context.Context) (*bwrap.Tool, error) {
+	t.Helper()
+	return func(context.Context) (*bwrap.Tool, error) { return &bwrap.Tool{}, nil }
 }

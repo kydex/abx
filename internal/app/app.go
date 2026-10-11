@@ -147,7 +147,7 @@ func runSessionForAccount(ctx context.Context, c cli.Command, env []string, stdi
 	}
 	defer finishClose(&status, &result, in.Close)
 	if c.Kind == cli.Verify {
-		return runVerify(ctx, in, account.Home, env, stdio, bwrap.Open)
+		return runVerify(ctx, in, account.Home, env, stdio, bwrap.Open, bwrap.Execute)
 	}
 	plan, err := buildPlan(in, env)
 	if err != nil {

@@ -1,7 +1,10 @@
 name: Release artifacts
 on:
   push:
-    tags: ['v*']
+    # Version tags only: a junk v-tag otherwise burns check+live before the
+    # packaging script rejects it. The semver validation in package.sh stays
+    # as the second wall.
+    tags: ['v[0-9]*']
 permissions:
   contents: read
 jobs:

@@ -12,7 +12,10 @@ func ValidateName(name string) error {
 		return errors.New("invalid profile name length: use 1-64 ASCII characters")
 	}
 	for i, c := range []byte(name) {
-		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || i > 0 && (c == '.' || c == '_' || c == '-')) {
+		letter := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+		digit := c >= '0' && c <= '9'
+		extra := i > 0 && (c == '.' || c == '_' || c == '-')
+		if !(letter || digit || extra) {
 			return fmt.Errorf("invalid profile name %q: start with a letter or digit; use only ASCII letters, digits, dot, underscore or hyphen", name)
 		}
 	}

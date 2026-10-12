@@ -145,8 +145,8 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		// probe deadline is what kills a wedged binary, so report it as such
 		// instead of the misleading "signal: killed", and keep caller
 		// cancellation distinct from the probe budget.
-		switch {
-		case check.Err() != nil && errors.Is(check.Err(), context.DeadlineExceeded):
+		switch err := check.Err(); {
+		case errors.Is(err, context.DeadlineExceeded):
 			return nil, errors.New("bubblewrap version probe timed out after 5s")
 		case ctx.Err() != nil:
 			return nil, fmt.Errorf("bubblewrap version probe cancelled: %w", ctx.Err())
@@ -242,12 +242,11 @@ func validateVersion(s string) error {
 		}
 		nums[i] = n
 	}
-	minimum := minimumVersion
 	for i := range nums {
-		if nums[i] > minimum[i] {
+		if nums[i] > minimumVersion[i] {
 			break
 		}
-		if nums[i] < minimum[i] {
+		if nums[i] < minimumVersion[i] {
 			return fmt.Errorf("bubblewrap %s.%s.%s is too old; requires >= %s", m[1], m[2], m[3], MinimumVersion)
 		}
 	}
@@ -267,12 +266,19 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// firstChildFD is where retained bind sources start in the child: 0-2 are
+// the standard streams.
+const firstChildFD = 3
+
 // Translate lends each retained bind source in exact mount order. Child fd numbers are local here.
 func Translate(plan sandbox.Plan, source func(string) (*os.File, error)) ([]string, []*os.File, error) {
 	if err := plan.Validate(); err != nil {
 		return nil, nil, fmt.Errorf("invalid plan: %w", err)
 	}
-	args := []string{"--unshare-user", "--disable-userns", "--unshare-pid", "--unshare-ipc", "--unshare-uts", "--hostname", "abx", "--die-with-parent", "--clearenv"}
+	args := []string{
+		"--unshare-user", "--disable-userns", "--unshare-pid", "--unshare-ipc",
+		"--unshare-uts", "--hostname", "abx", "--die-with-parent", "--clearenv",
+	}
 	for _, e := range plan.Environment() {
 		args = append(args, "--setenv", e.Name, e.Value)
 	}
@@ -295,7 +301,7 @@ func Translate(plan sandbox.Plan, source func(string) (*os.File, error)) ([]stri
 			if m.Kind == sandbox.Writable {
 				flag = "--bind-fd"
 			}
-			args = append(args, flag, strconv.Itoa(3+len(files)), m.Target)
+			args = append(args, flag, strconv.Itoa(firstChildFD+len(files)), m.Target)
 			files = append(files, f)
 		case sandbox.Symlink:
 			args = append(args, "--symlink", m.Source, m.Target)
@@ -324,7 +330,7 @@ func Execute(ctx context.Context, t *Tool, plan sandbox.Plan, source func(string
 	if err != nil {
 		return 1, err
 	}
-	path := "/proc/self/fd/" + strconv.Itoa(3+len(files))
+	path := "/proc/self/fd/" + strconv.Itoa(firstChildFD+len(files))
 	// #nosec G204 -- this descriptor holds validated /usr/bin/bwrap; argv is not shell-parsed.
 	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Args[0] = Path

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/kydex/abx/internal/sandbox"
+	"golang.org/x/sys/unix"
 )
 
 func TestProbePathMatchesSandbox(t *testing.T) {
@@ -80,6 +81,64 @@ func TestPrivateProbeRejectsOversizedValidJSON(t *testing.T) {
 	raw := `{"Home":"` + strings.Repeat("x", 70000) + `"}`
 	if _, err := decode(raw); err == nil || !strings.Contains(err.Error(), "probe input too large") {
 		t.Fatalf("oversized valid JSON err = %v", err)
+	}
+}
+
+func TestRunComposesGateDecodeAndReport(t *testing.T) {
+	// The three glue lines of Run execute only on a live host; here the gate
+	// and the observer are substituted so the composition itself is pinned:
+	// a passing world must report PASS, a failing gate must win over decode.
+	runtime := t.TempDir()
+	if err := os.Chmod(runtime, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	obs := observer{
+		getwd:    func() (string, error) { return "/workspace", nil },
+		hostname: func() (string, error) { return "abx", nil },
+		environ:  func() []string { return []string{"HOME=/home/agent"} },
+		stat: func(p string) (os.FileInfo, error) {
+			if p == "/run/user" {
+				return os.Stat(runtime)
+			}
+			return nil, os.ErrNotExist
+		},
+		identify: func(p string) (Identity, error) {
+			switch p {
+			case "/home/agent", "/workspace":
+				return Identity{}, nil
+			case "/host-home":
+				return Identity{}, os.ErrNotExist
+			default:
+				return Identity{Device: 9, Inode: 9}, nil
+			}
+		},
+		readlink: func(string) (string, error) { return "sandbox-ns", nil },
+		statfs: func(_ string, fs *unix.Statfs_t) error {
+			fs.Type = unix.TMPFS_MAGIC
+			return nil
+		},
+		statDevice: func(_ string, st *unix.Stat_t) error {
+			st.Mode = unix.S_IFCHR
+			st.Rdev = unix.Mkdev(1, 3)
+			return nil
+		},
+		mountinfo: func() ([]byte, error) {
+			return []byte("1 2 0:1 / /usr rw,ro - ext4 /dev/sda1 rw\n"), nil
+		},
+		writeProbe: func(string) error { return nil },
+	}
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	var out bytes.Buffer
+	if err := run(func() error { return nil }, valid, &out, obs); err != nil {
+		t.Fatalf("glue = %v", err)
+	}
+	if !strings.Contains(out.String(), `PASS "working directory"`) {
+		t.Fatalf("glue output = %q", out.String())
+	}
+	gateErr := errors.New("sealed")
+	var gated bytes.Buffer
+	if err := run(func() error { return gateErr }, "not json", &gated, obs); !errors.Is(err, gateErr) || gated.Len() != 0 {
+		t.Fatalf("gate failure = %q, %v", gated.String(), err)
 	}
 }
 

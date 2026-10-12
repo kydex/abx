@@ -60,14 +60,21 @@ func observation(name string, ok bool, err error, detail string) Check {
 }
 
 func Run(raw string, out io.Writer) error {
-	if err := gate(); err != nil {
+	return run(gate, raw, out, hostObserver())
+}
+
+// run is the testable shape of Run: gate first, then decode, then report over
+// the given observer. Run itself only supplies the production pieces, so the
+// composition of the three steps is pinned here instead of only on a live host.
+func run(gateFn func() error, raw string, out io.Writer, obs observer) error {
+	if err := gateFn(); err != nil {
 		return err
 	}
 	e, err := decode(raw)
 	if err != nil {
 		return err
 	}
-	return report(out, check(e, hostObserver()))
+	return report(out, check(e, obs))
 }
 
 // probePath must match sandbox.ProbePath: the fixed mountpoint of this

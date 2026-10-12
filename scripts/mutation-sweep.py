@@ -2,13 +2,20 @@
 """Mutation sweep over ABX's protective checks.
 
 Every `if <cond> {` guard in the listed files gets its condition neutralised and
-that package's tests are run. Three outcomes:
+that package's tests are run -- `else if` branches and conditions spanning
+lines until the brace included. Four outcomes:
 
     killed         a test fails, so something notices the guard disappearing
     survived       the tests still pass, so the guard can be deleted unnoticed
     not applicable the guard cannot be neutralised this way -- the package stops
                    compiling, which means the condition declared something used
                    nowhere else
+    error          go test exited non-zero with no FAIL line, so the tooling
+                   broke, not the code -- retried once, recorded loudly, and
+                   the run exits 1 instead of reporting counts
+
+Scope note: earlier runs only saw single-line `if ... {`, so their counts are
+not comparable with runs from the else-if/multi-line version on.
 
 The condition is neutralised as `false && (<cond>)` rather than replaced by a
 plain `false`, so the compiler still sees every variable the condition uses.
@@ -70,8 +77,10 @@ FILES = [
     "internal/cli/cli.go",
 ]
 
-# `if <cond> {` at the start of a line, possibly indented.
-GUARD = re.compile(r"^(?P<indent>[ \t]*)if (?P<cond>.*)\{$")
+# `if <cond> {` or `} else if <cond> {` at the start of a line, possibly
+# indented. The condition may span lines until the opening brace; the span
+# parser below follows it there.
+GUARD_START = re.compile(r"^(?P<indent>[ \t]*)(?P<else>\}\s*else\s+)?if (?P<head>.*)$")
 
 # Format switches and constant comparisons that are not refusals.
 SKIP_LINE = re.compile(r"\b[Kk]ind\b\s*==")
@@ -79,11 +88,12 @@ SKIP_LINE = re.compile(r"\b[Kk]ind\b\s*==")
 # A failing test announces itself; a passing one does not.
 TEST_FAILED = re.compile(r"(?m)^(?:--- FAIL:|FAIL\s)")
 
-KILLED, SURVIVED, NA = "killed", "survived", "not applicable"
+KILLED, SURVIVED, NA, ERROR = "killed", "survived", "not applicable", "error"
 
 _lock = threading.Lock()
 _tally = {KILLED: 0, SURVIVED: 0, NA: 0}
 _survivors: list[tuple[str, int, str]] = []
+_errors: list[tuple[str, int, str, int]] = []
 _done = 0
 _total = 0
 
@@ -93,12 +103,61 @@ def run(args: list[str], cwd: pathlib.Path) -> tuple[int, str]:
     return proc.returncode, proc.stdout + proc.stderr
 
 
-def neutralise(indent: str, cond: str) -> str:
-    """`if x, err := f(); err != nil {` keeps its init statement."""
-    if ";" in cond:
-        init, _, rest = cond.partition(";")
-        return f"{indent}if {init}; false && ({rest.strip()}) {{"
-    return f"{indent}if false && ({cond}) {{"
+def parse_guard(lines: list[str], start: int) -> tuple[int, str, str, str] | None:
+    """Parse the guard starting at 0-based `start`.
+
+    Returns (end, indent, else, full): `end` is the 0-based last line of the
+    span, `else` is `} else ` or empty, and `full` is the whole condition with
+    the trailing `{` removed. A `{` ending an inner line (composite literal)
+    stops the span early; the rewrite below then fails to compile, which the
+    compile check reports as not applicable -- loudly, never as a verdict.
+    The repository is gofmt-clean, so a brace on its own line cannot occur;
+    if it ever does, the same loud path takes it.
+    """
+    m = GUARD_START.match(lines[start])
+    if not m:
+        return None
+    indent, else_kw, head = m.group("indent"), m.group("else") or "", m.group("head")
+    end = start
+    while not lines[end].rstrip("\n").endswith("{"):
+        end += 1
+        if end >= len(lines):
+            return None
+    if end == start:
+        full = head[:-1]  # drop the `{`; identical slicing to the old regex
+    else:
+        last = lines[end].rstrip("\n")
+        full = "\n".join([head] + [l.rstrip("\n") for l in lines[start + 1 : end]] + [last[:-1]])
+    return end, indent, else_kw, full
+
+
+def find_guards(text_lines: list[str]) -> list[tuple[int, int, str, str, str]]:
+    """Every guard span as (start, end, indent, else, full), 0-based."""
+    spans = []
+    i = 0
+    while i < len(text_lines):
+        parsed = parse_guard(text_lines, i)
+        if parsed is None:
+            i += 1
+        else:
+            end, indent, else_kw, full = parsed
+            spans.append((i, end, indent, else_kw, full))
+            i = end + 1
+    return spans
+
+
+def rewrite_guard(indent: str, else_kw: str, full: str, ending: str) -> str:
+    """Return the replacement text for one guard span.
+
+    `full` is the whole condition with the trailing `{` removed, possibly
+    spanning lines. `if x, err := f(); err != nil {` keeps its init statement.
+    """
+    if ";" in full:
+        init, _, rest = full.partition(";")
+        opener = f"{indent}{else_kw}if {init}; false && ({rest.strip()}"
+    else:
+        opener = f"{indent}{else_kw}if false && ({full.strip()}"
+    return opener + ") {" + ending
 
 
 def sweep_package(repo: pathlib.Path, rels: list[str]) -> None:
@@ -126,13 +185,15 @@ def sweep_file(repo: pathlib.Path, rel: str) -> None:
     lines = list(orig_lines)
 
     found = [
-        (n, m.group("indent"), m.group("cond"))
-        for n, line in enumerate(orig_lines, 1)
-        if (m := GUARD.match(line)) and not SKIP_LINE.search(m.group("cond"))
+        (start, end, indent, else_kw, full)
+        for (start, end, indent, else_kw, full) in find_guards(orig_lines)
+        if not SKIP_LINE.search(full)
     ]
 
-    for n, indent, cond in found:
-        lines[n - 1] = neutralise(indent, cond) + "\n"
+    for start, end, indent, else_kw, full in found:
+        ending = "\n" if orig_lines[end].endswith("\n") else ""
+        lines = list(orig_lines)
+        lines[start : end + 1] = [rewrite_guard(indent, else_kw, full, ending)]
         path.write_text("".join(lines), encoding="utf-8")
         try:
             # Compile the package's tests without running them. A compile error
@@ -142,16 +203,33 @@ def sweep_file(repo: pathlib.Path, rel: str) -> None:
             if code != 0:
                 verdict = NA
             else:
-                _, out = run(["go", "test", "-count=1", pkg], repo)
-                verdict = KILLED if TEST_FAILED.search(out) else SURVIVED
+                test_code, out = run(["go", "test", "-count=1", pkg], repo)
+                if TEST_FAILED.search(out):
+                    verdict = KILLED
+                elif test_code == 0:
+                    verdict = SURVIVED
+                else:
+                    # No FAIL line but a non-zero exit: rerun once to shake off
+                    # flakes, then record loudly. A broken measurement is never
+                    # a verdict in either direction.
+                    test_code, out = run(["go", "test", "-count=1", pkg], repo)
+                    if TEST_FAILED.search(out):
+                        verdict = KILLED
+                    elif test_code == 0:
+                        verdict = SURVIVED
+                    else:
+                        verdict = ERROR
         finally:
-            lines[n - 1] = orig_lines[n - 1]
-            path.write_text("".join(lines), encoding="utf-8")
+            path.write_text(original, encoding="utf-8")
 
+        preview = full.replace("\n", "\\n")
         with _lock:
-            _tally[verdict] += 1
-            if verdict == SURVIVED:
-                _survivors.append((rel, n, cond))
+            if verdict == ERROR:
+                _errors.append((rel, start + 1, preview, test_code))
+            else:
+                _tally[verdict] += 1
+                if verdict == SURVIVED:
+                    _survivors.append((rel, start + 1, preview))
             _done += 1
             print(
                 f"\r   {_done:>4}/{_total}  killed {_tally[KILLED]:>3}"
@@ -187,17 +265,11 @@ def main() -> int:
                 print(f"error: no such file in HEAD: {rel}", file=sys.stderr)
                 return 1
             by_pkg.setdefault(pathlib.PurePosixPath(rel).parent.as_posix(), []).append(rel)
-        _total = sum(
-            len(
-                [
-                    1
-                    for line in (repo / rel).read_text(encoding="utf-8").splitlines()
-                    if GUARD.match(line) and not SKIP_LINE.search(GUARD.match(line).group("cond"))
-                ]
-            )
-            for files in by_pkg.values()
-            for rel in files
-        )
+        def count_guards(rel: str) -> int:
+            text = (repo / rel).read_text(encoding="utf-8").splitlines(keepends=True)
+            return sum(1 for (_, _, _, _, full) in find_guards(text) if not SKIP_LINE.search(full))
+
+        _total = sum(count_guards(rel) for files in by_pkg.values() for rel in files)
 
         print("== baseline ==")
         code, out = run(["go", "test", "-count=1", "./...", "-v"], repo)
@@ -221,7 +293,10 @@ def main() -> int:
         # together, so this is the difference between half an hour and minutes.
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(by_pkg)) as pool:
             futures = [pool.submit(sweep_package, repo, files) for files in by_pkg.values()]
-            concurrent.futures.as_completed(futures)
+            for future in concurrent.futures.as_completed(futures):
+                # Surface worker exceptions: a thread that dies quietly leaves
+                # its guards uncounted and the totals lying by omission.
+                future.result()
 
         print()
         print("== summary ==")
@@ -236,11 +311,20 @@ def main() -> int:
             for rel, n, cond in survivors:
                 print(f"   {rel}:{n}\t{cond[:86]}")
             # Redirect stdout to keep the machine-readable form, which the layout
-            # above mangles only by its leading spaces.
+            # above mangles only by its leading spaces. A `\\n` inside a condition
+            # is an escaped newline from a multi-line guard, not a row break.
             print()
             print("== survivors, TSV ==")
             for rel, n, cond in survivors:
                 print(f"{rel}\t{n}\t{cond}")
+
+        if _errors:
+            print()
+            print("== ERRORS: the tooling broke, these are not verdicts ==")
+            for rel, n, cond, code in sorted(_errors):
+                print(f"   {rel}:{n}\t{cond[:86]}  (exit {code})")
+            print("error: reran once and still no FAIL line; the counts above are untrustworthy", file=sys.stderr)
+            return 1
         return 0
     finally:
         shutil.rmtree(work, ignore_errors=True)

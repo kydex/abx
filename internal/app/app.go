@@ -133,7 +133,7 @@ func runSessionForAccount(ctx context.Context, c cli.Command, env []string, stdi
 	if c.Kind != cli.Shell {
 		cwd, err = os.Getwd()
 		if err != nil {
-			return 1, err
+			return 1, fmt.Errorf("resolve working directory: %w", err)
 		}
 	}
 	var in *host.Inputs
@@ -155,7 +155,7 @@ func runSessionForAccount(ctx context.Context, c cli.Command, env []string, stdi
 	}
 	if c.Kind == cli.Inspect {
 		if _, err = io.WriteString(stdio.Out, formatPlan(plan)); err != nil {
-			return 1, err
+			return 1, fmt.Errorf("write inspection: %w", err)
 		}
 		return 0, nil
 	}

@@ -8,6 +8,9 @@ test:
 lint:
 	golangci-lint fmt --diff ./...
 	golangci-lint run ./...
+	# testdata is invisible to go list, so the two lines above never see the
+	# live fixture: lint it by explicit path instead.
+	golangci-lint run ./internal/app/testdata/probe.go
 
 shellcheck:
 	shellcheck scripts/*.sh

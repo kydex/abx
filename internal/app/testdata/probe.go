@@ -27,6 +27,7 @@ func identity(path string) [2]uint64 {
 	s := info.Sys().(*syscall.Stat_t)
 	return [2]uint64{uint64(s.Dev), s.Ino}
 }
+
 func main() {
 	if len(os.Args) != 2 {
 		die("mode missing")
@@ -100,7 +101,7 @@ func main() {
 		}
 	}
 	info, e := os.Stat("/run/user")
-	if e != nil || info.Mode().Perm() != 0700 {
+	if e != nil || info.Mode().Perm() != 0o700 {
 		die("runtime mode")
 	}
 	mounts, e := os.ReadFile("/proc/self/mountinfo")
@@ -142,7 +143,7 @@ func main() {
 	}
 	for _, dir := range []string{"/home/agent", want} {
 		p := filepath.Join(dir, "probe-write")
-		if e = os.WriteFile(p, []byte("ok"), 0600); e != nil {
+		if e = os.WriteFile(p, []byte("ok"), 0o600); e != nil {
 			die("not writable: " + dir)
 		}
 		if os.Remove(p) != nil {

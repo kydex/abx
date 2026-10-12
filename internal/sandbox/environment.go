@@ -22,6 +22,9 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 	if strings.ContainsRune(username, 0) {
 		return nil, fmt.Errorf("sandbox username %q contains NUL", username)
 	}
+	if strings.ContainsRune(username, '\n') {
+		return nil, fmt.Errorf("sandbox username %q contains newline", username)
+	}
 	if !CleanPath(shell) {
 		return nil, fmt.Errorf("sandbox shell %q is not a clean absolute path", shell)
 	}

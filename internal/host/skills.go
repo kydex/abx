@@ -14,7 +14,7 @@ func (in *Inputs) observeSkills() error {
 	if _, err := os.Lstat(p); errors.Is(err, os.ErrNotExist) {
 		return nil
 	} else if err != nil {
-		return err
+		return fmt.Errorf("inspect shared skills %q: %w", p, err)
 	}
 	if err := in.private(in.paths.Shared); err != nil {
 		return err

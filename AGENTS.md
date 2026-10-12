@@ -61,7 +61,7 @@ Every user-visible change gets a `CHANGELOG.md` entry under `Unreleased` **in th
 - Keep CHANGELOG.md in English only and preserve published history. On release, move the entries into the version section and update `internal/app/VERSION`, the single release-version source.
 - [Releases](docs/releases.md) is the release procedure, including why a version tag must never be pushed with `--force`.
 - Documentation commands must use POSIX sh syntax and sh code fences. Keep one-off logs, test projects, and generated binaries out of the source archive.
-- CI stays simple: checks on branch pushes and pull requests; artifacts only on version-tag pushes. Use floating action version tags, not SHA pins. Do not add GitHub Release publication or repository write permissions as an incidental change.
+- CI stays simple: checks on branch pushes and pull requests; artifacts only on version-tag pushes. Use floating action version tags, not SHA pins (for `uses:` pins; source pins like the Bubblewrap commit are separate). Do not add GitHub Release publication or repository write permissions as an incidental change.
 - Preserve executable mode 0755 for scripts/*.sh and include both documentation languages in packaging.
 - Report what changed, what was actually verified, and remaining limitations. When providing a download archive, include its SHA-256.
 

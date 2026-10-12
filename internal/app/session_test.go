@@ -386,6 +386,21 @@ func TestFinishClosePreservesOperationAndCleanupFailures(t *testing.T) {
 	}
 }
 
+func TestFinishCloseJoinsChildStatusWithCleanupError(t *testing.T) {
+	closeErr := errors.New("close failed")
+	status, result := 23, error(nil)
+	finishClose(&status, &result, func() error { return closeErr })
+	if status != 23 || result == nil || !strings.Contains(result.Error(), "23") {
+		t.Fatalf("finishClose = status %d, err %v", status, result)
+	}
+	// A child that exited zero contributes no status text of its own.
+	status, result = 0, nil
+	finishClose(&status, &result, func() error { return closeErr })
+	if status != 1 || result == nil || strings.Contains(result.Error(), "status 0") {
+		t.Fatalf("finishClose = status %d, err %v", status, result)
+	}
+}
+
 func TestInspectDoesNotPreparePersistentRuntimeState(t *testing.T) {
 	account := host.Account{UID: os.Getuid(), Username: "tester", Home: t.TempDir()}
 	data := filepath.Join(t.TempDir(), "data")

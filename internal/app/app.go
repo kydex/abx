@@ -187,6 +187,9 @@ func executeSession(
 
 func finishClose(status *int, result *error, cleanup func() error) {
 	if err := cleanup(); err != nil {
+		if *status != 0 {
+			err = errors.Join(fmt.Errorf("child exited with status %d", *status), err)
+		}
 		*result = errors.Join(*result, err)
 		if *status == 0 {
 			*status = 1

@@ -31,8 +31,8 @@ func ResolveShell(uid int) Selection {
 }
 
 // resolveShellFrom is the deterministic passwd-file test seam.
-func resolveShellFrom(uid int, passwdPath string) Selection {
-	return resolveFrom(uid, passwdPath, visibleInSandbox)
+func resolveShellFrom(uid int, passwdFile string) Selection {
+	return resolveFrom(uid, passwdFile, visibleInSandbox)
 }
 
 func resolveFrom(uid int, passwdPath string, visible func(string) bool) Selection {

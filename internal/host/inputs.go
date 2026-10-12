@@ -197,8 +197,8 @@ const agentMountPoint = "/home/agent"
 // blaming the tool rather than the profile. Nothing is mounted there, so this
 // reports the real cause instead.
 func (in *Inputs) checkAgentPlacement() error {
-	rel := strings.TrimPrefix(in.executable, agentMountPoint)
-	if rel == in.executable {
+	rel, ok := strings.CutPrefix(in.executable, agentMountPoint)
+	if !ok {
 		return fmt.Errorf("agent path %q is not inside the agent mount", in.executable)
 	}
 	host := filepath.Join(in.home, rel)
@@ -283,7 +283,8 @@ func (in *Inputs) Revalidate() error {
 		if !os.SameFile(info, o.info) {
 			return fmt.Errorf("selected source changed: %q", path)
 		}
-		if path == in.home || path == in.paths.Root || path == in.paths.Profiles || path == in.paths.Shared {
+		if path == in.home || path == in.paths.Root ||
+			path == in.paths.Profiles || path == in.paths.Shared {
 			if err = privateInfo(path, info, in.account.UID); err != nil {
 				return err
 			}

@@ -25,7 +25,13 @@ type ProfileStatus struct {
 }
 
 func profileInputs(account Account, paths Paths, name string) *Inputs {
-	return &Inputs{account: account, paths: paths, home: filepath.Join(paths.Profiles, name), objects: map[string]object{}, links: map[string]string{}}
+	return &Inputs{
+		account: account,
+		paths:   paths,
+		home:    filepath.Join(paths.Profiles, name),
+		objects: map[string]object{},
+		links:   map[string]string{},
+	}
 }
 
 func (in *Inputs) readProfile() error {

@@ -69,7 +69,7 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 		return "", fmt.Errorf("current path %q is not a directory", project)
 	}
 	project = filepath.Clean(project)
-	if project == string(filepath.Separator) {
+	if project == "/" {
 		return "", fmt.Errorf("project %q is the filesystem root", project)
 	}
 	for _, exact := range exactProtectedRoots {

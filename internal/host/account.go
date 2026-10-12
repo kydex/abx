@@ -100,7 +100,7 @@ func ResolvePaths(account Account, xdgDataHome string) (Paths, error) {
 	if err != nil {
 		return Paths{}, fmt.Errorf("canonicalize data base: %w", err)
 	}
-	if canonicalBase == string(filepath.Separator) {
+	if canonicalBase == "/" {
 		return Paths{}, fmt.Errorf("data base %q is the filesystem root", canonicalBase)
 	}
 	for _, relative := range sensitiveHomeTrees {

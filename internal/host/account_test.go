@@ -11,6 +11,21 @@ import (
 	"testing"
 )
 
+func TestResolveAccountUsesProductionDependencies(t *testing.T) {
+	// ResolveAccount is resolveAccount with the real uid and lookup: a swapped
+	// constant or argument order must fail here, not only on a live host.
+	if os.Getuid() == 0 {
+		t.Skip("account lookup refuses root")
+	}
+	a, err := ResolveAccount()
+	if err != nil {
+		t.Skipf("no passwd entry for the invoking uid: %v", err)
+	}
+	if a.UID != os.Getuid() || a.Username == "" || a.Home == "" {
+		t.Fatalf("ResolveAccount = %#v", a)
+	}
+}
+
 func TestAccountFromPasswd(t *testing.T) {
 	home := t.TempDir()
 	link := filepath.Join(filepath.Dir(home), "home-link")

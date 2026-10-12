@@ -92,10 +92,13 @@ func TestIsolationSummaryMatchesBubblewrapNamespacePolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, flag := range []string{"--unshare-user", "--unshare-pid", "--unshare-ipc", "--unshare-uts"} {
+	for _, flag := range []string{"--unshare-user", "--disable-userns", "--unshare-pid", "--unshare-ipc", "--unshare-uts", "--die-with-parent", "--clearenv"} {
 		if !slices.Contains(args, flag) {
 			t.Fatalf("summary claims private namespace without %s: %v", flag, args)
 		}
+	}
+	if i := slices.Index(args, "--hostname"); i < 0 || i+1 >= len(args) || args[i+1] != "abx" {
+		t.Fatalf("summary hostname without --hostname abx: %v", args)
 	}
 	if slices.Contains(args, "--unshare-net") {
 		t.Fatalf("summary claims shared network but translation unshares it: %v", args)

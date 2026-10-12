@@ -212,6 +212,29 @@ func TestBadSourcesAndVersion(t *testing.T) {
 	}
 }
 
+func TestMinimumVersionStringMatchesNumeric(t *testing.T) {
+	// The message string and the comparison array describe one gate;
+	// raising only one of them must fail here.
+	m := versionPattern.FindStringSubmatch("bubblewrap " + MinimumVersion)
+	if m == nil {
+		t.Fatalf("MinimumVersion %q does not parse", MinimumVersion)
+	}
+	for i, want := range minimumVersion {
+		got, err := strconv.ParseUint(m[i+1], 10, 64)
+		if err != nil || got != want {
+			t.Fatalf("MinimumVersion %q parses to %q, want %v", MinimumVersion, m[1:], minimumVersion)
+		}
+	}
+}
+
+func TestOpenUsesFixedBubblewrapPath(t *testing.T) {
+	// Open is open with the production path: on a host without a trusted
+	// bwrap it must fail naming that path, not something else.
+	if _, err := Open(context.Background()); err != nil && !strings.Contains(err.Error(), Path) {
+		t.Fatalf("Open error does not name %q: %v", Path, err)
+	}
+}
+
 func TestChildStreamsExitAndCleanHostEnvironment(t *testing.T) {
 	t.Setenv("ABX_TEST_HOST_SECRET", "must-not-inherit")
 	var out, stderr bytes.Buffer

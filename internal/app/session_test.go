@@ -80,11 +80,18 @@ func TestUnknownCommandExits2(t *testing.T) {
 }
 
 func TestNoVerificationPassedOnFailedRuns(t *testing.T) {
+	// Where the invoking account resolves, the refusal must name the missing
+	// profile: in a container without the passwd home the same cases pass
+	// through the earlier account refusal, and only the status is asserted.
+	_, accountErr := host.ResolveAccount()
 	for _, args := range [][]string{{"verify", "nosuchprofile"}, {"run", "nosuchprofile"}} {
 		var out, stderr bytes.Buffer
 		status := Run(context.Background(), args, bwrap.Stdio{Out: &out, Err: &stderr})
 		if status != 1 || strings.Contains(out.String(), "Verification passed") {
 			t.Fatalf("%q = status %d, stdout %q", args, status, out.String())
+		}
+		if accountErr == nil && !strings.Contains(stderr.String(), "profile does not exist") {
+			t.Fatalf("%q refused without naming the profile: %q", args, stderr.String())
 		}
 	}
 }

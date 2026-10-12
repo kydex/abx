@@ -45,6 +45,11 @@ func TestBareAndHelpShortcuts(t *testing.T) {
 	if err != nil || c.Kind != Run || !reflect.DeepEqual(c.Args, []string{"--version", "-v", "--help"}) {
 		t.Fatalf("run args after separator: %+v %v", c, err)
 	}
+	// A bare separator with nothing after it is accepted as a no-op.
+	c, err = Parse([]string{"run", "demo", "--"})
+	if err != nil || c.Kind != Run || c.Profile != "demo" || len(c.Args) != 0 {
+		t.Fatalf("bare separator: %+v %v", c, err)
+	}
 	// Help and version are only commands in the first position. Anywhere else
 	// they are arguments, and must not turn a real command into a silent no-op.
 	for _, argv := range [][]string{

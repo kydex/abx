@@ -523,6 +523,33 @@ func TestWorkResolvesProjectWithoutAgentAndRetainsSource(t *testing.T) {
 	}
 }
 
+func TestResolveExposesInputsThroughGetters(t *testing.T) {
+	// The thin getters are the cross-package face of resolve: mode, home,
+	// project, skills, shell, username, command and system must all report
+	// what resolution stored, not a zero value from a missed assignment.
+	in := fixture(t)
+	project := filepath.Join(in.account.Home, "project")
+	if err := os.Mkdir(project, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Resolve(in.account, in.paths, "demo", project, Work, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer got.Close()
+	selection := ResolveShell(in.account.UID)
+	if selection.Path == "" {
+		t.Fatal(selection.Reason)
+	}
+	if got.Mode() != Work || got.Project() != project || got.Username() != "tester" ||
+		got.Home() != filepath.Join(in.paths.Profiles, "demo") ||
+		got.Shell() != selection.Path || got.Skills() != in.paths.SharedSkills ||
+		len(got.System()) == 0 {
+		t.Fatalf("getters: mode=%v home=%q project=%q skills=%q shell=%q username=%q system=%d",
+			got.Mode(), got.Home(), got.Project(), got.Skills(), got.Shell(), got.Username(), len(got.System()))
+	}
+}
+
 func TestWorkRejectsUnsafeProjectAndArguments(t *testing.T) {
 	in := fixture(t)
 	for _, project := range []string{"/", in.account.Home, in.paths.Root, filepath.Join(in.account.Home, "missing")} {

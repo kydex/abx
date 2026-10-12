@@ -103,6 +103,28 @@ func TestPrivateProbeRejectsHostExecution(t *testing.T) {
 	}
 }
 
+func TestDecodeRejectsEachEmptyListSeparately(t *testing.T) {
+	base := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	for _, raw := range []string{
+		strings.Replace(base, `"Environment":["HOME=/home/agent"]`, `"Environment":[]`, 1),
+		strings.Replace(base, `"ReadOnly":["/usr"]`, `"ReadOnly":[]`, 1),
+	} {
+		if _, err := decode(raw); err == nil || !strings.Contains(err.Error(), "incomplete probe inputs") {
+			t.Fatalf("decode with one empty list = %v", err)
+		}
+	}
+}
+
+func TestCleanPathMatchesSandbox(t *testing.T) {
+	// Probe keeps its own copy of the predicate instead of importing it;
+	// a one-sided edit must fail here rather than drift silently.
+	for _, p := range []string{"/usr/bin/sh", "/", "relative", "/tmp/", "/x\x00y", "", "/a/../b", "//double"} {
+		if cleanPath(p) != sandbox.CleanPath(p) {
+			t.Fatalf("cleanPath(%q) disagrees with sandbox", p)
+		}
+	}
+}
+
 func TestGateChecksIdentityAndReadOnlyMount(t *testing.T) {
 	self := Identity{Device: 7, Inode: 42}
 	ro := "1 2 3:4 / /abx-probe ro,nosuid - ext4 /dev/x rw\n"

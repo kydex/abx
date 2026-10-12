@@ -311,3 +311,32 @@ func TestProjectRejectsSiblingHome(t *testing.T) {
 		t.Fatalf("own project rejected: %q, %v", got, err)
 	}
 }
+
+func TestExactProtectedRootFollowsSymlinkAlias(t *testing.T) {
+	// The exact roots are compared against the canonical project, so an
+	// aliased root must match by its resolved target too, not just by the
+	// literal the way the system-tree loop already does.
+	base := t.TempDir()
+	target := filepath.Join(base, "real-tmp")
+	if err := os.Mkdir(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(base, "tmp-link")
+	if err := os.Symlink(target, alias); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		project, exact string
+		want           bool
+	}{
+		{target, target, true},
+		{target, alias, true},
+		{filepath.Join(target, "child"), alias, false},
+		{filepath.Join(base, "elsewhere"), alias, false},
+	} {
+		got, err := isExactProtectedRoot(tc.project, tc.exact)
+		if err != nil || got != tc.want {
+			t.Errorf("isExactProtectedRoot(%q, %q) = %v, %v, want %v", tc.project, tc.exact, got, err, tc.want)
+		}
+	}
+}

@@ -33,6 +33,21 @@ var exactProtectedRoots = []string{
 	"/tmp", "/var/tmp", "/dev/shm",
 }
 
+// isExactProtectedRoot reports whether project is an exact-protected root
+// itself, following a symlink alias the way canonicalProtectedTree does for
+// system trees. Without the resolved comparison, a /tmp that is a link to a
+// tree outside the protected roots would canonicalize past the literal.
+func isExactProtectedRoot(project, exact string) (bool, error) {
+	if project == exact {
+		return true, nil
+	}
+	resolved, err := canonicalProtectedTree(exact)
+	if err != nil {
+		return false, err
+	}
+	return project == resolved, nil
+}
+
 // ResolveProject canonicalizes and validates a candidate project directory.
 func ResolveProject(cwd, realHome, dataRoot string) (string, error) {
 	return resolveProject(cwd, realHome, dataRoot, systemRoots)
@@ -58,7 +73,11 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 		return "", fmt.Errorf("project %q is the filesystem root", project)
 	}
 	for _, exact := range exactProtectedRoots {
-		if project == exact {
+		match, err := isExactProtectedRoot(project, exact)
+		if err != nil {
+			return "", err
+		}
+		if match {
 			return "", fmt.Errorf("project %q is a protected system path", project)
 		}
 	}

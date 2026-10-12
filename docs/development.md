@@ -66,8 +66,7 @@ Two distinctions the output depends on. A build or vet failure is *not applicabl
 ## Live sandbox tests
 
 On a regular-user Linux host with Bubblewrap 0.12.0+ at `/usr/bin/bwrap` and working unprivileged user namespaces.
-CachyOS is the distribution the live tests actually exercise; `ubuntu-latest` is the CI baseline, which
-cannot run them. A host close to CachyOS is the one worth trusting when isolation or process lifetime
+CachyOS is the distribution the live tests actually exercise; `ubuntu-latest` is the CI baseline, where the live suite runs automated on a source-built Bubblewrap. A host close to CachyOS is the one worth trusting when isolation or process lifetime
 has changed:
 
 ```sh

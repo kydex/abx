@@ -9,6 +9,11 @@
 - The Russian security guide regained the 4 GiB tmpfs scope its English original states, and the Russian usage guide its code quotes around `SIGKILL`.
 - Fixed: the development guide no longer claims `ubuntu-latest` cannot run the live tests. CI runs them automated on a source-built Bubblewrap; the guide now names the CachyOS host the reference live environment instead. (English and Russian.)
 - Fixed: the `Ctrl+\` check in `manual-checks.md` no longer breaks bold markup. The backslash escaped the closing asterisks, so the emphasis ran past the paragraph in rendered output. (English and Russian.)
+- Fixed: the architecture guide no longer claims the account home is revalidated for exact `0700`. The profile home and storage roots are; the passwd home is checked once at resolution for a non-world-writable directory owned by the invoking UID. (English and Russian.)
+- Fixed three stale claims in the usage guide: the verify deadline covers tool opening onward rather than all setup, probe files land in the real home only rather than home and project, and the no-arguments-after-`--` rule for `work` and `shell` now reads in English as it already did in Russian. (English and Russian.)
+- The release guide names the narrowed tag trigger and lists the full source-archive contents. (English and Russian.)
+- The development guide drops the root-owned passwd claim for `ResolveAccount` and names all three live scenarios. (English and Russian.)
+- The Russian installation and security guides now say `other` where the home check allows group writes.
 
 - Fixed: the security model no longer requires `/etc/passwd` to be owned by root. The code stopped requiring that in 0.8.24 because it refused to start in containers, but the document kept promising a refusal that never comes. The entry now matches the installation guide: a regular file group and other cannot rewrite, no owner requirement. (English and Russian.)
 - Documented that the parent directories of the login shell, agent executable, and mounted system sources are not checked for writability: a group member able to write one could substitute the binary a session runs. Accepted as a trade-off rather than fixed, since refusing would break team machines running umask 002. (English and Russian.)

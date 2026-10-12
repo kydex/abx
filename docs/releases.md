@@ -43,7 +43,7 @@ It creates:
 | File | Contents |
 |---|---|
 | `abx-X.Y.Z-linux-amd64.tar.gz` | Static Linux amd64 binary, the full `docs/` tree in both languages (user guides and contributor documents alike), both `README` files, `CHANGELOG.md`, and `LICENSE`/`THIRD_PARTY_LICENSES` |
-| `abx-X.Y.Z-source.tar.gz` | Source, tests, documentation, Makefile, packaging script, and workflows |
+| `abx-X.Y.Z-source.tar.gz` | Source, tests, documentation, Makefile, packaging script, workflows, and the root support files (`go.mod`, `go.sum`, `.golangci.yml`, `.gitignore`, both READMEs, both AGENTS files, `CHANGELOG.md`, licenses) |
 | `abx-X.Y.Z-SHA256SUMS` | SHA-256 hashes for the binary and source archives |
 
 ## GitHub Actions
@@ -52,7 +52,7 @@ CI is development/release infrastructure, not an installation interface.
 
 - `.github/workflows/check.yml` runs `make check` for pushes and pull requests and is reused by the release workflow.
 - `.github/workflows/live.yml` runs the real Bubblewrap test suite on the CI runner.
-- `.github/workflows/release.yml` runs for `v*` tags, requires both check and live jobs, runs `scripts/package.sh`, and uploads the resulting `dist/*` files as a workflow artifact.
+- `.github/workflows/release.yml` runs for `v[0-9]*` tags, requires both check and live jobs, runs `scripts/package.sh`, and uploads the resulting `dist/*` files as a workflow artifact.
 
 The workflow artifact is for maintainer validation and distribution. The workflow does **not** create a release page, and adding release publication is out of scope for this project — see the rule in `AGENTS.md`. Step 7 therefore says "the project's release channel" without naming a service: whichever channel you publish through, the deliverable is the same three files and their SHA-256, and a user should be able to follow [Installation](installation.md) without interacting with Actions.
 

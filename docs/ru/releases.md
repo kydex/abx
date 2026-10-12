@@ -43,7 +43,7 @@ make live
 | Файл | Содержимое |
 |---|---|
 | `abx-X.Y.Z-linux-amd64.tar.gz` | Статический Linux amd64 бинарник, всё дерево `docs/` на двух языках (и руководства пользователя, и документы для контрибьюторов), оба файла `README`, `CHANGELOG.md`, а также `LICENSE`/`THIRD_PARTY_LICENSES` |
-| `abx-X.Y.Z-source.tar.gz` | Исходники, тесты, документация, Makefile, packaging script и workflows |
+| `abx-X.Y.Z-source.tar.gz` | Исходники, тесты, документация, Makefile, packaging script, workflows и корневые support-файлы (`go.mod`, `go.sum`, `.golangci.yml`, `.gitignore`, оба README, оба AGENTS-файла, `CHANGELOG.md`, лицензии) |
 | `abx-X.Y.Z-SHA256SUMS` | SHA-256 бинарного и исходного архивов |
 
 ## GitHub Actions
@@ -52,7 +52,7 @@ CI относится к инфраструктуре разработки и в
 
 - `.github/workflows/check.yml` запускает `make check` для push и pull requests и переиспользуется release-workflow.
 - `.github/workflows/live.yml` запускает настоящие Bubblewrap tests на CI runner.
-- `.github/workflows/release.yml` запускается для тегов `v*`, требует успеха check и live jobs, выполняет `scripts/package.sh` и загружает `dist/*` как workflow artifact.
+- `.github/workflows/release.yml` запускается для тегов `v[0-9]*`, требует успеха check и live jobs, выполняет `scripts/package.sh` и загружает `dist/*` как workflow artifact.
 
 Workflow artifact предназначен для проверки и дальнейшей публикации сопровождающим. Workflow **не создаёт** страницу релиза, и добавление публикации на странице выходит за рамки проекта — см. правило в `AGENTS.md`. Поэтому в шаге 7 сказано «канал релизов проекта» без указания сервиса: какой бы канал вы ни выбрали, результат один и тот же — три файла и их SHA-256, а пользователь должен суметь следовать [Установке](installation.md), не работая с Actions.
 

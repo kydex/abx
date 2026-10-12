@@ -87,6 +87,9 @@ To focus on one scenario:
 env ABX_LIVE=1 go test -count=1 -v ./internal/app -run '^TestLiveVerify$'
 ```
 
+The suite has two more live scenarios behind the same gate: `TestLiveShellRunAndWork`
+and `TestLiveProfilesCLI`.
+
 Run live tests after changes to mounts, namespaces, retained descriptors, project/profile path policy, Bubblewrap translation/execution, or verification behavior.
 
 For diagnosis with disposable profiles, use the [optional manual checks](manual-checks.md) when useful. They are not required before every release and do not replace the automated or live tests above.
@@ -124,10 +127,10 @@ here so nobody starts the same discussion from scratch.
   over the floor. The aggregate catches gross
   regressions and nothing finer. A coverage drop with every test still green means tests were deleted
   or skipped, and the skip path is the one worth watching.
-  `host.ResolveAccount` is the one function in that package no test reaches: it is a single
-  line over `resolveAccount(os.Getuid(), user.LookupId)`, and reaching it needs a real root-owned
-  `/etc/passwd`. The seam exists below it and is tested; the wrapper is left uncovered rather than
-  given a seam of its own.
+  `host.ResolveAccount` is a one-line wrapper over the tested seam; unit tests
+  reach it where the host provides a real account entry and skip loudly
+  elsewhere, and the live suite covers it fully. The wrapper is left without a
+  seam of its own.
 - `profile list` stops at the first profile with an unsafe layout instead of
   listing the rest. Documented in [Usage](usage.md) rather than changed.
 

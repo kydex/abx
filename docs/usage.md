@@ -159,7 +159,7 @@ An absolute link such as `.local/bin/demo -> /home/agent/.local/lib/demo` can wo
 
 For links between files within a profile, use relative targets that stay within the profile, such as `.local/bin/demo -> ../lib/demo`. The entire link chain must remain valid. Avoid links to the profile's absolute host path.
 
-If an installed tool works inside the sandbox but fails this host check, open `abx work <profile>` and launch it there; use `abx shell <profile>` when project access is not needed. Neither command requires a matching profile executable.
+If an installed tool works inside the sandbox but fails this host check, open `abx work <profile>` and launch it there; use `abx shell <profile>` when project access is not needed. Neither command requires a matching profile executable, and both take only the profile name, with no arguments after `--`.
 
 For direct `run`, another option is a regular executable wrapper named after the profile in one of the searched directories. It can call the actual tool by its sandbox path and forward arguments, for example:
 
@@ -238,7 +238,7 @@ Successful verification ends with:
 Verification passed; temporary probe files removed.
 ```
 
-Verification runs under a 30-second deadline covering setup and checks. On timeout ABX reports `execution cancelled` and returns exit `1`. Check lines are written as
+Verification runs under a 30-second deadline covering tool opening, observation and checks: the first plan build validates the shape before the deadline starts. On timeout ABX reports `execution cancelled` and returns exit `1`. Check lines are written as
 the probe runs, not buffered until the end, so a probe killed mid-run leaves the lines it
 already printed on stdout. Like `work`, `verify` accepts only the profile name, with no arguments after `--`.
 
@@ -246,7 +246,7 @@ Individual checks use `PASS`, `FAIL`, `UNAVAILABLE`, and `N/A`. `N/A` is expecte
 
 The read-only checks inspect mount flags at the selected mountpoints; they do not independently check every nested mount. Read-only enforcement is delegated to Bubblewrap. See the [verification scope](security.md#verification).
 
-Verification temporarily creates probe files in the real home and project and removes them before reporting final success. A forced process kill or host crash can leave such temporary files behind.
+Verification temporarily creates probe files in the real home and removes them before reporting final success. A forced process kill or host crash can leave such temporary files behind.
 
 The `__probe` entry point is private: it runs only inside the sandbox as `/abx-probe` and host-side invocations are rejected.
 

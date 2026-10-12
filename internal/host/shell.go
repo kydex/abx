@@ -101,6 +101,9 @@ func checkPasswdFile(path string) error {
 // host whose database an unprivileged user can rewrite, that user is already
 // outside the model ABX protects.
 
+// shellFromPasswd takes the shell from the first passwd row with the uid.
+// A database with duplicate uids would pair another route's home with this
+// row's shell; that is a broken database, not a case to reconcile.
 func shellFromPasswd(uid int, path string) (string, error) {
 	if err := checkPasswdFile(path); err != nil {
 		return "", err
@@ -146,7 +149,9 @@ func validateExecutable(path string) (string, error) {
 	}
 	// Ownership is deliberately not required: user-managed shells live under
 	// system paths too (for example /usr/local/bin), and visibility already
-	// constrains shells to mounted system trees.
+	// constrains shells to mounted system trees. Access follows the link, so
+	// it checks the same object plus the traversability of the link path;
+	// Stat and the mode check below pin the resolved target itself.
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 || unix.Access(path, unix.X_OK) != nil {
 		return "", fmt.Errorf("login shell %q is not a regular file executable by the invoking user", path)
 	}

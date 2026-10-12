@@ -502,9 +502,11 @@ func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
 }
 
 // checkAgentPlacement is only worth anything if resolve() actually calls it.
-// This walks the real path through resolve(), which needs a host /etc/passwd
-// owned by root; where that is not the case the whole run is refused earlier
-// and the test says so rather than passing silently.
+// This walks the real path through resolve(), which reads the login shell from
+// the host /etc/passwd first. The database needs no particular owner, only a
+// regular file that group and other cannot rewrite, so on an ordinary host the
+// walk reaches the agent-placement refusal below; a host without a passwd entry
+// for the invoking UID fails loudly here instead of passing silently.
 func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
 	home, project := t.TempDir(), t.TempDir()
 	root := filepath.Join(home, "data")

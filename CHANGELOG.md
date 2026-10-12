@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed: the security model no longer requires `/etc/passwd` to be owned by root. The code stopped requiring that in 0.8.24 because it refused to start in containers, but the document kept promising a refusal that never comes. The entry now matches the installation guide: a regular file group and other cannot rewrite, no owner requirement. (English and Russian.)
+
 ## 0.8.24
 
 Closed the third audit round: 102 findings, and from this release every one of them

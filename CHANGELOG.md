@@ -8,6 +8,7 @@
 - The release table now lists both `README` files and `CHANGELOG.md` in the binary archive, matching what the packaging script copies. (English and Russian.)
 - The Russian security guide regained the 4 GiB tmpfs scope its English original states, and the Russian usage guide its code quotes around `SIGKILL`.
 - Fixed: the development guide no longer claims `ubuntu-latest` cannot run the live tests. CI runs them automated on a source-built Bubblewrap; the guide now names the CachyOS host the reference live environment instead. (English and Russian.)
+- Fixed: the `Ctrl+\` check in `manual-checks.md` no longer breaks bold markup. The backslash escaped the closing asterisks, so the emphasis ran past the paragraph in rendered output. (English and Russian.)
 
 - Fixed: the security model no longer requires `/etc/passwd` to be owned by root. The code stopped requiring that in 0.8.24 because it refused to start in containers, but the document kept promising a refusal that never comes. The entry now matches the installation guide: a regular file group and other cannot rewrite, no owner requirement. (English and Russian.)
 - Documented that the parent directories of the login shell, agent executable, and mounted system sources are not checked for writability: a group member able to write one could substitute the binary a session runs. Accepted as a trade-off rather than fixed, since refusing would break team machines running umask 002. (English and Russian.)

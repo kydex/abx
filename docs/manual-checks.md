@@ -397,7 +397,7 @@ No more commands are needed in B. Continue in A on the host.
 abx run smoke -- wait
 ```
 
-The command waits without output. After a couple of seconds, press **Ctrl+\** — Ctrl together with the backslash key, immediately right of Enter on a standard layout. When the host prompt returns, immediately run:
+The command waits without output. After a couple of seconds, press **Ctrl+\\** — Ctrl together with the backslash key, immediately right of Enter on a standard layout. When the host prompt returns, immediately run:
 
 **Terminal A · host · ONE COMMAND — run separately**
 

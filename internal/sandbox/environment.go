@@ -22,7 +22,7 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 	if strings.ContainsRune(username, 0) {
 		return nil, fmt.Errorf("sandbox username %q contains NUL", username)
 	}
-	if !cleanPath(shell) {
+	if !CleanPath(shell) {
 		return nil, fmt.Errorf("sandbox shell %q is not a clean absolute path", shell)
 	}
 	if workingDirectory != "/workspace" && workingDirectory != "/home/agent" {

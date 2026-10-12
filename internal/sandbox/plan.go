@@ -79,7 +79,11 @@ func (p Plan) Mounts() []Mount          { return slices.Clone(p.mounts) }
 func (p Plan) Environment() []Entry     { return slices.Clone(p.environment) }
 func (p Plan) Command() []string        { return slices.Clone(p.command) }
 func (p Plan) WorkingDirectory() string { return p.cwd }
-func cleanPath(p string) bool {
+
+// CleanPath accepts only clean absolute paths without NUL bytes. Probe keeps
+// its own copy rather than importing it, so the twin must not drift:
+// probe_test pins that both predicates agree.
+func CleanPath(p string) bool {
 	return filepath.IsAbs(p) && filepath.Clean(p) == p && !strings.ContainsRune(p, 0)
 }
 
@@ -156,13 +160,13 @@ func Build(in Input) (Plan, error) {
 }
 
 func build(in Input) (Plan, error) {
-	if !cleanPath(in.Home) || len(in.Command) == 0 || !cleanPath(in.Command[0]) {
+	if !CleanPath(in.Home) || len(in.Command) == 0 || !CleanPath(in.Command[0]) {
 		return Plan{}, errors.New("invalid session inputs")
 	}
-	if (in.Mode == Shell && in.Project != "") || (in.Mode != Shell && !cleanPath(in.Project)) {
+	if (in.Mode == Shell && in.Project != "") || (in.Mode != Shell && !CleanPath(in.Project)) {
 		return Plan{}, errors.New("project does not match session mode")
 	}
-	if in.Skills != "" && !cleanPath(in.Skills) {
+	if in.Skills != "" && !CleanPath(in.Skills) {
 		return Plan{}, errors.New("invalid skills source")
 	}
 	var kind planKind
@@ -207,7 +211,7 @@ func build(in Input) (Plan, error) {
 		if !allowedSystemTarget(m.Target) || seen[m.Target] || m.Mode != 0 || (m.Kind != ReadOnly && !(compat && m.Kind == Symlink)) {
 			return Plan{}, fmt.Errorf("invalid system mount %q", m.Target)
 		}
-		if (m.Kind == ReadOnly && !cleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
+		if (m.Kind == ReadOnly && !CleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
 			return Plan{}, errors.New("invalid system source")
 		}
 		if m.Size != 0 {

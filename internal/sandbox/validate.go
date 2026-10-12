@@ -10,12 +10,12 @@ import (
 // Validate checks the structural invariants of an in-memory sandbox plan without touching the host filesystem.
 // It is the final structural guard before a plan is translated into Bubblewrap arguments.
 func (p Plan) Validate() error {
-	if !cleanPath(p.expected.homeSource) || (p.expected.skillsSource != "" && !cleanPath(p.expected.skillsSource)) {
+	if !CleanPath(p.expected.homeSource) || (p.expected.skillsSource != "" && !CleanPath(p.expected.skillsSource)) {
 		return errors.New("invalid plan expected source")
 	}
 	switch p.expected.kind {
 	case planRun, planWork, planVerify:
-		if p.cwd != "/workspace" || !cleanPath(p.expected.projectSource) {
+		if p.cwd != "/workspace" || !CleanPath(p.expected.projectSource) {
 			return errors.New("invalid project plan expectation")
 		}
 	case planShell:
@@ -26,7 +26,7 @@ func (p Plan) Validate() error {
 		return errors.New("invalid plan kind")
 	}
 
-	if len(p.command) == 0 || !cleanPath(p.command[0]) {
+	if len(p.command) == 0 || !CleanPath(p.command[0]) {
 		return errors.New("invalid plan command")
 	}
 	for _, arg := range p.command {
@@ -68,7 +68,7 @@ func (p Plan) Validate() error {
 		if !allowedSystemTarget(m.Target) || m.Mode != 0 || (m.Kind != ReadOnly && !(compat && m.Kind == Symlink)) {
 			return fmt.Errorf("invalid expected system mount %q", m.Target)
 		}
-		if (m.Kind == ReadOnly && !cleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
+		if (m.Kind == ReadOnly && !CleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
 			return errors.New("invalid expected system source")
 		}
 		if m.Kind == Symlink && !compatibilitySourceKeptInUsr(m.Source) {

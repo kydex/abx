@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Documented that a child exit status of `2` is indistinguishable from a CLI syntax error, and that a cleanup failure after a nonzero child exit keeps that status and joins both errors. (English and Russian.)
+- Documented that a bare `abx run <profile> --` with no agent arguments is accepted as a no-op, matching what the parser already did. (English and Russian.)
+- The security model now names the checks it had been leaving implicit: mounted system sources are trusted configuration without mode checks, login-shell replacement is a residual window like the agent one, the visible-shell list is static, a home under a protected tree such as `/var` has no carve-out, and uncovered base directories stay writable as ephemeral scratch. (English and Russian.)
+- The release table now lists both `README` files and `CHANGELOG.md` in the binary archive, matching what the packaging script copies. (English and Russian.)
+- The Russian security guide regained the 4 GiB tmpfs scope its English original states, and the Russian usage guide its code quotes around `SIGKILL`.
+
 - Fixed: the security model no longer requires `/etc/passwd` to be owned by root. The code stopped requiring that in 0.8.24 because it refused to start in containers, but the document kept promising a refusal that never comes. The entry now matches the installation guide: a regular file group and other cannot rewrite, no owner requirement. (English and Russian.)
 - Documented that the parent directories of the login shell, agent executable, and mounted system sources are not checked for writability: a group member able to write one could substitute the binary a session runs. Accepted as a trade-off rather than fixed, since refusing would break team machines running umask 002. (English and Russian.)
 

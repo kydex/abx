@@ -42,7 +42,7 @@ make live
 
 | Файл | Содержимое |
 |---|---|
-| `abx-X.Y.Z-linux-amd64.tar.gz` | Статический Linux amd64 бинарник, всё дерево `docs/` на двух языках (и руководства пользователя, и документы для контрибьюторов), а также `LICENSE`/`THIRD_PARTY_LICENSES` |
+| `abx-X.Y.Z-linux-amd64.tar.gz` | Статический Linux amd64 бинарник, всё дерево `docs/` на двух языках (и руководства пользователя, и документы для контрибьюторов), оба файла `README`, `CHANGELOG.md`, а также `LICENSE`/`THIRD_PARTY_LICENSES` |
 | `abx-X.Y.Z-source.tar.gz` | Исходники, тесты, документация, Makefile, packaging script и workflows |
 | `abx-X.Y.Z-SHA256SUMS` | SHA-256 бинарного и исходного архивов |
 

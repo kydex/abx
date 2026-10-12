@@ -42,7 +42,7 @@ It creates:
 
 | File | Contents |
 |---|---|
-| `abx-X.Y.Z-linux-amd64.tar.gz` | Static Linux amd64 binary, the full `docs/` tree in both languages (user guides and contributor documents alike), and `LICENSE`/`THIRD_PARTY_LICENSES` |
+| `abx-X.Y.Z-linux-amd64.tar.gz` | Static Linux amd64 binary, the full `docs/` tree in both languages (user guides and contributor documents alike), both `README` files, `CHANGELOG.md`, and `LICENSE`/`THIRD_PARTY_LICENSES` |
 | `abx-X.Y.Z-source.tar.gz` | Source, tests, documentation, Makefile, packaging script, and workflows |
 | `abx-X.Y.Z-SHA256SUMS` | SHA-256 hashes for the binary and source archives |
 

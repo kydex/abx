@@ -348,8 +348,9 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	// Ctrl+C instead of dumping the launcher's goroutines and exiting 2, a
 	// status docs/usage.md documents as a CLI syntax error. Unhandled it also
 	// leaves the sandbox running: the agent never learns the session is over.
-	// Buffer of 4 matches the four subscribed signals so none is dropped while
-	// a previous one is still being forwarded.
+	// Buffer of 4 holds one of each subscribed signal; a burst of repeats
+	// while a previous one is still being forwarded can drop a duplicate,
+	// since os/signal discards into a full buffer instead of blocking.
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	defer signal.Stop(signals)
 	restoreFDs, err := markInheritedFDsCloseOnExec(cmd.ExtraFiles)

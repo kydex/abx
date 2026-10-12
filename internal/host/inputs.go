@@ -23,7 +23,9 @@ type (
 	}
 )
 
-// Mode selects host resources and the session command.
+// Mode selects host resources and the session command. It mirrors
+// sandbox.Mode one to one; app.sessionInput maps between them, and a new mode
+// needs all three places at once.
 type Mode uint8
 
 const (

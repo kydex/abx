@@ -34,6 +34,8 @@ type Mount struct {
 }
 
 // Mode describes the visibility and working directory of a normal session.
+// It mirrors host.Mode one to one; app.sessionInput maps between them, and a
+// new mode needs all three places at once.
 type Mode uint8
 
 const (

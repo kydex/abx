@@ -34,6 +34,9 @@ func (p Plan) Validate() error {
 			return errors.New("plan command argument contains NUL")
 		}
 	}
+	if !slices.Equal(p.command, p.expected.command) {
+		return errors.New("plan command does not match expectation")
+	}
 	seenEnv := make(map[string]bool, len(p.environment))
 	for _, e := range p.environment {
 		if !validName(e.Name) || seenEnv[e.Name] || strings.ContainsRune(e.Value, 0) {

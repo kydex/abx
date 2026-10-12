@@ -407,6 +407,7 @@ func TestValidateRejectsExpectedMutations(t *testing.T) {
 		{name: "relative skills source", want: "invalid plan expected source", mutate: func(_ *testing.T, p *Plan) { p.expected.skillsSource = "relative" }},
 		{name: "unknown kind", want: "invalid plan kind", mutate: func(_ *testing.T, p *Plan) { p.expected.kind = planKind(0) }},
 		{name: "empty command", want: "invalid plan command", mutate: func(_ *testing.T, p *Plan) { p.command = nil }},
+		{name: "substituted command", want: "plan command does not match expectation", mutate: func(_ *testing.T, p *Plan) { p.command[0] = "/bin/sh" }},
 		{name: "writable expected usr", want: "invalid expected system mount", mutate: func(t *testing.T, p *Plan) { p.expected.system[usrExpected(t, p)].Kind = Writable }},
 		{name: "usr with mode", want: "invalid expected system mount", mutate: func(t *testing.T, p *Plan) { p.expected.system[usrExpected(t, p)].Mode = 0o755 }},
 		{name: "missing expected usr", want: "expected system /usr is required", mutate: func(t *testing.T, p *Plan) {

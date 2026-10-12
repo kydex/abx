@@ -65,6 +65,7 @@ type expectations struct {
 	projectSource string
 	skillsSource  string
 	system        []Mount
+	command       []string
 }
 
 type Plan struct {
@@ -190,6 +191,7 @@ func build(in Input) (Plan, error) {
 			projectSource: in.Project,
 			skillsSource:  in.Skills,
 			system:        slices.Clone(in.System),
+			command:       slices.Clone(in.Command),
 		},
 	}
 	for _, arg := range p.command {

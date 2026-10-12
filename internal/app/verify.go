@@ -15,7 +15,11 @@ import (
 	"github.com/kydex/abx/internal/sandbox"
 )
 
-func runVerify(ctx context.Context, in *host.Inputs, home string, env []string, stdio bwrap.Stdio, openTool func(context.Context) (*bwrap.Tool, error), execute func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error)) (status int, result error) {
+func runVerify(
+	ctx context.Context, in *host.Inputs, home string, env []string, stdio bwrap.Stdio,
+	openTool func(context.Context) (*bwrap.Tool, error),
+	execute func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error),
+) (status int, result error) {
 	input, err := sessionInput(in, env)
 	if err != nil {
 		return 1, err
@@ -134,7 +138,7 @@ func (p *probeFiles) create(home string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	p.files = append(p.files, probeFile{f.Name(), nil})
+	p.files = append(p.files, probeFile{path: f.Name()})
 	info, err := f.Stat()
 	if err != nil {
 		return "", errors.Join(err, f.Close())

@@ -47,19 +47,21 @@ func runProfiles(c cli.Command, account host.Account, paths host.Paths, out io.W
 			break
 		}
 		const header = "PROFILE"
+		// Width fits the longest word in the column, "unavailable".
+		const commandWidth = len("unavailable")
 		width := len(header)
 		for _, status := range statuses {
 			if len(status.Name) > width {
 				width = len(status.Name)
 			}
 		}
-		fmt.Fprintf(&text, "%-*s  %-11s  SKILLS\n", width, header, "COMMAND")
+		fmt.Fprintf(&text, "%-*s  %-*s  SKILLS\n", width, header, commandWidth, "COMMAND")
 		for _, status := range statuses {
 			command := "available"
 			if status.AgentError != nil {
 				command = "unavailable"
 			}
-			fmt.Fprintf(&text, "%-*s  %-11s  %s\n", width, Escape(status.Name), command, status.Skills)
+			fmt.Fprintf(&text, "%-*s  %-*s  %s\n", width, Escape(status.Name), commandWidth, command, status.Skills)
 		}
 	default:
 		return 1, fmt.Errorf("unsupported profile operation %q", c.Kind)

@@ -254,7 +254,11 @@ def main() -> int:
             print("error: could not export HEAD", file=sys.stderr)
             return 1
         with tarfile.open(fileobj=io.BytesIO(archived.stdout)) as tar:
-            tar.extractall(repo)
+            # Explicit where new Pythons already default: the archive is our
+            # own `git archive` (files and directories only), and the gate
+            # keeps the script working where `filter` does not exist yet.
+            kwargs = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
+            tar.extractall(repo, **kwargs)
 
         if subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet"]).returncode:
             print("note: uncommitted changes present; the sweep measures HEAD, not them.")

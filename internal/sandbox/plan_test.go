@@ -228,8 +228,11 @@ func TestValidateRejectsPolicyMutations(t *testing.T) {
 		modes  []Mode
 		mutate func(*testing.T, *Plan)
 	}{
-		{name: "relative command", mutate: func(_ *testing.T, p *Plan) { p.command[0] = "relative" }},
-		{name: "NUL command argument", mutate: func(_ *testing.T, p *Plan) { p.command = append(p.command, "bad\x00arg") }},
+		{name: "relative command", mutate: func(_ *testing.T, p *Plan) { p.command[0] = "relative"; p.expected.command[0] = "relative" }},
+		{name: "NUL command argument", mutate: func(_ *testing.T, p *Plan) {
+			p.command = append(p.command, "bad\x00arg")
+			p.expected.command = append(p.expected.command, "bad\x00arg")
+		}},
 		{name: "unexpected cwd", mutate: func(_ *testing.T, p *Plan) { p.cwd = "/tmp" }},
 		{name: "duplicate environment", mutate: func(_ *testing.T, p *Plan) { p.environment = append(p.environment, p.environment[0]) }},
 		{name: "invalid environment name", mutate: func(_ *testing.T, p *Plan) { p.environment[0].Name = "bad-name" }},
@@ -559,7 +562,7 @@ func TestValidateVerificationProbePolicy(t *testing.T) {
 	for _, mutate := range []func(*Plan){
 		func(p *Plan) { p.mounts[len(p.mounts)-1].Source = "/tmp/probe" },
 		func(p *Plan) { p.mounts[len(p.mounts)-1].Kind = Writable },
-		func(p *Plan) { p.command[1] = "other" },
+		func(p *Plan) { p.command[1] = "other"; p.expected.command[1] = "other" },
 	} {
 		p, err := BuildVerification(input)
 		if err != nil {

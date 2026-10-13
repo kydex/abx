@@ -660,3 +660,23 @@ func TestProfileExecutableCheckedLikeLoginShell(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckAgentPlacementRefusesOutsideMount(t *testing.T) {
+	// resolveAgent only builds paths inside the mount, so the outside-mount
+	// refusal has no production path to it; pin it directly.
+	in := fixture(t)
+	in.executable = "/elsewhere/demo"
+	if err := in.checkAgentPlacement(); err == nil || !strings.Contains(err.Error(), "not inside the agent mount") {
+		t.Fatalf("outside-mount agent = %v", err)
+	}
+}
+
+func TestCreateProfileRefusesNonAbsoluteRoot(t *testing.T) {
+	in := fixture(t)
+	paths := in.paths
+	paths.Root = "relative"
+	paths.Profiles = "relative/profiles"
+	if _, err := CreateProfile(in.account, paths, "demo"); err == nil || !strings.Contains(err.Error(), "invalid profile storage paths") {
+		t.Fatalf("create with relative root = %v", err)
+	}
+}

@@ -18,6 +18,16 @@
 
 - Fixed: the security model no longer requires `/etc/passwd` to be owned by root. The code stopped requiring that in 0.8.24 because it refused to start in containers, but the document kept promising a refusal that never comes. The entry now matches the installation guide: a regular file group and other cannot rewrite, no owner requirement. (English and Russian.)
 - Documented that the parent directories of the login shell, agent executable, and mounted system sources are not checked for writability: a group member able to write one could substitute the binary a session runs. Accepted as a trade-off rather than fixed, since refusing would break team machines running umask 002. (English and Russian.)
+- Fixed: a session username containing a newline is refused the way a NUL byte already
+  was. The account lookup cannot produce one, so no legitimate session changes, but the
+  barrier no longer depends on the shape of its source.
+- Fixed: `/tmp`, `/var/tmp` and `/dev/shm` are refused as project paths through either
+  spelling. On a host where one of them is a link into a tree outside the protected roots,
+  the literal comparison let the resolved path through; the exact roots now resolve the
+  way the protected-tree loop already did, and a lookup error is a refusal.
+- Fixed: plan validation compares the built command against the one the plan expected at
+  construction, so a plan altered after `Build` is refused instead of translated into
+  Bubblewrap arguments. Valid plans are unaffected.
 
 ## 0.8.24
 

@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## 0.8.25
+
+Closed the fourth audit round: 40 findings, and from this release every one of them
+carries a recorded decision rather than a silent gap. Four of them were code. A `/tmp`
+that is a symlink into a tree outside the protected roots canonicalized straight past
+the exact-path refusal; a cleanup failure after a nonzero child exit reported only the
+cleanup, leaving the status to be read out of the return value alone; a session
+username carrying a newline reached the agent because only a NUL byte was refused;
+and a plan altered after `Build` was translated into Bubblewrap arguments without a
+word, because validation compared the command with nothing.
+
+The mutation sweep gained `else if` branches and multi-line conditions. Its sixth run
+measured 240 of 336 guards killed, 96 survived and none unmeasurable. It then caught
+a defect in this repository's own tests: the new expected-command check had been
+masking three older command-shape rows, which asserted one refusal and exercised
+another. Each row now isolates its own check, and all three mutants are caught. Four
+refusals the sweep reported as unpinned are pinned now, each verified against its own
+mutant.
+
+Aggregate coverage moved from 90.8% to 91.5%. Seven documentation claims that outran
+the code are corrected, the security model stops promising a root-ownership check on
+`/etc/passwd` that the code dropped in 0.8.24, the release guide states exactly what
+its force-push evidence covers, and the unchecked parent directories of the login
+shell, the agent executable and the mounted system sources are recorded as an accepted
+residual risk instead of staying unmentioned.
+
 - Documented that a child exit status of `2` is indistinguishable from a CLI syntax error, and that a cleanup failure after a nonzero child exit keeps that status and joins both errors. (English and Russian.)
 - Documented that a bare `abx run <profile> --` with no agent arguments is accepted as a no-op, matching what the parser already did. (English and Russian.)
 - The security model now names the checks it had been leaving implicit: mounted system sources are trusted configuration without mode checks, login-shell replacement is a residual window like the agent one, the visible-shell list is static, a home under a protected tree such as `/var` has no carve-out, and uncovered base directories stay writable as ephemeral scratch. (English and Russian.)
@@ -15,7 +41,6 @@
 - The development guide drops the root-owned passwd claim for `ResolveAccount` and names all three live scenarios. (English and Russian.)
 - The Russian installation and security guides now say `other` where the home check allows group writes.
 - The release guide states precisely what is proven about force-pushed tags: pushing all tags at once starts no workflow; a single retargeted tag is untested. (English and Russian.)
-
 - Fixed: the security model no longer requires `/etc/passwd` to be owned by root. The code stopped requiring that in 0.8.24 because it refused to start in containers, but the document kept promising a refusal that never comes. The entry now matches the installation guide: a regular file group and other cannot rewrite, no owner requirement. (English and Russian.)
 - Documented that the parent directories of the login shell, agent executable, and mounted system sources are not checked for writability: a group member able to write one could substitute the binary a session runs. Accepted as a trade-off rather than fixed, since refusing would break team machines running umask 002. (English and Russian.)
 - Fixed: a session username containing a newline is refused the way a NUL byte already

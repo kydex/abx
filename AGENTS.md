@@ -26,7 +26,7 @@ Each guide answers one question: [Usage](docs/usage.md) for user-visible behavio
 
 Use focused behavior or regression tests for meaningful changes, particularly path boundaries, permissions, resource lifetime, and failure handling. Do not add tests just to mirror implementation or meet a coverage percentage.
 
-Run relevant tests during implementation and `make check` for production Go changes. Use `make live` on a supported non-root host when isolation, process launch, signal handling, working directory, or session lifetime changes, even if the namespace and mount configuration is unchanged. If that environment is unavailable, report the missing validation and give a focused follow-up; never describe mocks or skipped tests as a successful live run. Documentation-only changes need link and content checks; packaging changes need an archive smoke check.
+Run relevant tests during implementation and `make check` for any Go change, tests included: formatting and lint cover test files too, and a test-only commit has broken `make check` here before. Use `make live` on a supported non-root host when isolation, process launch, signal handling, working directory, or session lifetime changes, even if the namespace and mount configuration is unchanged. If that environment is unavailable, report the missing validation and give a focused follow-up; never describe mocks or skipped tests as a successful live run. Documentation-only changes need link and content checks; packaging changes need an archive smoke check.
 
 Use temporary storage for tests. Never create test profiles in the user's real home or use a working profile as a writable test mount.
 

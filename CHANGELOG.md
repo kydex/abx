@@ -14,6 +14,7 @@
 - The release guide names the narrowed tag trigger and lists the full source-archive contents. (English and Russian.)
 - The development guide drops the root-owned passwd claim for `ResolveAccount` and names all three live scenarios. (English and Russian.)
 - The Russian installation and security guides now say `other` where the home check allows group writes.
+- The release guide states precisely what is proven about force-pushed tags: pushing all tags at once starts no workflow; a single retargeted tag is untested. (English and Russian.)
 
 - Fixed: the security model no longer requires `/etc/passwd` to be owned by root. The code stopped requiring that in 0.8.24 because it refused to start in containers, but the document kept promising a refusal that never comes. The entry now matches the installation guide: a regular file group and other cannot rewrite, no owner requirement. (English and Russian.)
 - Documented that the parent directories of the login shell, agent executable, and mounted system sources are not checked for writability: a group member able to write one could substitute the binary a session runs. Accepted as a trade-off rather than fixed, since refusing would break team machines running umask 002. (English and Russian.)

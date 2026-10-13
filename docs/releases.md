@@ -85,6 +85,6 @@ Local packaging can be rehearsed at any time with `make package-smoke` against e
 
 Do not move an already published version tag to different contents. Publish later fixes as a new version.
 
-Force-pushing a tag starts no workflow. If a tag is recreated or retargeted locally and then sent with `git push --force`, the remote tag moves and GitHub runs nothing: no check job, no live job, no release artifacts, and no error anywhere to say why. It reads as a broken Actions setup. Push tags without `--force`; a branch may be forced when its history is being replaced.
+Pushing all tags at once with `git push --force` starts no workflow: the remote tags move and GitHub runs nothing — no check job, no live job, no release artifacts, and no error anywhere to say why. It reads as a broken Actions setup. A single retargeted tag sent with `--force` is untested. Push tags without `--force`; a branch may be forced when its history is being replaced.
 
 Archive metadata is not normalized for byte-for-byte reproducibility, and the workflow currently produces no build attestation.

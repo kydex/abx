@@ -27,7 +27,7 @@ make live
 
 The [optional manual checks](manual-checks.md) are available for diagnosis or targeted investigation. They are not a requirement before every release and add no release gate.
 
-Packaging runs after the tag exists (see *Publish a version*, step 5): the script requires the release tag on `HEAD`, so it cannot be rehearsed before that. To rehearse against archives you already have, run `make package-smoke`.
+Packaging runs after the tag exists (see *Publish a version*, step 5): the release run requires the tag on `HEAD`. The same archives can be built and smoke-checked without a tag with `make package-check`, which builds into a temporary directory and runs the same checks; `make check` runs it, so a packaging regression fails on a branch or pull request instead of only at the tag. To check archives you already have, run `make package-smoke`.
 
 `make package` reads `internal/app/VERSION` and delegates to `scripts/package.sh`. The packaging script does not run tests and does not create a git tag. In a git work tree it requires:
 
@@ -81,7 +81,7 @@ publication risk, only a wasted run.
 6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. Download its workflow artifact: the archive files inside keep their `abx-X.Y.Z-*` names, so `(cd <downloaded> && sha256sum -c "abx-X.Y.Z-SHA256SUMS")` verifies them as-is. Then smoke-test the binary.
 7. Publish the verified binary archive, source archive, and checksum manifest through the project's release channel — see the note above on what that means. Report the SHA-256 values.
 
-Local packaging can be rehearsed at any time with `make package-smoke` against existing `dist/` files; `make package` itself requires the tag, so run it after step 5.
+Local packaging can be rehearsed without a tag with `make package-check`; `make package-smoke` checks archives already in `dist/`, and `make package` itself requires the tag, so run it after step 5.
 
 Do not move an already published version tag to different contents. Publish later fixes as a new version.
 

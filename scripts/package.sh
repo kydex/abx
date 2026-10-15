@@ -2,19 +2,36 @@
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd -- "$root"
-tag=${1:?usage: bash scripts/package.sh vX.Y.Z}
-if [[ ! $tag =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-    printf 'Invalid release tag: %s\n' "$tag" >&2
-    exit 2
-fi
+
+# Release mode requires the release tag on HEAD and a clean tree, so the
+# archive name cannot lie about its contents. Check mode builds the same
+# archives into a caller-provided directory without those gates, so make
+# check can rehearse packaging on any branch; see make package-check.
+mode=release
+case "${1-}" in
+--check)
+    mode=check
+    outdir=${2:?usage: bash scripts/package.sh --check OUTDIR}
+    ;;
+*)
+    tag=${1:?usage: bash scripts/package.sh vX.Y.Z | bash scripts/package.sh --check OUTDIR}
+    outdir=dist
+    if [[ ! $tag =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+        printf 'Invalid release tag: %s\n' "$tag" >&2
+        exit 2
+    fi
+    ;;
+esac
 version=$(<internal/app/VERSION)
 if [[ ! $version =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
     printf 'Invalid source version: %s\n' "$version" >&2
     exit 2
 fi
-if [[ ${tag#v} != "$version" ]]; then
-    printf 'Tag %s does not match source version %s\n' "$tag" "$version" >&2
-    exit 2
+if [ "$mode" = release ]; then
+    if [[ ${tag#v} != "$version" ]]; then
+        printf 'Tag %s does not match source version %s\n' "$tag" "$version" >&2
+        exit 2
+    fi
 fi
 # A source archive unpacked inside an unrelated repository (for example a
 # home directory under git) is not a release checkout: treat it as a plain
@@ -26,7 +43,7 @@ else
     in_git=false
     printf 'warning: not a git release checkout; packaging archives from the working directory as-is\n' >&2
 fi
-if $in_git; then
+if $in_git && [ "$mode" = release ]; then
     # A-068: the tag must point at this checkout, otherwise the archive
     # name would lie about its contents. Plain builds (go build,
     # build-check, tests) are unaffected — only release packaging is gated.
@@ -53,10 +70,10 @@ if $in_git; then
     fi
 fi
 umask 022
-mkdir -p dist
+mkdir -p "$outdir"
 # A-067: drop stale archives first so a failed build cannot leave old files
 # behind for a later smoke check to bless.
-rm -f dist/abx-"$version"-linux-amd64.tar.gz dist/abx-"$version"-source.tar.gz dist/abx-"$version"-SHA256SUMS
+rm -f "$outdir/abx-$version-linux-amd64.tar.gz" "$outdir/abx-$version-source.tar.gz" "$outdir/abx-$version-SHA256SUMS"
 stage=$(mktemp -d)
 # A-067: a build that fails partway must not leave a partial archive behind for
 # a later smoke check to treat as a release candidate. Runs only on failure,
@@ -67,7 +84,7 @@ failed=1
 cleanup() {
     rm -rf -- "$stage"
     if [ "$failed" -ne 0 ]; then
-        rm -f "dist/abx-$version-linux-amd64.tar.gz" "dist/abx-$version-source.tar.gz" "dist/abx-$version-SHA256SUMS"
+        rm -f "$outdir/abx-$version-linux-amd64.tar.gz" "$outdir/abx-$version-source.tar.gz" "$outdir/abx-$version-SHA256SUMS"
     fi
 }
 trap cleanup EXIT
@@ -85,7 +102,7 @@ if $in_git; then
 else
     cp -R docs "$stage/$name/docs"
 fi
-tar --owner=0 --group=0 --numeric-owner -C "$stage" -czf "dist/$name.tar.gz" "$name"
+tar --owner=0 --group=0 --numeric-owner -C "$stage" -czf "$outdir/$name.tar.gz" "$name"
 source="abx-$version-source"
 mkdir "$stage/$source"
 if $in_git; then
@@ -109,6 +126,6 @@ if $in_git; then
         exit 2
     fi
 fi
-tar --owner=0 --group=0 --numeric-owner -C "$stage" -czf "dist/$source.tar.gz" "$source"
-(cd dist && sha256sum "$name.tar.gz" "$source.tar.gz" > "abx-$version-SHA256SUMS")
+tar --owner=0 --group=0 --numeric-owner -C "$stage" -czf "$outdir/$source.tar.gz" "$source"
+(cd "$outdir" && sha256sum "$name.tar.gz" "$source.tar.gz" > "abx-$version-SHA256SUMS")
 failed=0

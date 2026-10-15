@@ -28,7 +28,7 @@ make package
 make package-smoke
 ```
 
-`make package-smoke` распаковывает архивы из `dist/`. `make package` требует тег релиза на `HEAD`; порядок выпуска — в [Releases](releases.md).
+`make package-smoke` распаковывает архивы из `dist/`. `make package` требует тег релиза на `HEAD`; порядок выпуска — в [Releases](releases.md). `make package-check` собирает архивы во временный каталог без тега и выполняет те же проверки; `make check` запускает её, поэтому дефект упаковки обнаруживается до тега.
 
 Полный набор локальных проверок:
 
@@ -43,6 +43,7 @@ make check
 - `actionlint` для GitHub Actions workflows;
 - `govulncheck`;
 - проверку статической production-сборки;
+- smoke-проверку структуры обоих архивов, собранных без релизного тега (`make package-check`);
 - Go-тесты с race detector без кэша и общим coverage floor из `Makefile`;
 - независимый прогон `go vet` в дополнение к проверке govet внутри golangci.
 

@@ -28,7 +28,7 @@ make package
 make package-smoke
 ```
 
-`make package-smoke` unpacks the archives from `dist/`. `make package` requires the release tag on `HEAD`; see [Releases](releases.md) for the release flow.
+`make package-smoke` unpacks the archives from `dist/`. `make package` requires the release tag on `HEAD`; see [Releases](releases.md) for the release flow. `make package-check` builds the archives into a temporary directory without a tag and runs the same checks; `make check` runs it, so a packaging regression fails before the tag.
 
 Run the full local check suite:
 
@@ -43,6 +43,7 @@ make check
 - `actionlint` for GitHub Actions workflows;
 - `govulncheck`;
 - static production build check;
+- a structure smoke check of both archives, built without a release tag (`make package-check`);
 - race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`;
 - an independent `go vet` pass besides the golangci govet check.
 

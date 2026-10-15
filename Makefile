@@ -1,4 +1,4 @@
-.PHONY: test check lint shellcheck actionlint local-diff-check security build-check licenses-check coverage-check build package package-smoke clean live
+.PHONY: test check lint shellcheck actionlint local-diff-check security build-check licenses-check coverage-check build package package-smoke package-check clean live
 
 COVERAGE_MIN ?= 74.0
 
@@ -47,7 +47,7 @@ coverage-check:
 	total=$$(go tool cover -func="$$profile" | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v got="$$total" -v min="$(COVERAGE_MIN)" 'BEGIN { if (got + 0 < min + 0) { printf "coverage %.1f%% is below minimum %.1f%%\n", got, min; exit 1 } printf "coverage %.1f%% (minimum %.1f%%)\n", got, min }'
 
-check: lint shellcheck actionlint security build-check licenses-check coverage-check
+check: lint shellcheck actionlint security build-check licenses-check package-check coverage-check
 	go vet ./...
 
 build:
@@ -62,52 +62,18 @@ package:
 # against the mandatory file list plus the embedded version.
 # The release binary itself is not executed, so this works for any caller.
 package-smoke:
+	@bash scripts/package-smoke.sh dist
+
+# Rehearses release packaging on any branch: builds both archives into a
+# throwaway directory without a release tag or cleanliness gate and runs the
+# same smoke checks, so a packaging regression fails here instead of only at
+# the tag.
+package-check:
 	@set -eu; \
-	version=$$(cat internal/app/VERSION); \
 	work=$$(mktemp -d); \
 	trap 'rm -rf "$$work"' EXIT HUP INT TERM; \
-	test -f "dist/abx-$$version-linux-amd64.tar.gz" || { echo "error: dist/abx-$$version-linux-amd64.tar.gz is missing; run 'make package' first" >&2; exit 1; }; \
-	test -f "dist/abx-$$version-source.tar.gz" || { echo "error: dist/abx-$$version-source.tar.gz is missing; run 'make package' first" >&2; exit 1; }; \
-	test -f "dist/abx-$$version-SHA256SUMS" || { echo "error: dist/abx-$$version-SHA256SUMS is missing; run 'make package' first" >&2; exit 1; }; \
-	(cd dist && sha256sum -c "abx-$$version-SHA256SUMS"); \
-	tar -xzf "dist/abx-$$version-linux-amd64.tar.gz" -C "$$work"; \
-	test -x "$$work/abx-$$version-linux-amd64/abx"; \
-	if [ "$$(id -u)" -ne 0 ]; then \
-		"$$work/abx-$$version-linux-amd64/abx" version > "$$work/version.out"; \
-		printf 'abx %s\n' "$$version" | cmp -s - "$$work/version.out"; \
-	else \
-		echo "note: built as root, so the archive was not executed: abx refuses to run as root, which is the correct behaviour, not a broken archive"; \
-	fi; \
-	test -f "$$work/abx-$$version-linux-amd64/LICENSE"; \
-	test -f "$$work/abx-$$version-linux-amd64/THIRD_PARTY_LICENSES"; \
-	test -f "$$work/abx-$$version-linux-amd64/README.md"; \
-	test -f "$$work/abx-$$version-linux-amd64/README.ru.md"; \
-	test -f "$$work/abx-$$version-linux-amd64/CHANGELOG.md"; \
-	test -d "$$work/abx-$$version-linux-amd64/docs"; \
-	test -d "$$work/abx-$$version-linux-amd64/docs/ru"; \
-	! test -e "$$work/abx-$$version-linux-amd64/AGENTS.md"; \
-	! test -e "$$work/abx-$$version-linux-amd64/AGENTS.ru.md"; \
-	tar -xzf "dist/abx-$$version-source.tar.gz" -C "$$work"; \
-	test -d "$$work/abx-$$version-source/cmd"; \
-	test -d "$$work/abx-$$version-source/internal"; \
-	test -d "$$work/abx-$$version-source/scripts"; \
-	test -d "$$work/abx-$$version-source/docs"; \
-	test -d "$$work/abx-$$version-source/.github"; \
-	test -f "$$work/abx-$$version-source/go.mod"; \
-	test -f "$$work/abx-$$version-source/go.sum"; \
-	test -f "$$work/abx-$$version-source/Makefile"; \
-	test -f "$$work/abx-$$version-source/README.md"; \
-	test -f "$$work/abx-$$version-source/README.ru.md"; \
-	test -f "$$work/abx-$$version-source/AGENTS.md"; \
-	test -f "$$work/abx-$$version-source/AGENTS.ru.md"; \
-	test -f "$$work/abx-$$version-source/CHANGELOG.md"; \
-	test -f "$$work/abx-$$version-source/LICENSE"; \
-	test -f "$$work/abx-$$version-source/THIRD_PARTY_LICENSES"; \
-	test -f "$$work/abx-$$version-source/.gitignore"; \
-	test -f "$$work/abx-$$version-source/.golangci.yml"; \
-	test "$$(cat "$$work/abx-$$version-source/internal/app/VERSION")" = "$$version"; \
-	(cd "$$work/abx-$$version-source" && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./cmd/abx); \
-	printf 'package smoke ok: %s\n' "$$version"
+	bash scripts/package.sh --check "$$work"; \
+	bash scripts/package-smoke.sh "$$work"
 
 clean:
 	rm -rf ./abx dist coverage.out

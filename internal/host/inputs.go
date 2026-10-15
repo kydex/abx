@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -270,18 +271,53 @@ func resolveAgent(home, name string) (string, error) {
 	return "", fmt.Errorf("profile %q has no executable", name)
 }
 
+// role names a retained object for diagnostics: the same failure covers
+// several kinds of source, and the message must say which one changed.
+func (in *Inputs) role(path string) string {
+	switch {
+	case path == in.home:
+		return "profile home"
+	case path == in.paths.Root:
+		return "data root"
+	case path == in.paths.Profiles:
+		return "profiles directory"
+	case path == in.paths.Shared:
+		return "shared directory"
+	case path == in.project:
+		return "project"
+	case path == in.skills:
+		return "shared skills"
+	case path == filepath.Dir(in.paths.SharedSkills):
+		return "shared skills directory"
+	}
+	for _, s := range in.system {
+		if path == s.Path {
+			return "system source"
+		}
+	}
+	return "source"
+}
+
 // Revalidate detects replacement of selected source objects; it never rebuilds inputs.
 func (in *Inputs) Revalidate() error {
 	if len(in.objects) == 0 {
 		return errors.New("inputs are closed")
 	}
-	for path, o := range in.objects {
+	// Sorted keys make the reported object deterministic when several were
+	// replaced between selection and preparation.
+	paths := make([]string, 0, len(in.objects))
+	for path := range in.objects {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	for _, path := range paths {
+		o := in.objects[path]
 		info, err := os.Lstat(path)
 		if err != nil {
 			return err
 		}
 		if !os.SameFile(info, o.info) {
-			return fmt.Errorf("selected source changed: %q", path)
+			return fmt.Errorf("selected source changed: %q (%s)", path, in.role(path))
 		}
 		if path == in.home || path == in.paths.Root ||
 			path == in.paths.Profiles || path == in.paths.Shared {
@@ -290,12 +326,17 @@ func (in *Inputs) Revalidate() error {
 			}
 		}
 	}
-	for path, want := range in.links {
+	links := make([]string, 0, len(in.links))
+	for path := range in.links {
+		links = append(links, path)
+	}
+	sort.Strings(links)
+	for _, path := range links {
 		got, err := os.Readlink(path)
 		if err != nil {
 			return err
 		}
-		if got != want {
+		if got != in.links[path] {
 			return fmt.Errorf("system link changed: %q", path)
 		}
 	}

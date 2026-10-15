@@ -8,6 +8,7 @@
 - Fixed: a cleanup failure after a launcher-side failure no longer reports `child exited with status 1`; the phrase names the child's own exit status only.
 - Fixed: a forwarded host environment value longer than 64 KiB is refused before the sandbox starts, with an error naming the variable. Such a value previously failed inside `execve` as a raw "argument list too long" whose troubleshooting advice pointed at unprivileged user namespaces. The verify probe keeps its own 64 KiB input bound, now named in the guides. (English and Russian.)
 - Fixed: a Bubblewrap version probe that fails for a reason other than its 5s deadline or caller cancellation now reports that reason. The message wrapped the probe deadline context instead of the run error and rendered the nil value as `%!w(<nil>)`.
+- Fixed: when selected sources changed between validation and preparation, the error now names the same object every time -- the first in sorted order -- and says what it is (profile home, data root, project, and so on). The name used to depend on map order and carry no role.
 
 ## 0.8.25
 

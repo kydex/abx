@@ -2,6 +2,7 @@ package host
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -65,6 +66,26 @@ func TestSourcesRemainBoundToOpenedObject(t *testing.T) {
 	}
 	if e = in.Close(); e != nil {
 		t.Fatal(e)
+	}
+}
+
+func TestRevalidateNamesSortedFirstChangeWithRole(t *testing.T) {
+	in := fixture(t)
+	// Replace every object; the report must always name the same one -- the
+	// sorted first -- with its role, whatever order the map yields.
+	for _, p := range []string{in.home, in.paths.Profiles, in.paths.Root} {
+		if err := os.Rename(p, p+".replaced"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(p, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := fmt.Sprintf("selected source changed: %q (data root)", in.paths.Root)
+	for i := 0; i < 25; i++ {
+		if err := in.Revalidate(); err == nil || err.Error() != want {
+			t.Fatalf("revalidation %d = %v, want %q", i, err, want)
+		}
 	}
 }
 

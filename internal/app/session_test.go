@@ -238,6 +238,30 @@ func TestVersionCommand(t *testing.T) {
 	}
 }
 
+// Help text is the whole documentation that exists before any command runs; it
+// must reach empty arguments and "help" alike, and name every command the
+// parser accepts.
+func TestHelpDescribesEveryParsedCommand(t *testing.T) {
+	if os.Getuid() == 0 || os.Geteuid() == 0 || os.Geteuid() != os.Getuid() {
+		t.Skip("public CLI requires a non-root user")
+	}
+	for _, args := range [][]string{nil, {"help"}} {
+		var out, stderr bytes.Buffer
+		status := Run(context.Background(), args, bwrap.Stdio{Out: &out, Err: &stderr})
+		if status != 0 || stderr.Len() != 0 {
+			t.Fatalf("help args %q: status=%d stderr=%q", args, status, stderr.String())
+		}
+		if out.Len() == 0 {
+			t.Fatalf("help args %q: no output", args)
+		}
+		for _, kind := range []cli.Kind{cli.ProfileCreate, cli.ProfileShow, cli.ProfileList, cli.Run, cli.Shell, cli.Work, cli.Inspect, cli.Verify, cli.Help, cli.Version} {
+			if !strings.Contains(out.String(), string(kind)) {
+				t.Errorf("help args %q: does not mention %q", args, kind)
+			}
+		}
+	}
+}
+
 func TestExecuteSessionPreparesRetainedInputsBeforeExecution(t *testing.T) {
 	in := inputs(t, host.Run)
 	plan, err := buildPlan(in, nil)

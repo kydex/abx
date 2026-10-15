@@ -78,7 +78,7 @@ workflow re-runs both check and live against the tagged commit itself and
 packages nothing unless both pass. A tag pushed early is therefore not a
 publication risk, only a wasted run.
 
-6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. Download its workflow artifact: the archive files inside keep their `abx-X.Y.Z-*` names, so `(cd <downloaded> && sha256sum -c "abx-X.Y.Z-SHA256SUMS")` verifies them as-is. Then smoke-test the binary.
+6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. A non-root caller then executes `abx version` from the unpacked binary archive; a root caller skips that step, since abx refuses to work as root. Download its workflow artifact: the archive files inside keep their `abx-X.Y.Z-*` names, so `(cd <downloaded> && sha256sum -c "abx-X.Y.Z-SHA256SUMS")` verifies them as-is. Then smoke-test the binary.
 7. Publish the verified binary archive, source archive, and checksum manifest through the project's release channel — see the note above on what that means. Report the SHA-256 values.
 
 Local packaging can be rehearsed without a tag with `make package-check`; `make package-smoke` checks archives already in `dist/`, and `make package` itself requires the tag, so run it after step 5.

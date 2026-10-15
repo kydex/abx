@@ -60,7 +60,8 @@ package:
 
 # Verifies the checksum manifest, unpacks both archives and checks structure
 # against the mandatory file list plus the embedded version.
-# The release binary itself is not executed, so this works for any caller.
+# A non-root caller also runs `abx version` from the unpacked binary archive;
+# a root caller skips that, since abx refuses to run as root.
 package-smoke:
 	@bash scripts/package-smoke.sh dist
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Verifies the checksum manifest, unpacks both archives and checks structure
 # against the mandatory file list plus the embedded version.
-# The release binary itself is not executed, so this works for any caller.
+# A non-root caller also runs `abx version` from the unpacked binary archive;
+# a root caller skips that, since abx refuses to run as root.
 # usage: bash scripts/package-smoke.sh [dir]   (default: dist)
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)

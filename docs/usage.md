@@ -250,7 +250,7 @@ The input the launcher hands the probe is limited to 64 KiB, environment include
 
 The read-only checks inspect mount flags at the selected mountpoints; they do not independently check every nested mount. Read-only enforcement is delegated to Bubblewrap. See the [verification scope](security.md#verification).
 
-Verification temporarily creates probe files in the real home and removes them before reporting final success. A forced process kill or host crash can leave such temporary files behind.
+Verification temporarily creates probe files in the real home, the selected profile's home directory, and the selected project, and removes them before reporting final success. A forced process kill or host crash can leave such temporary files behind.
 
 The `__probe` entry point is private: it runs only inside the sandbox as `/abx-probe` and host-side invocations are rejected.
 

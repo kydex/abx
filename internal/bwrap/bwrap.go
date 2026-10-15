@@ -131,7 +131,9 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	check, cancel := context.WithTimeout(ctx, bwrapProbeTimeout)
 	defer cancel()
 	// Execute the retained object, not a second lookup after validation.
-	cmd := exec.CommandContext(check, "/proc/self/fd/3", "--version")
+	// It is the only extra file, so it starts at firstChildFD.
+	// #nosec G204 -- the path is the firstChildFD constant, not external input.
+	cmd := exec.CommandContext(check, "/proc/self/fd/"+strconv.Itoa(firstChildFD), "--version")
 	cmd.ExtraFiles = []*os.File{f}
 	cmd.Env = []string{"LC_ALL=C"}
 	cmd.Dir = "/"

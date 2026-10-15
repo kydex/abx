@@ -12,6 +12,16 @@ import (
 	"github.com/kydex/abx/internal/host"
 )
 
+// runProfiles serves a closed set of profile commands; a future kind must be
+// refused rather than fall through to success.
+func TestUnknownProfileOperationFailsClosed(t *testing.T) {
+	var out bytes.Buffer
+	status, err := runProfiles(cli.Command{Kind: cli.Kind("future-profile-op")}, host.Account{}, host.Paths{}, &out)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "unsupported profile operation") {
+		t.Fatalf("unknown profile operation = status %d, error %v", status, err)
+	}
+}
+
 func TestProfileCommandsReportWithoutRuntime(t *testing.T) {
 	base := t.TempDir()
 	a := host.Account{UID: os.Getuid(), Username: "tester", Home: base}

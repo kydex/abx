@@ -43,6 +43,7 @@ make check
 - `actionlint` for GitHub Actions workflows;
 - `govulncheck`;
 - static production build check;
+- a check that `THIRD_PARTY_LICENSES` matches the build's module list;
 - a structure smoke check of both archives, built without a release tag (`make package-check`);
 - race-enabled uncached Go tests with the aggregate coverage floor from `Makefile`;
 - an independent `go vet` pass besides the golangci govet check.

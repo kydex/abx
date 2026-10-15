@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The development guides now name the `THIRD_PARTY_LICENSES` check among the `make check` steps; the Russian guide now carries the 12 October date for the `/etc/passwd` root-ownership removal and a translated releases link text. (English and Russian.)
+
 ## 0.8.26
 
 - Fixed: `profile show` and `profile list` no longer reject an agent installed as a symlink under a mounted system path such as `/usr`. Profile inputs carried no discovered system sources, so the placement check refused the layout `run` accepts and the security guide calls supported.

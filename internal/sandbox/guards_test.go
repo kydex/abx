@@ -86,6 +86,26 @@ func TestValidateRejectsPlanEditedAfterBuild(t *testing.T) {
 			t.Fatalf("size accepted on an expected non-tmpfs mount: %v", err)
 		}
 	})
+	t.Run("relative system source", func(t *testing.T) {
+		q := p
+		q.expected.system = append([]Mount{}, p.expected.system...)
+		q.mounts = append([]Mount{}, p.mounts...)
+		q.expected.system[0].Source = "usr"
+		q.mounts[len(baseMounts())].Source = "usr"
+		if err := q.Validate(); err == nil || !strings.Contains(err.Error(), "invalid system source") {
+			t.Fatalf("relative system source accepted: %v", err)
+		}
+	})
+	t.Run("empty compatibility link source", func(t *testing.T) {
+		q := p
+		q.expected.system = append([]Mount{}, p.expected.system...)
+		q.mounts = append([]Mount{}, p.mounts...)
+		q.expected.system[1].Source = ""
+		q.mounts[len(baseMounts())+1].Source = ""
+		if err := q.Validate(); err == nil || !strings.Contains(err.Error(), "invalid system source") {
+			t.Fatalf("empty compatibility link source accepted: %v", err)
+		}
+	})
 }
 
 // A sandbox with no /usr has nothing to run. The mount may come from anywhere in
@@ -251,6 +271,17 @@ func TestBuildAloneRefusesEscapingCompatibilityLink(t *testing.T) {
 	}
 	if _, err := build(in); err == nil || !strings.Contains(err.Error(), "not a relative path inside /usr") {
 		t.Fatalf("build let an escaping compatibility link through: %v", err)
+	}
+}
+
+// The same rules must hold when build runs alone: a system source that is not
+// a clean absolute path has to stop the construction, not only the later
+// barrier.
+func TestBuildAloneRefusesInvalidSystemSource(t *testing.T) {
+	in := testInput(t, Run)
+	in.System[0].Source = "usr"
+	if _, err := build(in); err == nil || !strings.Contains(err.Error(), "invalid system source") {
+		t.Fatalf("build accepted a relative system source: %v", err)
 	}
 }
 

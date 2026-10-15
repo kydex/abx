@@ -208,8 +208,11 @@ func TestVerifyRunCycle(t *testing.T) {
 			openStubTool(t),
 			func(_ context.Context, _ *bwrap.Tool, plan sandbox.Plan, _ func(string) (*os.File, error), _ bwrap.Stdio) (int, error) {
 				payload = plan.Command()[2]
-				// The sentinel must already exist when Execute is called: the
-				// probe deletes it and verify then checks that it is gone.
+				// The sentinel must already exist when Execute is called:
+				// the probe checks that this path is absent inside the
+				// sandbox, which means nothing unless the file exists
+				// outside it. The host side removes it after Execute and
+				// reports a missing or replaced file as a cleanup failure.
 				entries, readErr := os.ReadDir(home)
 				if readErr != nil || len(entries) != 1 {
 					t.Errorf("sentinel present at Execute: %d entries, %v", len(entries), readErr)

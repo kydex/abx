@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+# Resolve the script path and the checkout root physically: git reports the
+# physical work tree, so only a physical root compares equal to it. Through a
+# symlinked path the logical root differed and every gate below was skipped
+# silently.
+script=$(readlink -f -- "${BASH_SOURCE[0]}")
+root=$(cd -- "$(dirname -- "$script")/.." && pwd -P)
 cd -- "$root"
 
 # Release mode requires the release tag on HEAD and a clean tree, so the

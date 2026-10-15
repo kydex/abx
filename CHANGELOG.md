@@ -13,6 +13,7 @@
 - Fixed: diagnostic text keeps invalid UTF-8 bytes as `\xNN` instead of replacing each one with U+FFFD, so a path with such bytes is reported exactly.
 - Fixed: the compatibility link check (the /bin, /sbin, /lib, /lib64 aliases) resolves the link text from the sandbox root, where the link sits, so "usr/bin/../../etc" is refused as /etc; option-like texts and /usr itself are refused too. Only a path below /usr passes.
 - Fixed: a compatibility symlink (/bin, /sbin, /lib, /lib64) whose target resolves outside the mounted system sources -- for example through a further link inside /usr -- is now refused at discovery, naming the link and its target. It previously built a sandbox whose compatibility path led nowhere, and the session failed at exec blaming the tool.
+- Fixed: a project swapped for a regular file between path validation and opening is refused with an error that says so, instead of being retained and mounted at `/workspace`.
 
 ## 0.8.25
 

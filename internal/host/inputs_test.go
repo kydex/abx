@@ -108,6 +108,20 @@ func TestRevalidateRefusesMalformedSystemSource(t *testing.T) {
 	}
 }
 
+// ResolveProject judges the project path before it is opened; a path swapped
+// for a regular file in between must not be retained and mounted.
+func TestRetainProjectRequiresADirectory(t *testing.T) {
+	in := fixture(t)
+	file := filepath.Join(t.TempDir(), "project")
+	if err := os.WriteFile(file, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	in.project = file
+	if err := in.retainProject(); err == nil || !strings.Contains(err.Error(), "is not a directory") {
+		t.Fatalf("regular file accepted as project: %v", err)
+	}
+}
+
 func countOpenFDs(t *testing.T) int {
 	t.Helper()
 	entries, err := os.ReadDir("/proc/self/fd")

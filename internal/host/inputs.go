@@ -97,6 +97,20 @@ func (in *Inputs) retain(path string) error {
 	return nil
 }
 
+// retainProject opens the project and then requires the retained object itself
+// to be a directory. ResolveProject judged the same path by name; between that
+// check and this open the name can be swapped for a regular file, which retain
+// accepts for the /etc sources and would otherwise mount at /workspace.
+func (in *Inputs) retainProject() error {
+	if err := in.retain(in.project); err != nil {
+		return err
+	}
+	if !in.objects[in.project].info.IsDir() {
+		return fmt.Errorf("project %q is not a directory", in.project)
+	}
+	return nil
+}
+
 func (in *Inputs) private(path string) error {
 	if err := in.retain(path); err != nil {
 		return err
@@ -166,7 +180,7 @@ func resolve(account Account, paths Paths, name, project string, mode Mode, need
 		if err != nil {
 			return nil, err
 		}
-		if err = in.retain(in.project); err != nil {
+		if err = in.retainProject(); err != nil {
 			return nil, err
 		}
 		if mode == Run && needAgent {

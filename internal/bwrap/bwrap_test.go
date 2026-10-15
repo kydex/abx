@@ -200,6 +200,39 @@ printf 'SELF=%s\n' "$0"`)
 	}
 }
 
+// A refused plan must be reported with its own reason: starting Bubblewrap
+// with no arguments replaces "invalid plan"/"bind source" with its help text.
+func TestExecuteReportsTranslationRefusal(t *testing.T) {
+	tool, err := open(context.Background(), writeScript(t, `printf 'bubblewrap 0.12.0\n'`), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tool.Close()
+	status, err := Execute(context.Background(), tool, sandbox.Plan{}, func(string) (*os.File, error) { return nil, errors.New("unused") }, Stdio{Out: io.Discard, Err: io.Discard})
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "invalid plan") {
+		t.Fatalf("invalid plan = status %d, err %v", status, err)
+	}
+	status, err = Execute(context.Background(), tool, plan(t, sandbox.Shell), func(string) (*os.File, error) { return nil, errors.New("gone") }, Stdio{Out: io.Discard, Err: io.Discard})
+	if status != 1 || err == nil || !strings.Contains(err.Error(), `bind source for "/usr": gone`) {
+		t.Fatalf("bind source = status %d, err %v", status, err)
+	}
+}
+
+// A context cancelled before start must not run the command at all: the
+// caller cancelled it, and verify bounds the session with a 30s context.
+func TestExecuteDoesNotStartCancelledCommand(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "started")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	status, err := execute(ctx, exec.Command(writeScript(t, "touch "+marker)), Stdio{Out: io.Discard, Err: io.Discard})
+	if status != 1 || !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled start = status %d, err %v", status, err)
+	}
+	if _, err := os.Stat(marker); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("command ran despite the cancelled context")
+	}
+}
+
 // versionOK is a test-only shorthand for the production version check.
 func versionOK(s string) bool { return validateVersion(s) == nil }
 

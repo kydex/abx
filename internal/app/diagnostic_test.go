@@ -113,6 +113,8 @@ func TestIsolationSummaryMatchesBubblewrapNamespacePolicy(t *testing.T) {
 		"uts namespace: private",
 		"mount namespace: private",
 		"network: shared with host",
+		"nested user namespaces: disabled",
+		"lifetime: killed with the launcher",
 	} {
 		if !strings.Contains(isolationSummary, want) {
 			t.Fatalf("missing isolation summary line %q", want)

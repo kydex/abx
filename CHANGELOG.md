@@ -15,6 +15,7 @@
 - Fixed: a compatibility symlink (/bin, /sbin, /lib, /lib64) whose target resolves outside the mounted system sources -- for example through a further link inside /usr -- is now refused at discovery, naming the link and its target. It previously built a sandbox whose compatibility path led nowhere, and the session failed at exec blaming the tool.
 - Fixed: a project swapped for a regular file between path validation and opening is refused with an error that says so, instead of being retained and mounted at `/workspace`.
 - Fixed: a failure inspecting the shared skills path says which check failed (`inspect shared skills "<path>": ...`) instead of returning a bare `lstat` error. Late entry: the change shipped in 0.8.25 without a changelog note.
+- The `inspect` isolation summary gained two lines: `nested user namespaces: disabled` and `lifetime: killed with the launcher`. Both properties were enforced all along by the shared Bubblewrap arguments; the summary just did not name them.
 
 ## 0.8.25
 

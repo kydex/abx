@@ -14,6 +14,8 @@ const isolationSummary = `isolation:
   uts namespace: private
   mount namespace: private
   network: shared with host
+  nested user namespaces: disabled
+  lifetime: killed with the launcher
 `
 
 // formatPlan returns a readable command description, never a reusable shell string.

@@ -240,9 +240,11 @@ func TestBuildRequiresUsrInSystemLayout(t *testing.T) {
 }
 
 // The compatibility link text is read from the host, not written here, and the
-// sandbox mounts only /usr. A link pointing anywhere else resolves to a
-// directory the sandbox creates empty, so the agent would find no binaries and
-// nothing would say why.
+// sandbox mounts only /usr. The link sits at the root of the sandbox tree, so
+// its text resolves from "/", not from the mount point: "usr/bin/../lib" is
+// /usr/lib, while "usr/bin/../../etc" is /etc. A link pointing anywhere else
+// resolves to a directory the sandbox creates empty, so the agent would find
+// no binaries and nothing would say why.
 func TestCompatibilityLinkMustStayInUsr(t *testing.T) {
 	for _, src := range []string{
 		"usr/bin", "usr/sbin", "usr/lib", "usr/lib64",
@@ -255,6 +257,8 @@ func TestCompatibilityLinkMustStayInUsr(t *testing.T) {
 	for _, src := range []string{
 		"/etc", "/bin", "../etc", "../../home/kdx/.ssh", "usr/../../etc",
 		"/", ".", "", "usr/../../../..",
+		"usr/bin/../../etc", "usr/a/b/../../../etc",
+		"usr/lib/x86_64-linux-gnu/../../../etc", "-foo", "usr",
 	} {
 		if compatibilitySourceKeptInUsr(src) {
 			t.Errorf("accepted a link that leaves /usr: %q", src)
@@ -269,7 +273,7 @@ func TestBuildRejectsCompatibilityLinkEscapingUsr(t *testing.T) {
 			in.System[i].Source = "../../home/kdx/.ssh"
 		}
 	}
-	if _, err := Build(in); err == nil || !strings.Contains(err.Error(), "escapes /usr") {
+	if _, err := Build(in); err == nil || !strings.Contains(err.Error(), "not a relative path inside /usr") {
 		t.Fatalf("accepted a compatibility link outside /usr: %v", err)
 	}
 	// The same link reaching Validate alone must be refused there too: Validate
@@ -285,7 +289,7 @@ func TestBuildRejectsCompatibilityLinkEscapingUsr(t *testing.T) {
 			p.mounts[i].Source = "/etc"
 		}
 	}
-	if err = p.Validate(); err == nil || !strings.Contains(err.Error(), "escapes /usr") {
+	if err = p.Validate(); err == nil || !strings.Contains(err.Error(), "not a relative path inside /usr") {
 		t.Fatalf("Validate accepted a compatibility link outside /usr: %v", err)
 	}
 }

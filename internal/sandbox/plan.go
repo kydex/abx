@@ -135,15 +135,18 @@ func compatibilityTarget(target string) bool {
 //
 // The link text is read from the host, not written here: /bin, /sbin, /lib and
 // /lib64 are conventionally relative links into /usr and the sandbox mounts
-// exactly that tree. A link that is absolute, or that climbs out with ..,
-// would resolve to a directory the sandbox creates empty, so the agent would
-// find no binaries and no error would say why. Refusing it here names the
+// exactly that tree. The link itself sits at the root of the sandbox tree, so
+// its text resolves from "/": anchoring the check at the mount point made
+// "usr/bin/../../etc" look like /usr/etc, while the kernel reads it as /etc.
+// A link that is absolute, option-like, or that climbs out with .., resolves
+// outside the mounted tree or reads as an argument to Bubblewrap, so the agent
+// would find no binaries and no error would say why; refusing it here names the
 // cause instead of producing a silently broken sandbox.
 func compatibilitySourceKeptInUsr(source string) bool {
-	if source == "" || filepath.IsAbs(source) {
+	if source == "" || filepath.IsAbs(source) || strings.HasPrefix(source, "-") {
 		return false
 	}
-	rel, err := filepath.Rel("/usr", filepath.Clean(filepath.Join("/usr", source)))
+	rel, err := filepath.Rel("/usr", filepath.Clean("/"+source))
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return false
 	}

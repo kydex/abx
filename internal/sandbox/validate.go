@@ -75,7 +75,7 @@ func (p Plan) Validate() error {
 			return errors.New("invalid expected system source")
 		}
 		if m.Kind == Symlink && !compatibilitySourceKeptInUsr(m.Source) {
-			return fmt.Errorf("expected system link %q escapes /usr: %q", m.Target, m.Source)
+			return fmt.Errorf("expected system link %q is not a relative path inside /usr: %q", m.Target, m.Source)
 		}
 		if m.Size != 0 {
 			return fmt.Errorf("invalid expected system mount %q", m.Target)

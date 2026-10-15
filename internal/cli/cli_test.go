@@ -68,6 +68,17 @@ func TestBareAndHelpShortcuts(t *testing.T) {
 	}
 }
 
+func TestOptionLikeProfileNameGetsAHint(t *testing.T) {
+	_, err := Parse([]string{"run", "--version"})
+	if err == nil || err.Error() != `unknown option "--version" for run; run "abx --help"` {
+		t.Fatalf("option-like profile name: %v", err)
+	}
+	_, err = Parse([]string{"-h", "extra"})
+	if err == nil || err.Error() != "-h takes no arguments" {
+		t.Fatalf("-h with an argument: %v", err)
+	}
+}
+
 func TestProfileCommands(t *testing.T) {
 	for _, tc := range []struct {
 		args []string

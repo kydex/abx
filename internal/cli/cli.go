@@ -4,6 +4,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/kydex/abx/internal/profile"
 )
@@ -82,12 +83,17 @@ func Parse(args []string) (Command, error) {
 		}
 	case Help, Version:
 		if len(args) != 1 {
-			return Command{}, fmt.Errorf("%s takes no arguments", k)
+			return Command{}, fmt.Errorf("%s takes no arguments", args[0])
 		}
 		return Command{Kind: k}, nil
 	case Run, Shell, Work, Inspect, Verify:
 		if len(args) < 2 {
 			return Command{}, fmt.Errorf("%s requires a profile", k)
+		}
+		// A leading hyphen is a mistyped flag, not a name: say so and point
+		// at the help, instead of reciting the profile name rules.
+		if strings.HasPrefix(args[1], "-") {
+			return Command{}, fmt.Errorf("unknown option %q for %s; run \"abx --help\"", args[1], k)
 		}
 		if err := profile.ValidateName(args[1]); err != nil {
 			return Command{}, err

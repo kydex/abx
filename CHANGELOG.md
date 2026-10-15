@@ -19,6 +19,7 @@
 - The mutation sweep measures every guard in its file list -- the filter that skipped `Kind ==` guards is gone and `internal/app` joined the list -- and gives each package its own copy of the scratch tree: package tests link one another, and in a shared tree one package's mutant was recorded against another package's guard (a full run read 54 of `internal/app`'s 76 guards killed; in its own tree the number is 38). Runs from before these changes are not comparable. Its eighth run measured 288 of 425 guards killed, 137 survived and none unmeasurable.
 - `make package-check` rehearses release packaging without a release tag: it builds both archives into a temporary directory and runs the same smoke checks as `make package-smoke`, and `make check` runs it, so a packaging regression fails on a branch instead of only at the tag.
 - The security guide records the `__probe` gate's limit: it proves the mode the private entry point runs under (the binary executing as the read-only `/abx-probe` mount), not the origin of the call. (English and Russian.)
+- Fixed: the security and usage guides no longer claim a background job can outlive the session -- a claim added in 0.8.25. The sandbox is its own PID namespace; when its init process (pid 1) dies, the kernel kills every process left in it, `nohup` and `setsid` jobs included, and their tmpfs allocations and network access end with the session. A live run of the manual check on Bubblewrap 0.13.1 confirmed that a background writer stops when the session ends. (English and Russian.)
 
 ## 0.8.25
 

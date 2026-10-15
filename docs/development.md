@@ -56,6 +56,8 @@ The race detector requires a supported Go platform and a working C toolchain. `m
 
 The script never writes to your repository. It exports `HEAD` into a scratch directory with no `.git` in it and does the rewriting there, so a killed run cannot leave a source file modified and nothing has to be restored. If the working tree has uncommitted changes the script says so and measures `HEAD` rather than them.
 
+Each package is measured in its own copy of that scratch tree. Package tests link other packages -- `internal/app` links five of the six other swept packages, and `internal/bwrap` and `internal/probe` link `internal/sandbox` -- so with one shared tree a test run of one package compiles whatever mutant another worker holds in the packages it links, and that failure is recorded against the guard being measured.
+
 A full run re-executes a package's whole test suite once per guard, so it is slow on one package and quick on the rest; packages run in parallel, because a package's tests see every file in it and two files of the same package must not be rewritten at once:
 
 ```sh
@@ -132,7 +134,8 @@ here so nobody starts the same discussion from scratch.
 - The orchestrator in `internal/app` is knowingly under-covered. The code is
   correct where it was checked; closing the gap needs test seams that the
   project's own rules discourage. The mutation sweep behind this list measured
-  the size of the gap: one of eleven orchestrator mutations is caught.
+  the size of the gap: its tests catch 38 of the package's 76 guards, and the
+  other 38 survive deletion.
 - The aggregate coverage floor is 74.0% against an actual 91.5%, and `internal/app` is 280 of its
   325 statements (86.2%). Halving that package's coverage still leaves the aggregate at 83.1%; even
   zeroing it leaves 74.7%, still above the floor, so the gate does not fire on this package. The aggregate catches gross

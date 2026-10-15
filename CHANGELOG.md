@@ -16,6 +16,7 @@
 - Fixed: a project swapped for a regular file between path validation and opening is refused with an error that says so, instead of being retained and mounted at `/workspace`.
 - Fixed: a failure inspecting the shared skills path says which check failed (`inspect shared skills "<path>": ...`) instead of returning a bare `lstat` error. Late entry: the change shipped in 0.8.25 without a changelog note.
 - The `inspect` isolation summary gained two lines: `nested user namespaces: disabled` and `lifetime: killed with the launcher`. Both properties were enforced all along by the shared Bubblewrap arguments; the summary just did not name them.
+- The mutation sweep measures every guard in its file list -- the filter that skipped `Kind ==` guards is gone and `internal/app` joined the list -- and gives each package its own copy of the scratch tree: package tests link one another, and in a shared tree one package's mutant was recorded against another package's guard (a full run read 54 of `internal/app`'s 76 guards killed; in its own tree the number is 38). Runs from before these changes are not comparable. Its eighth run measured 288 of 425 guards killed, 137 survived and none unmeasurable.
 
 ## 0.8.25
 

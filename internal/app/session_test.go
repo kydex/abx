@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -398,6 +399,27 @@ func TestFinishCloseJoinsChildStatusWithCleanupError(t *testing.T) {
 	finishClose(&status, &result, func() error { return closeErr })
 	if status != 1 || result == nil || strings.Contains(result.Error(), "status 0") {
 		t.Fatalf("finishClose = status %d, err %v", status, result)
+	}
+}
+
+// Run used to report every session error as status 1, which erased a kept
+// child status: a cleanup failure after a nonzero child exit joins both
+// errors, and the joined error arrives here as a plain error. The report must
+// keep the status the session returned.
+func TestFailKeepsTheSessionStatus(t *testing.T) {
+	var errOut bytes.Buffer
+	joined := errors.Join(fmt.Errorf("child exited with status %d", 23), errors.New("close failed"))
+	if status := fail(23, joined, bwrap.Stdio{Err: &errOut}); status != 23 {
+		t.Fatalf("status = %d, want 23", status)
+	}
+	for _, want := range []string{"child exited with status 23", "close failed"} {
+		if !strings.Contains(errOut.String(), want) {
+			t.Fatalf("stderr %q does not mention %q", errOut.String(), want)
+		}
+	}
+	// A failure without a status of its own reports 1.
+	if status := fail(0, errors.New("failed before any child"), bwrap.Stdio{Err: &errOut}); status != 1 {
+		t.Fatalf("status without one of its own = %d, want 1", status)
 	}
 }
 

@@ -24,28 +24,24 @@ var versionText string
 var Version = strings.TrimSpace(versionText)
 
 func Run(ctx context.Context, args []string, stdio bwrap.Stdio) int {
-	fail := func(code int, err error) int {
-		_, _ = fmt.Fprintf(stdio.Err, "abx: %s\n", Escape(err.Error()))
-		return code
-	}
 	if err := validateEffectiveUID(os.Getuid(), os.Geteuid()); err != nil {
-		return fail(1, err)
+		return fail(1, err, stdio)
 	}
 	if err := validateEffectiveGID(os.Getgid(), os.Getegid()); err != nil {
-		return fail(1, err)
+		return fail(1, err, stdio)
 	}
 	if len(args) > 0 && args[0] == "__probe" {
 		if len(args) != 2 {
-			return fail(2, errors.New("invalid private probe invocation"))
+			return fail(2, errors.New("invalid private probe invocation"), stdio)
 		}
 		if err := probe.Run(args[1], stdio.Out); err != nil {
-			return fail(1, err)
+			return fail(1, err, stdio)
 		}
 		return 0
 	}
 	c, err := cli.Parse(args)
 	if err != nil {
-		return fail(2, err)
+		return fail(2, err, stdio)
 	}
 	switch c.Kind {
 	case cli.Help:
@@ -55,19 +51,32 @@ func Run(ctx context.Context, args []string, stdio bwrap.Stdio) int {
 	default:
 		status, e := runSession(ctx, c, os.Environ(), stdio)
 		if e != nil {
-			return fail(1, e)
+			return fail(status, e, stdio)
 		}
 		if c.Kind == cli.Verify && status == 0 {
 			if err := verifySuccess(stdio.Out); err != nil {
-				return fail(1, err)
+				return fail(1, err, stdio)
 			}
 		}
 		return status
 	}
 	if err != nil {
-		return fail(1, err)
+		return fail(1, err, stdio)
 	}
 	return 0
+}
+
+// fail reports one failure and returns the process status. A status the
+// session returned is kept even when an error accompanies it: a cleanup
+// failure after a nonzero child exit joins both errors, and the usage guide
+// promises that status stays observable through the CLI. A failure without a
+// status of its own reports 1.
+func fail(status int, err error, stdio bwrap.Stdio) int {
+	if status == 0 {
+		status = 1
+	}
+	_, _ = fmt.Fprintf(stdio.Err, "abx: %s\n", Escape(err.Error()))
+	return status
 }
 
 func validateEffectiveUID(realUID, effectiveUID int) error {

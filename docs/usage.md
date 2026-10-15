@@ -40,7 +40,7 @@ ABX uses the home directory from `/etc/passwd`, not the host `HOME` environment 
 
 `profile show` reports a missing profile as `State: absent` and returns status `0`; it is not an existence check by exit code. `profile list` prints nothing and exits `0` when there are no profiles; the output is just as empty when every entry was skipped as invalid. Command availability is a host-side file check, not proof that the tool or sandbox can start. Mandatory layout errors still fail the command.
 
-Unusable shared skills are different: `profile show` and `profile list` still succeed, reporting the skills as `Skills: invalid` with the reason, while all three session modes mount shared skills when configured and refuse to start until the directory is fixed (see Shared skills).
+Unusable shared skills are different: `profile show` and `profile list` still succeed and report the skills as invalid, with `profile show` naming the reason, while all three session modes mount shared skills when configured and refuse to start until the directory is fixed (see Shared skills).
 
 ABX does not automatically rename, migrate, or delete profiles.
 

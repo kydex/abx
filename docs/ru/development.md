@@ -122,11 +122,12 @@ Live tests нужны после изменений mounts, namespaces, retained
 - `Plan.Validate()` остаётся одной длинной функцией. Она стоит между собранным
   планом и аргументами Bubblewrap; её разбиение рискует этой границей ради
   читаемости.
-- Восемь идентификаторов экспортированы, хотя используются только в своём
-  пакете: `Escape` (app), `MinimumVersion` (bwrap), `ErrProfileNotFound`,
-  `ProfileStatus`, `ResolveProject`, `ResolveShell`, `Selection` (host) и
-  `Check` (probe). Снятие экспорта заставит компилятор перестать ловить опечатки
-  в именах между пакетами — без выгоды здесь.
+- Одиннадцать идентификаторов экспортированы, хотя используются только в своём
+  пакете: `Escape`, `Version` (app), `MinimumVersion`, `Path` (bwrap),
+  `ErrProfileNotFound`, `ProfileStatus`, `ResolveProject`, `ResolveShell`,
+  `Selection`, `Source` (host) и `Check` (probe). Снятие экспорта заставит
+  компилятор перестать ловить опечатки в именах между пакетами — без выгоды
+  здесь.
 - Фаззеры в `internal/sandbox`, `internal/profile` и `internal/cli` собираются и
   прогоняются с сид-корпусом на каждом `go test`, а сам фаззинг (`-fuzz`) в CI
   не запускается. Они фиксируют форму входа; запуск по расписанию — отдельное

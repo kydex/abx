@@ -123,11 +123,12 @@ here so nobody starts the same discussion from scratch.
 
 - `Plan.Validate()` stays one long function. It sits between a built plan and the
   Bubblewrap arguments; splitting it risks that barrier to buy readability.
-- Eight identifiers are exported although only their own package uses them:
-  `Escape` (app), `MinimumVersion` (bwrap), `ErrProfileNotFound`,
-  `ProfileStatus`, `ResolveProject`, `ResolveShell`, `Selection` (host), and
-  `Check` (probe). Unexporting them would make the compiler stop catching
-  misspelled names across package boundaries, for no gain here.
+- Eleven identifiers are exported although only their own package uses them:
+  `Escape`, `Version` (app), `MinimumVersion`, `Path` (bwrap),
+  `ErrProfileNotFound`, `ProfileStatus`, `ResolveProject`, `ResolveShell`,
+  `Selection`, `Source` (host), and `Check` (probe). Unexporting them would
+  make the compiler stop catching misspelled names across package boundaries,
+  for no gain here.
 - The fuzz harnesses in `internal/sandbox`, `internal/profile`, and `internal/cli`
   are built and run with their seed corpora on every `go test`, but the fuzzing
   itself (`-fuzz`) never runs in CI. They document the input shape; running them

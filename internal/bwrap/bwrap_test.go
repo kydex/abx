@@ -173,6 +173,7 @@ func TestOpenReportsVersionProbeFailure(t *testing.T) {
 func TestEnvironmentValuesStaySingleArgvElements(t *testing.T) {
 	env, err := sandbox.Session("tester", "/bin/sh", "/home/agent", []string{
 		"TERM=xterm", "LC_SPACED=a b", "LC_DOLLAR=$(x)", "LC_QUOTE=a'b\"c", "LC_EMPTY=",
+		"LC_NEWLINE=line1\nline2", "LC_DASH=--ro-bind / /",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -196,7 +197,7 @@ func TestEnvironmentValuesStaySingleArgvElements(t *testing.T) {
 			found[args[i+1]] = args[i+2]
 		}
 	}
-	for k, v := range map[string]string{"LC_SPACED": "a b", "LC_DOLLAR": "$(x)", "LC_QUOTE": `a'b"c`, "LC_EMPTY": ""} {
+	for k, v := range map[string]string{"LC_SPACED": "a b", "LC_DOLLAR": "$(x)", "LC_QUOTE": `a'b"c`, "LC_EMPTY": "", "LC_NEWLINE": "line1\nline2", "LC_DASH": "--ro-bind / /"} {
 		if found[k] != v {
 			t.Errorf("--setenv %s = %q, want single element %q", k, found[k], v)
 		}

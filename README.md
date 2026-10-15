@@ -19,9 +19,8 @@ When you run an agent, the current project is mounted writable at `/workspace`. 
 
 ## Install
 
-The project publishes no download page of its own. The archives reach you through
-whoever maintains a build for your platform, so there is no single URL to point
-you at — take the archive for the version you want:
+Download the archive for the version you want from the project's
+[releases page](https://github.com/kydex/abx/releases):
 
 ```text
 abx-X.Y.Z-linux-amd64.tar.gz

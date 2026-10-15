@@ -54,7 +54,7 @@ CI is development/release infrastructure, not an installation interface.
 - `.github/workflows/live.yml` runs the real Bubblewrap test suite on the CI runner.
 - `.github/workflows/release.yml` runs for `v[0-9]*` tags, requires both check and live jobs, runs `scripts/package.sh`, and uploads the resulting `dist/*` files as a workflow artifact.
 
-The workflow artifact is for maintainer validation and distribution. The workflow does **not** create a release page, and adding release publication is out of scope for this project — see the rule in `AGENTS.md`. Step 7 therefore says "the project's release channel" without naming a service: whichever channel you publish through, the deliverable is the same three files and their SHA-256, and a user should be able to follow [Installation](installation.md) without interacting with Actions.
+The workflow artifact is for maintainer validation and distribution. The workflow does **not** create a release page; the maintainer publishes the three files manually on the project's [GitHub Releases page](https://github.com/kydex/abx/releases). Adding automated publication is out of scope for this project — see the rule in `AGENTS.md`. The deliverable is still the three files and their SHA-256, and a user should be able to follow [Installation](installation.md) without interacting with Actions.
 
 ## Publish a version
 
@@ -79,7 +79,7 @@ packages nothing unless both pass. A tag pushed early is therefore not a
 publication risk, only a wasted run.
 
 6. Confirm that the tag workflow succeeds. It packages and then runs `make package-smoke`, which verifies the checksum manifest, unpacks both archives, and checks the mandatory file lists. A non-root caller then executes `abx version` from the unpacked binary archive; a root caller skips that step, since abx refuses to work as root. Download its workflow artifact: the archive files inside keep their `abx-X.Y.Z-*` names, so `(cd <downloaded> && sha256sum -c "abx-X.Y.Z-SHA256SUMS")` verifies them as-is. Then smoke-test the binary.
-7. Publish the verified binary archive, source archive, and checksum manifest through the project's release channel — see the note above on what that means. Report the SHA-256 values.
+7. Publish the verified binary archive, source archive, and checksum manifest on the project's [GitHub Releases page](https://github.com/kydex/abx/releases). Report the SHA-256 values.
 
 Local packaging can be rehearsed without a tag with `make package-check`; `make package-smoke` checks archives already in `dist/`, and `make package` itself requires the tag, so run it after step 5.
 

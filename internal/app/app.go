@@ -196,7 +196,10 @@ func executeSession(
 
 func finishClose(status *int, result *error, cleanup func() error) {
 	if err := cleanup(); err != nil {
-		if *status != 0 {
+		// Only the child's own exit arrives as a nonzero status with no error:
+		// every launcher-side failure returns an error together with its
+		// status, and such a failure must not be named as a child exit.
+		if *status != 0 && *result == nil {
 			err = errors.Join(fmt.Errorf("child exited with status %d", *status), err)
 		}
 		*result = errors.Join(*result, err)

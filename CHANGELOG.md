@@ -5,6 +5,7 @@
 - Fixed: `profile show` and `profile list` no longer reject an agent installed as a symlink under a mounted system path such as `/usr`. Profile inputs carried no discovered system sources, so the placement check refused the layout `run` accepts and the security guide calls supported.
 - Fixed: a dangling `/etc` resource no longer aborts every session; the entry is skipped like a missing one, as the security guide states.
 - Fixed: `run`, `shell`, and `work` keep the child's exit status when a cleanup failure is reported with it. `Run` turned every session error into status `1`, so the documented keep-the-status rule was not observable through the CLI.
+- Fixed: a cleanup failure after a launcher-side failure no longer reports `child exited with status 1`; the phrase names the child's own exit status only.
 
 ## 0.8.25
 

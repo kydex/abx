@@ -400,6 +400,15 @@ func TestFinishCloseJoinsChildStatusWithCleanupError(t *testing.T) {
 	if status != 1 || result == nil || strings.Contains(result.Error(), "status 0") {
 		t.Fatalf("finishClose = status %d, err %v", status, result)
 	}
+	// A launcher-side failure carries an error with its nonzero status, so it
+	// must not be named as a child exit: the child never started.
+	opErr := errors.New("plan failed")
+	status, result = 1, opErr
+	finishClose(&status, &result, func() error { return closeErr })
+	if status != 1 || !errors.Is(result, opErr) || !errors.Is(result, closeErr) ||
+		strings.Contains(result.Error(), "child exited") {
+		t.Fatalf("finishClose = status %d, err %v", status, result)
+	}
 }
 
 // Run used to report every session error as status 1, which erased a kept

@@ -89,6 +89,25 @@ func TestRevalidateNamesSortedFirstChangeWithRole(t *testing.T) {
 	}
 }
 
+// Source encodes bind and link in two plain fields, and consumers read
+// Link == "" to tell them apart: a Source that names both or neither must be
+// refused before it can be reinterpreted.
+func TestRevalidateRefusesMalformedSystemSource(t *testing.T) {
+	for _, test := range []struct {
+		source Source
+		want   string
+	}{
+		{Source{Path: "/usr", Target: "/usr", Link: "usr"}, `system source "/usr" names both a path and a link`},
+		{Source{Target: "/usr"}, `system source "/usr" has neither a path nor a link`},
+	} {
+		in := fixture(t)
+		in.system = []Source{test.source}
+		if err := in.Revalidate(); err == nil || err.Error() != test.want {
+			t.Fatalf("Revalidate with %+v = %v, want %q", test.source, err, test.want)
+		}
+	}
+}
+
 func countOpenFDs(t *testing.T) int {
 	t.Helper()
 	entries, err := os.ReadDir("/proc/self/fd")

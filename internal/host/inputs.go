@@ -14,8 +14,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Source is an observed system bind or compatibility symlink.
-// A non-empty Link makes the mount a symlink to Link; Path is then not used as the source.
+// Source is one observed system resource: a bind mount of Path, or a
+// compatibility symlink whose text is Link. Exactly one of Path and Link is
+// set -- Revalidate refuses a Source that names both or neither -- and Target
+// is the path the sandbox exposes it at.
 type (
 	Source struct{ Path, Target, Link string }
 	object struct {
@@ -302,6 +304,17 @@ func (in *Inputs) role(path string) string {
 func (in *Inputs) Revalidate() error {
 	if len(in.objects) == 0 {
 		return errors.New("inputs are closed")
+	}
+	// Source carries the union of a bind and a link in two plain fields;
+	// downstream reads Link == "" to tell them apart, so a malformed Source
+	// must stop here rather than be reinterpreted.
+	for _, s := range in.system {
+		switch {
+		case s.Path == "" && s.Link == "":
+			return fmt.Errorf("system source %q has neither a path nor a link", s.Target)
+		case s.Path != "" && s.Link != "":
+			return fmt.Errorf("system source %q names both a path and a link", s.Target)
+		}
 	}
 	// Sorted keys make the reported object deterministic when several were
 	// replaced between selection and preparation.

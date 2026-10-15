@@ -52,7 +52,7 @@ Scopes in use: `host`, `sandbox`, `bwrap`, `app`, `cli`, `probe`, `profile`, `pa
 
 Mark a breaking change with `!` after the type and/or a `BREAKING CHANGE:` footer saying what changed and why. Messages are English.
 
-Every user-visible change gets a `CHANGELOG.md` entry under `Unreleased` **in the same commit as the change**. A test-only commit that changes nothing a user sees does not. A release commit moves the accumulated entries into the version section.
+Every user-visible change gets a `CHANGELOG.md` entry under `Unreleased` **in the same commit as the change**. A test-only commit that changes nothing a user sees does not. A release commit moves the accumulated entries into the version section. If a user-visible change reached history without an entry, do not rewrite that commit: add the entry under `Unreleased` in its own commit whose message says it is a late addition, and mark the entry itself when the change has already shipped in a released version.
 
 ## Documentation and delivery
 

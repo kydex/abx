@@ -53,5 +53,40 @@ test -f "$work/abx-$version-source/THIRD_PARTY_LICENSES"
 test -f "$work/abx-$version-source/.gitignore"
 test -f "$work/abx-$version-source/.golangci.yml"
 test "$(cat "$work/abx-$version-source/internal/app/VERSION")" = "$version"
+# Each archive's member list must match its unpacked tree member for member,
+# and every member must stay inside the archive's own prefix: a duplicate
+# entry, a path escaping the prefix, or an added top-level path fails these
+# checks.
+for name in "abx-$version-linux-amd64" "abx-$version-source"; do
+    listing=$(tar -tzf "$dir/$name.tar.gz")
+    members=$(printf '%s\n' "$listing" | wc -l)
+    unpacked=$(find "$work/$name" | wc -l)
+    if [ "$members" -ne "$unpacked" ]; then
+        printf 'error: %s lists %s members, %s entries extracted\n' "$name.tar.gz" "$members" "$unpacked" >&2
+        exit 1
+    fi
+    if printf '%s\n' "$listing" | grep -qvE "^$name(/|$)"; then
+        printf 'error: %s contains a member outside %s/\n' "$name.tar.gz" "$name" >&2
+        exit 1
+    fi
+    top=$(printf '%s\n' "$listing" | awk -F/ '{print $2}' | grep -v '^$' | LC_ALL=C sort -u | tr '\n' ' ')
+    top=${top% }
+    case "$name" in
+    "abx-$version-source") want=".github .gitignore .golangci.yml AGENTS.md AGENTS.ru.md CHANGELOG.md LICENSE Makefile README.md README.ru.md THIRD_PARTY_LICENSES cmd docs go.mod go.sum internal scripts" ;;
+    *) want="CHANGELOG.md LICENSE README.md README.ru.md THIRD_PARTY_LICENSES abx docs" ;;
+    esac
+    if [ "$top" != "$want" ]; then
+        printf 'error: %s top-level entries are "%s", expected "%s"\n' "$name.tar.gz" "$top" "$want" >&2
+        exit 1
+    fi
+done
+# Packaging must keep scripts/*.sh executable (0755), the one executable mode
+# of the source archive.
+for script in "$work/abx-$version-source"/scripts/*.sh; do
+    test -x "$script" || {
+        printf 'error: %s must stay executable\n' "${script#"$work/abx-$version-source/"}" >&2
+        exit 1
+    }
+done
 (cd "$work/abx-$version-source" && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./cmd/abx)
 printf 'package smoke ok: %s\n' "$version"

@@ -21,6 +21,7 @@
 - The security guide records the `__probe` gate's limit: it proves the mode the private entry point runs under (the binary executing as the read-only `/abx-probe` mount), not the origin of the call. (English and Russian.)
 - Fixed: the security and usage guides no longer claim a background job can outlive the session -- a claim added in 0.8.25. The sandbox is its own PID namespace; when its init process (pid 1) dies, the kernel kills every process left in it, `nohup` and `setsid` jobs included, and their tmpfs allocations and network access end with the session. A live run of the manual check on Bubblewrap 0.13.1 confirmed that a background writer stops when the session ends. (English and Russian.)
 - Fixed: `scripts/package.sh` resolves the script path and the checkout root physically before its git checks, so packaging a checkout reached through a symlinked path no longer skips the release-tag, cleanliness, and untracked-file gates.
+- The package smoke check now compares each archive's member list with its unpacked tree, refuses a member outside the archive prefix or an unexpected top-level path, and requires `scripts/*.sh` in the source archive to stay executable.
 
 ## 0.8.25
 

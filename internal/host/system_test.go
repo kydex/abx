@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -78,6 +79,29 @@ func TestCompatSymlinkRevalidationDetectsSwap(t *testing.T) {
 	}
 	if err := in.Revalidate(); err == nil {
 		t.Fatal("swapped compat symlink accepted")
+	}
+}
+
+// A compatibility link can pass the text rule and still land outside the
+// mounted tree: the text names one hop, and /usr itself may continue the chain
+// with a link the text does not show. Such a link would appear inside the
+// sandbox pointing at a directory it creates empty.
+func TestCompatLinkResolvingOutsideMountedUsrRefused(t *testing.T) {
+	root := t.TempDir()
+	for _, p := range []string{"usr", "opt"} {
+		if err := os.Mkdir(filepath.Join(root, p), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink("../opt", filepath.Join(root, "usr/lib")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("usr/lib", filepath.Join(root, "lib")); err != nil {
+		t.Fatal(err)
+	}
+	in := fixture(t)
+	if err := in.discoverSystem(root); err == nil || !strings.Contains(err.Error(), "outside mounted system sources") {
+		t.Fatalf("compat link resolving outside the mounted /usr accepted: %v", err)
 	}
 }
 

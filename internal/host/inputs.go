@@ -209,18 +209,25 @@ func (in *Inputs) checkAgentPlacement() error {
 	if err != nil {
 		return fmt.Errorf("resolve profile executable %q: %w", host, err)
 	}
-	if within(resolved, in.home) {
+	if within(resolved, in.home) || in.withinSystemSource(resolved) {
 		return nil
-	}
-	for _, s := range in.system {
-		if s.Link == "" && (resolved == s.Path || within(resolved, s.Path)) {
-			return nil
-		}
 	}
 	return fmt.Errorf(
 		"profile executable %q resolves to %q, which the sandbox does not mount; "+
 			"put the binary inside the profile or under a mounted system path such as /usr",
 		host, resolved)
+}
+
+// withinSystemSource reports whether resolved lies on a mounted system bind
+// source. Compatibility links are skipped: their text points at a target
+// inside the mounted tree, not at a mount of its own.
+func (in *Inputs) withinSystemSource(resolved string) bool {
+	for _, s := range in.system {
+		if s.Link == "" && (resolved == s.Path || within(resolved, s.Path)) {
+			return true
+		}
+	}
+	return false
 }
 
 func resolveAgent(home, name string) (string, error) {

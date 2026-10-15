@@ -83,6 +83,9 @@ func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 			if overlaps(resolved, in.account.Home) || overlaps(resolved, in.paths.Root) {
 				return fmt.Errorf("protected data overlaps system link %q", resolved)
 			}
+			if !in.withinSystemSource(resolved) {
+				return fmt.Errorf("compat system link %q resolves outside mounted system sources to %q", path, resolved)
+			}
 			in.links[path] = link
 			in.system = append(in.system, Source{Target: p, Link: link})
 		} else if err = add(path, p); err != nil {

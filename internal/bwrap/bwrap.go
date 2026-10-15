@@ -135,7 +135,7 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	output := &limitedBuffer{limit: 4096}
 	cmd.Stdout = output
 	cmd.Stderr = output
-	restoreFDs, err := markInheritedFDsCloseOnExec(cmd.ExtraFiles)
+	restoreFDs, err := markInheritedFDsCloseOnExec()
 	if err != nil {
 		return nil, err
 	}
@@ -160,13 +160,13 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	return t, nil
 }
 
-func markInheritedFDsCloseOnExec(extra []*os.File) (func(), error) {
-	keep := map[int]bool{0: true, 1: true, 2: true}
-	for _, file := range extra {
-		if file != nil {
-			keep[int(file.Fd())] = true
-		}
-	}
+// markInheritedFDsCloseOnExec marks every inherited descriptor above the
+// standard streams close-on-exec and returns a restore. ExtraFiles entries get
+// the same treatment: os/exec reinjects them into the child with the flag
+// cleared, so only the parent's copy closes at exec, while leaving them
+// inheritable made the child see each entry twice -- under its inherited
+// number and under the injected one.
+func markInheritedFDsCloseOnExec() (func(), error) {
 	entries, err := os.ReadDir("/proc/self/fd")
 	if err != nil {
 		return nil, fmt.Errorf("read inherited file descriptors: %w", err)
@@ -190,7 +190,7 @@ func markInheritedFDsCloseOnExec(extra []*os.File) (func(), error) {
 	}
 	for _, entry := range entries {
 		fd, parseErr := strconv.Atoi(entry.Name())
-		if parseErr != nil || fd < 3 || keep[fd] {
+		if parseErr != nil || fd < 3 {
 			continue
 		}
 		flags, err := unix.FcntlInt(uintptr(fd), unix.F_GETFD, 0)
@@ -359,7 +359,7 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	// since os/signal discards into a full buffer instead of blocking.
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	defer signal.Stop(signals)
-	restoreFDs, err := markInheritedFDsCloseOnExec(cmd.ExtraFiles)
+	restoreFDs, err := markInheritedFDsCloseOnExec()
 	if err != nil {
 		return 1, err
 	}

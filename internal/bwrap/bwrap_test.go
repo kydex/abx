@@ -271,47 +271,52 @@ func TestWaitDelayPreservesFailedExit(t *testing.T) {
 	}
 }
 
-func TestMarkInheritedFDsKeepsExplicitFiles(t *testing.T) {
-	keep, err := os.CreateTemp(t.TempDir(), "keep")
+func TestMarkInheritedFDsCloseOnExec(t *testing.T) {
+	explicit, err := os.CreateTemp(t.TempDir(), "explicit")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer keep.Close()
+	defer explicit.Close()
 	unknown, err := os.CreateTemp(t.TempDir(), "unknown")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer unknown.Close()
-	for _, file := range []*os.File{keep, unknown} {
+	for _, file := range []*os.File{explicit, unknown} {
 		if _, err := unix.FcntlInt(file.Fd(), unix.F_SETFD, 0); err != nil {
 			t.Fatal(err)
 		}
 	}
-	restore, err := markInheritedFDsCloseOnExec([]*os.File{keep})
+	restore, err := markInheritedFDsCloseOnExec()
 	if err != nil {
 		t.Fatal(err)
 	}
-	keepFlags, err := unix.FcntlInt(keep.Fd(), unix.F_GETFD, 0)
+	// ExtraFiles entries are marked like any other descriptor: the child
+	// receives them through dup2, which clears the flag on its copy, and an
+	// unmarked parent copy would reach the child a second time.
+	explicitFlags, err := unix.FcntlInt(explicit.Fd(), unix.F_GETFD, 0)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if explicitFlags&unix.FD_CLOEXEC == 0 {
+		t.Fatal("extra-files descriptor stayed inheritable across exec")
 	}
 	unknownFlags, err := unix.FcntlInt(unknown.Fd(), unix.F_GETFD, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if keepFlags&unix.FD_CLOEXEC != 0 {
-		t.Fatal("explicit ExtraFiles descriptor was marked close-on-exec")
-	}
 	if unknownFlags&unix.FD_CLOEXEC == 0 {
 		t.Fatal("inherited descriptor remained open across exec")
 	}
 	restore()
-	unknownFlags, err = unix.FcntlInt(unknown.Fd(), unix.F_GETFD, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if unknownFlags&unix.FD_CLOEXEC != 0 {
-		t.Fatal("inherited descriptor flags were not restored")
+	for _, file := range []*os.File{explicit, unknown} {
+		flags, err := unix.FcntlInt(file.Fd(), unix.F_GETFD, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if flags&unix.FD_CLOEXEC != 0 {
+			t.Fatalf("descriptor %d flags were not restored", file.Fd())
+		}
 	}
 	// A restore must never touch a descriptor whose number was reused:
 	// close it, let another file take the slot, then restore.

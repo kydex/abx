@@ -38,7 +38,7 @@ ABX uses the home directory from `/etc/passwd`, not the host `HOME` environment 
 
 `profile create` creates a new empty profile and refuses to overwrite an existing one. `profile show` reports the actual path and whether the matching entry-point executable and optional shared skills are usable. `profile list` lists all profiles. Entries with invalid names are skipped silently. A profile whose layout is unsafe stops the listing instead of being reported as usable: the command prints an error and nothing else, and `profile show <profile>` names the reason for that one profile. The listing stops on purpose -- showing a profile that cannot be run is worse than showing fewer.
 
-`profile show` reports a missing profile as `State: absent` and returns status `0`; it is not an existence check by exit code. Command availability is a host-side file check, not proof that the tool or sandbox can start. Mandatory layout errors still fail the command.
+`profile show` reports a missing profile as `State: absent` and returns status `0`; it is not an existence check by exit code. `profile list` prints nothing and exits `0` when there are no profiles; the output is just as empty when every entry was skipped as invalid. Command availability is a host-side file check, not proof that the tool or sandbox can start. Mandatory layout errors still fail the command.
 
 Unusable shared skills are different: `profile show` and `profile list` still succeed, reporting the skills as `Skills: invalid` with the reason, while all three session modes mount shared skills when configured and refuse to start until the directory is fixed (see Shared skills).
 

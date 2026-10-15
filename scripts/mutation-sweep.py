@@ -14,8 +14,9 @@ lines until the brace included. Four outcomes:
                    broke, not the code -- retried once, recorded loudly, and
                    the run exits 1 instead of reporting counts
 
-Scope note: earlier runs only saw single-line `if ... {`, so their counts are
-not comparable with runs from the else-if/multi-line version on.
+Scope note: earlier runs only saw single-line `if ... {`, and runs before the
+textual filter was dropped skipped guards matching it, so their counts are not
+comparable with runs from the current version on.
 
 The condition is neutralised as `false && (<cond>)` rather than replaced by a
 plain `false`, so the compiler still sees every variable the condition uses.
@@ -75,15 +76,17 @@ FILES = [
     "internal/probe/probe.go",
     "internal/profile/name.go",
     "internal/cli/cli.go",
+    "internal/app/app.go",
+    "internal/app/diagnostic.go",
+    "internal/app/profiles.go",
+    "internal/app/report.go",
+    "internal/app/verify.go",
 ]
 
 # `if <cond> {` or `} else if <cond> {` at the start of a line, possibly
 # indented. The condition may span lines until the opening brace; the span
 # parser below follows it there.
 GUARD_START = re.compile(r"^(?P<indent>[ \t]*)(?P<else>\}\s*else\s+)?if (?P<head>.*)$")
-
-# Format switches and constant comparisons that are not refusals.
-SKIP_LINE = re.compile(r"\b[Kk]ind\b\s*==")
 
 # A failing test announces itself; a passing one does not.
 TEST_FAILED = re.compile(r"(?m)^(?:--- FAIL:|FAIL\s)")
@@ -184,11 +187,7 @@ def sweep_file(repo: pathlib.Path, rel: str) -> None:
     orig_lines = original.splitlines(keepends=True)
     lines = list(orig_lines)
 
-    found = [
-        (start, end, indent, else_kw, full)
-        for (start, end, indent, else_kw, full) in find_guards(orig_lines)
-        if not SKIP_LINE.search(full)
-    ]
+    found = find_guards(orig_lines)
 
     for start, end, indent, else_kw, full in found:
         ending = "\n" if orig_lines[end].endswith("\n") else ""
@@ -271,7 +270,7 @@ def main() -> int:
             by_pkg.setdefault(pathlib.PurePosixPath(rel).parent.as_posix(), []).append(rel)
         def count_guards(rel: str) -> int:
             text = (repo / rel).read_text(encoding="utf-8").splitlines(keepends=True)
-            return sum(1 for (_, _, _, _, full) in find_guards(text) if not SKIP_LINE.search(full))
+            return len(find_guards(text))
 
         _total = sum(count_guards(rel) for files in by_pkg.values() for rel in files)
 

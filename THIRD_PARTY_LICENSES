@@ -1,3 +1,9 @@
+Third-party components bundled with ABX in both archives:
+
+- golang.org/x/sys v0.47.0 - BSD-3-Clause
+
+The license text below covers these components.
+
 Copyright 2009 The Go Authors.
 
 Redistribution and use in source and binary forms, with or without

@@ -1,4 +1,4 @@
-.PHONY: test check lint shellcheck actionlint local-diff-check security build-check coverage-check build package package-smoke clean live
+.PHONY: test check lint shellcheck actionlint local-diff-check security build-check licenses-check coverage-check build package package-smoke clean live
 
 COVERAGE_MIN ?= 74.0
 
@@ -30,6 +30,15 @@ build-check:
 	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./cmd/abx
 	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./internal/app/testdata
 
+# Both archives carry THIRD_PARTY_LICENSES, so a module used by the build must
+# appear there; the rows are counted against go.mod's module list.
+licenses-check:
+	@set -eu; \
+	want=$$(($$(go list -m all | wc -l) - 1)); \
+	got=$$(sed -n '/^- /p' THIRD_PARTY_LICENSES | wc -l); \
+	[ "$$got" -eq "$$want" ] || { echo "error: THIRD_PARTY_LICENSES lists $$got modules, the build uses $$want" >&2; exit 1; }; \
+	echo "THIRD_PARTY_LICENSES matches the build's module list"
+
 coverage-check:
 	@set -eu; \
 	profile=$$(mktemp); \
@@ -38,7 +47,7 @@ coverage-check:
 	total=$$(go tool cover -func="$$profile" | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v got="$$total" -v min="$(COVERAGE_MIN)" 'BEGIN { if (got + 0 < min + 0) { printf "coverage %.1f%% is below minimum %.1f%%\n", got, min; exit 1 } printf "coverage %.1f%% (minimum %.1f%%)\n", got, min }'
 
-check: lint shellcheck actionlint security build-check coverage-check
+check: lint shellcheck actionlint security build-check licenses-check coverage-check
 	go vet ./...
 
 build:

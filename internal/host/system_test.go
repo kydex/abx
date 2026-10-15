@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -82,7 +81,11 @@ func TestCompatSymlinkRevalidationDetectsSwap(t *testing.T) {
 	}
 }
 
-func TestDiscoverSystemReportsFailingCandidate(t *testing.T) {
+// Missing host resources are skipped silently, and a dangling /etc entry is a
+// resource that is absent, not a failure: it resolves nowhere, so there is
+// nothing to mount and no reason to abort the session. The compat links keep
+// their own stricter rule (TestDiscoverSystemRejectsUnsafeCompatLinks).
+func TestDiscoverSystemSkipsDanglingCandidate(t *testing.T) {
 	root := t.TempDir()
 	for _, p := range []string{"usr", "etc"} {
 		if err := os.MkdirAll(filepath.Join(root, p), 0o700); err != nil {
@@ -94,9 +97,13 @@ func TestDiscoverSystemReportsFailingCandidate(t *testing.T) {
 		t.Fatal(err)
 	}
 	in := fixture(t)
-	err := in.discoverSystem(root)
-	if err == nil || !strings.Contains(err.Error(), broken) {
-		t.Fatalf("failing candidate unnamed: %v", err)
+	if err := in.discoverSystem(root); err != nil {
+		t.Fatalf("dangling candidate aborted discovery: %v", err)
+	}
+	for _, s := range in.System() {
+		if s.Path == broken || s.Target == "/etc/resolv.conf" {
+			t.Fatalf("dangling candidate was mounted: %+v", s)
+		}
 	}
 }
 

@@ -98,6 +98,12 @@ func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 			return fmt.Errorf("inspect system path %q: %w", p, err)
 		}
 		if err := add(path, p); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				// A dangling entry is absent, not broken: nothing can be
+				// mounted for a link that resolves nowhere, and one broken
+				// /etc resource must not abort every session.
+				continue
+			}
 			return err
 		}
 	}

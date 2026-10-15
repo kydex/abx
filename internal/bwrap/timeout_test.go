@@ -2,6 +2,7 @@ package bwrap
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,9 +10,13 @@ import (
 	"time"
 )
 
-// A wedged bwrap must be reported as the 5s probe deadline, not as the
+// A wedged bwrap must be reported as the probe deadline, not as the
 // "signal: killed" that exec produces when CommandContext kills the child.
+// The deadline is shortened here so the test observes the classification
+// instead of waiting out the real one.
 func TestVersionProbeTimeoutIsDiagnosed(t *testing.T) {
+	bwrapProbeTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { bwrapProbeTimeout = 5 * time.Second })
 	dir := t.TempDir()
 	hang := filepath.Join(dir, "hang")
 	if err := os.WriteFile(hang, []byte("#!/bin/sh\nsleep 30\n"), 0o700); err != nil {
@@ -23,13 +28,14 @@ func TestVersionProbeTimeoutIsDiagnosed(t *testing.T) {
 		t.Fatal("opened a hanging tool")
 	}
 	elapsed := time.Since(start)
-	if !strings.Contains(err.Error(), "timed out after 5s") {
-		t.Fatalf("timeout diagnosis = %q", err.Error())
+	want := fmt.Sprintf("timed out after %s", bwrapProbeTimeout)
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("timeout diagnosis = %q, want %q", err.Error(), want)
 	}
 	if strings.Contains(err.Error(), "signal: killed") {
 		t.Fatalf("leaked exec wording: %q", err.Error())
 	}
-	if elapsed > 15*time.Second {
+	if elapsed > 5*time.Second {
 		t.Fatalf("probe took %s", elapsed)
 	}
 }
@@ -45,7 +51,7 @@ fi`)
 	if err == nil {
 		t.Fatal("expected cancellation error")
 	}
-	if strings.Contains(err.Error(), "timed out after 5s") {
+	if strings.Contains(err.Error(), "timed out after") {
 		t.Fatalf("cancellation reported as probe timeout: %q", err.Error())
 	}
 }

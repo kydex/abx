@@ -24,6 +24,11 @@ const (
 	MinimumVersion = "0.12.0"
 )
 
+// bwrapProbeTimeout bounds the retained binary's version probe. The diagnostic
+// text is built from it, and the timeout test shortens it: waiting out the
+// real deadline only makes the suite slower, not more convincing.
+var bwrapProbeTimeout = 5 * time.Second
+
 type Stdio struct {
 	In       io.Reader
 	Out, Err io.Writer
@@ -123,7 +128,7 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		return nil, fmt.Errorf("access Bubblewrap executable %q: %w", resolved, err)
 	}
 	t := &Tool{f, info, resolved}
-	check, cancel := context.WithTimeout(ctx, 5*time.Second)
+	check, cancel := context.WithTimeout(ctx, bwrapProbeTimeout)
 	defer cancel()
 	// Execute the retained object, not a second lookup after validation.
 	cmd := exec.CommandContext(check, "/proc/self/fd/3", "--version")
@@ -140,14 +145,14 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	}
 	defer restoreFDs()
 	if err = cmd.Run(); err != nil {
-		// check is the 5s probe deadline; ctx is the caller's context. The
+		// check is the probe deadline; ctx is the caller's context. The
 		// probe deadline is what kills a wedged binary, so report it as such
 		// instead of the misleading "signal: killed", and keep caller
 		// cancellation distinct from the probe budget. Everything else is the
 		// run error itself.
 		switch checkErr := check.Err(); {
 		case errors.Is(checkErr, context.DeadlineExceeded):
-			return nil, errors.New("bubblewrap version probe timed out after 5s")
+			return nil, fmt.Errorf("bubblewrap version probe timed out after %s", bwrapProbeTimeout)
 		case ctx.Err() != nil:
 			return nil, fmt.Errorf("bubblewrap version probe cancelled: %w", ctx.Err())
 		default:

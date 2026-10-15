@@ -93,6 +93,37 @@ func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 		if !reflect.DeepEqual(tail, p.Command()) {
 			t.Fatal("changed child argv")
 		}
+		if args[len(args)-len(p.Command())-1] != "--" {
+			t.Fatal("command is not separated from options by --")
+		}
+	}
+}
+
+// An option-like command must stay the command: only "--" separates it from
+// the options Translate builds.
+func TestOptionLikeCommandStaysAfterDoubleDash(t *testing.T) {
+	p, err := sandbox.Build(sandbox.Input{
+		Home:        "/profile",
+		Mode:        sandbox.Shell,
+		System:      []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"}},
+		Environment: []sandbox.Entry{{Name: "PWD", Value: "/home/agent"}},
+		Command:     []string{"/bin/sh", "--unshare-all", "-l"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	devnull, err := os.Open("/dev/null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer devnull.Close()
+	args, _, err := Translate(p, func(string) (*os.File, error) { return devnull, nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--", "/bin/sh", "--unshare-all", "-l"}
+	if got := args[len(args)-len(want):]; !reflect.DeepEqual(got, want) {
+		t.Fatalf("tail = %q, want %q", got, want)
 	}
 }
 

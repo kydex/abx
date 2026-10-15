@@ -325,6 +325,8 @@ func Translate(plan sandbox.Plan, source func(string) (*os.File, error)) ([]stri
 			return nil, nil, fmt.Errorf("unsupported mount kind %d for %q", m.Kind, m.Target)
 		}
 	}
+	// "--" ends option parsing unconditionally: a command that begins with
+	// "-" must stay the command even if Bubblewrap's own parsing changes.
 	args = append(args, "--")
 	args = append(args, plan.Command()...)
 	return args, files, nil

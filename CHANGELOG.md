@@ -27,6 +27,7 @@
 - Fixed: a missing Bubblewrap no longer reports only a bare `lstat` error, and a dangling `/usr/bin/bwrap` link names the path ABX checked (`resolve Bubblewrap executable "/usr/bin/bwrap": ...`) instead of only its target.
 - The `abx help` storage line now says that `$XDG_DATA_HOME` is used only when absolute, matching the guides.
 - Fixed: the invalid-profile-name message now names the rule the input broke -- `must start with a letter or digit` or the allowed character set -- instead of asserting both for a name like `a b`.
+- The custom-storage guide now lists all six data base refusal conditions, including the ancestor checks for a non-directory and for setuid or setgid bits. (English and Russian.)
 
 ## 0.8.25
 

@@ -133,6 +133,9 @@ type probeFile struct {
 }
 type probeFiles struct{ files []probeFile }
 
+// create is the one session object made by name rather than through a retained
+// descriptor: the sentinel lives in the account home, which is deliberately not
+// retained. Its identity is captured now and checked again in Close.
 func (p *probeFiles) create(home string) (string, error) {
 	f, err := os.CreateTemp(home, ".abx-verify-*")
 	if err != nil {

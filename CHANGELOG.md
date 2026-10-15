@@ -23,6 +23,7 @@
 - Fixed: `scripts/package.sh` resolves the script path and the checkout root physically before its git checks, so packaging a checkout reached through a symlinked path no longer skips the release-tag, cleanliness, and untracked-file gates.
 - The package smoke check now compares each archive's member list with its unpacked tree, refuses a member outside the archive prefix or an unexpected top-level path, and requires `scripts/*.sh` in the source archive to stay executable.
 - Fixed: the release guide and the smoke check's comments now say that a non-root `make package-smoke` executes `abx version` from the unpacked binary archive, instead of claiming the binary is never run. (English and Russian.)
+- Fixed: a symlink cycle in a sensitive home tree (`~/.ssh -> .ssh`) no longer stops every command at startup. Like a dangling link, a link that cannot resolve is compared by the literal target its own text names; a cycle never resolves, so no data can sit behind it.
 
 ## 0.8.25
 

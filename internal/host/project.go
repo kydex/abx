@@ -153,10 +153,11 @@ func canonicalProtectedTree(path string) (string, error) {
 }
 
 // canonicalSensitiveTree resolves a sensitive home tree for the two overlap
-// rules, and it is deliberately forgiving about a link that does not resolve
-// yet: such a link still says where it is headed, and that target is what has
+// rules, and it is deliberately forgiving about a link that does not resolve:
+// a dangling link still says where it is headed, and that target is what has
 // to be compared against, because a path that does not exist today can sit
-// inside the project or the data base tomorrow.
+// inside the project or the data base tomorrow. A cycle resolves to nothing
+// ever; its first hop is the literal target the same way.
 //
 // The literal link would be safe too — nothing can exist underneath a link that
 // resolves nowhere, and both callers compare against an already resolved path —
@@ -172,9 +173,10 @@ func canonicalSensitiveTree(path string) (string, error) {
 	if err == nil {
 		return filepath.Clean(resolved), nil
 	}
-	if !errors.Is(err, fs.ErrNotExist) {
-		return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)
-	}
+	// The link did not resolve: it is dangling, cyclic, or unreadable. Its
+	// own text still says where it is headed, and that literal target is what
+	// the overlap rules compare against. Only a path without a link to read
+	// is refused.
 	target, readErr := os.Readlink(path)
 	if readErr != nil {
 		return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)

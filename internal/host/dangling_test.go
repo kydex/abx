@@ -11,8 +11,9 @@ import (
 // apply, and resolving it failed. Uninstalling a program that owned
 // ~/.mozilla or ~/.config leaves exactly that behind.
 //
-// A dangling link shelters nothing, so it has to be treated as a missing path.
-// The three cases below pin which links still do their job.
+// A dangling link shelters nothing, so it has to be treated as a missing path;
+// a cycle resolves to nothing ever and is handled the same way. The cases
+// below pin which links still do their job.
 func TestSensitiveHomeTreeToleratesDanglingSymlink(t *testing.T) {
 	account := Account{UID: os.Getuid(), Username: "tester"}
 
@@ -23,6 +24,16 @@ func TestSensitiveHomeTreeToleratesDanglingSymlink(t *testing.T) {
 		}
 		if _, err := ResolvePaths(accountWithHome(account, home), filepath.Join(home, "data")); err != nil {
 			t.Fatalf("dangling symlink blocked every command: %v", err)
+		}
+	})
+
+	t.Run("symlink cycle does not block", func(t *testing.T) {
+		home := t.TempDir()
+		if err := os.Symlink(".ssh", filepath.Join(home, ".ssh")); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ResolvePaths(accountWithHome(account, home), filepath.Join(home, "data")); err != nil {
+			t.Fatalf("symlink cycle blocked every command: %v", err)
 		}
 	})
 

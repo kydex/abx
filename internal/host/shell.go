@@ -76,8 +76,10 @@ func unsafeModeReason(mode os.FileMode) string {
 
 // checkPasswdFile pins the trust assumptions on the account database file:
 // a regular file without privilege-escalation bits that group and other
-// cannot rewrite. The account lookup path (resolveAccount) goes through NSS
-// and names no file, so only the direct reader is checked here.
+// cannot rewrite. The shipped binary is built with CGO_ENABLED=0, where the
+// os/user lookup behind resolveAccount reads this same literal file; only a
+// cgo build routes the account record through NSS, where this check no
+// longer covers what the lookup reads. See docs/security.md.
 func checkPasswdFile(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {

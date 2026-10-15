@@ -72,11 +72,10 @@ func (t *Tool) Revalidate() error {
 // This duplicates the trusted-object mode rule that internal/host applies to
 // /etc/passwd and the login shell. The duplication is deliberate: bwrap
 // executes and must not depend on host, and the two rules are not the same --
-// this one adds the execute bit, because its objects are executed. The shared
-// half is pinned by TestUnsafeModeReason in both packages, so weakening either
-// copy shows up as a failing table rather than as a silent gap. If the rules
-// ever do diverge, that is the moment to reconsider, and to update both tables
-// in the same commit.
+// this one adds the execute bit, because its objects are executed. Each package
+// pins only its own copy with its own table; the tables are independent, and
+// nothing fails here when the host copy changes, so a change to the shared half
+// belongs in both copies and both tables in the same commit.
 func unsafeModeReason(mode os.FileMode) string {
 	switch {
 	case mode.Perm()&0o111 == 0:

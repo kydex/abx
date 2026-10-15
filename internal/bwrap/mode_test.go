@@ -8,9 +8,9 @@ import (
 // internal/host applies the same two conditions to the objects it trusts, in a
 // predicate it does not export and this package must not depend on. The rules
 // are deliberately kept in two places -- this one adds the execute bit because
-// its objects are executed -- so the shared half is pinned here against the
-// same table the host package uses. Changing one copy without the other turns
-// into a failing row instead of a silent difference.
+// its objects are executed -- but the tables are independent: this one pins
+// only this package's copy, and a change to the host copy fails nothing here.
+// Keeping the shared half in step is a review duty, not a test guarantee.
 func TestUnsafeModeReason(t *testing.T) {
 	for _, tc := range []struct {
 		name string

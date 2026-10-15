@@ -3,6 +3,7 @@ package probe
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -18,11 +19,17 @@ import (
 // a host, and that half still needs a live stand.
 func TestCheckProducesEveryObservation(t *testing.T) {
 	dir := t.TempDir()
+	// The two write observations name /home/agent and /workspace, which on a
+	// test machine are real paths: point the probe at temporary storage and
+	// count the calls, so no edit can quietly put the real ones back.
+	obs := hostObserver()
+	touched := 0
+	obs.writeProbe = func(string) error { touched++; return writeAndRemove(dir) }
 	checks := check(Expected{
 		Environment: []string{"HOME=/home/agent"},
 		Sentinel:    dir + "/sentinel",
 		ReadOnly:    []string{"/usr"},
-	}, hostObserver())
+	}, obs)
 	got := make([]string, len(checks))
 	for i, c := range checks {
 		got[i] = c.Name
@@ -52,6 +59,12 @@ func TestCheckProducesEveryObservation(t *testing.T) {
 		default:
 			t.Errorf("observation %q has unknown state %q", c.Name, c.State)
 		}
+	}
+	if touched != 2 {
+		t.Fatalf("write probe called %d times, want 2", touched)
+	}
+	if entries, err := os.ReadDir(dir); err != nil || len(entries) != 0 {
+		t.Fatalf("temporary write probe left %d entries (err %v)", len(entries), err)
 	}
 }
 

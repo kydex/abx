@@ -297,7 +297,7 @@ func TestBuildRejectsCompatibilityLinkEscapingUsr(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Первые mounts — базовые каталоги, поэтому ищем по цели, а не по индексу.
+	// The first mounts are the base directories, so look the entry up by target rather than index.
 	p.expected.system[1].Source = "/etc"
 	for i := range p.mounts {
 		if p.mounts[i].Target == "/bin" {

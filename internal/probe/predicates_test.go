@@ -125,7 +125,7 @@ func TestCheckPassesWithConsistentObservations(t *testing.T) {
 	e := sandboxExpected()
 	checks := check(e, goodObserver(e))
 	for _, c := range checks {
-		if c.State != statePass && c.Name != "shared skills" {
+		if c.State != statePass && !c.Optional {
 			t.Errorf("%q = %s: %s", c.Name, c.State, c.Detail)
 		}
 	}

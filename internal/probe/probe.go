@@ -45,7 +45,15 @@ const (
 	stateNA          = "N/A"
 )
 
-type Check struct{ Name, State, Detail string }
+// Check is one verification observation. Optional marks a check whose absence
+// is legitimate: stateNA on an optional check does not fail the run, while a
+// failed or unavailable optional check still does.
+type Check struct {
+	Name     string
+	State    string
+	Detail   string
+	Optional bool
+}
 
 func observation(name string, ok bool, err error, detail string) Check {
 	c := Check{Name: name, State: statePass}
@@ -156,7 +164,7 @@ func report(out io.Writer, checks []Check) error {
 	}
 	failed := false
 	for _, c := range checks {
-		if c.State != statePass && !(c.State == stateNA && c.Name == "shared skills") {
+		if c.State != statePass && !(c.State == stateNA && c.Optional) {
 			failed = true
 		}
 		line := fmt.Sprintf("%s %q", c.State, c.Name)
@@ -263,7 +271,7 @@ func check(e Expected, obs observer) []Check {
 		add("read-only "+target, detail == "", err, detail)
 	}
 	if !e.Skills {
-		checks = append(checks, Check{Name: "shared skills", State: stateNA, Detail: "not configured"})
+		checks = append(checks, Check{Name: "shared skills", State: stateNA, Detail: "not configured", Optional: true})
 	}
 	for _, p := range []string{"/home/agent", "/workspace"} {
 		err := obs.writeProbe(p)

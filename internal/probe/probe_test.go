@@ -47,7 +47,7 @@ func TestIncompleteResultsNeverPass(t *testing.T) {
 	if err := report(&bytes.Buffer{}, nil); err == nil {
 		t.Fatal("accepted empty report")
 	}
-	if err := report(&bytes.Buffer{}, []Check{{Name: "required", State: "PASS"}, {Name: "shared skills", State: "N/A"}}); err != nil {
+	if err := report(&bytes.Buffer{}, []Check{{Name: "required", State: "PASS"}, {Name: "future optional", State: "N/A", Optional: true}}); err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
@@ -56,6 +56,20 @@ func TestIncompleteResultsNeverPass(t *testing.T) {
 	}
 	if strings.Count(out.String(), "\n") != 1 || strings.ContainsAny(out.String(), "\x1b\r") {
 		t.Fatalf("unsafe output %q", out.String())
+	}
+}
+
+// Optionality is a field, not the name: an unconfigured optional check is a
+// legitimate result, while one that ran and failed or came back unavailable
+// still fails the run.
+func TestOptionalChecksExemptOnlyUnconfiguredState(t *testing.T) {
+	if err := report(&bytes.Buffer{}, []Check{{Name: "future optional", State: stateNA, Detail: "not configured", Optional: true}}); err != nil {
+		t.Fatalf("unconfigured optional check failed the run: %v", err)
+	}
+	for _, state := range []string{stateFail, stateUnavailable} {
+		if err := report(&bytes.Buffer{}, []Check{{Name: "future optional", State: state, Optional: true}}); err == nil {
+			t.Fatalf("optional check in state %s passed the run", state)
+		}
 	}
 }
 
@@ -300,7 +314,7 @@ func TestReportOmitsOnlyEmptyDetails(t *testing.T) {
 	var out bytes.Buffer
 	err := report(&out, []Check{
 		{Name: "working directory", State: "PASS"},
-		{Name: "shared skills", State: "N/A", Detail: "not configured"},
+		{Name: "shared skills", State: "N/A", Detail: "not configured", Optional: true},
 		{Name: "hostname", State: "FAIL", Detail: "unexpected sandbox state"},
 	})
 	want := "PASS \"working directory\"\nN/A \"shared skills\": \"not configured\"\nFAIL \"hostname\": \"unexpected sandbox state\"\n"

@@ -68,12 +68,27 @@ func TestCheckProducesEveryObservation(t *testing.T) {
 	}
 }
 
+// The shared skills observation is the one Optional producer today: a check
+// run without configured skills must pass the report, and the observation
+// must still be disclosed.
+func TestUnconfiguredSkillsCheckIsOptional(t *testing.T) {
+	e := sandboxExpected()
+	checks := check(e, goodObserver(e))
+	var out bytes.Buffer
+	if err := report(&out, checks); err != nil {
+		t.Fatalf("a run without shared skills failed: %v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), `N/A "shared skills"`) {
+		t.Fatalf("shared skills observation missing: %s", out.String())
+	}
+}
+
 // report is what turns the observation list into a verdict, and it must never
 // print PASS overall while anything is not PASS. The only exception is an
 // explicitly unconfigured observation.
 func TestReportIsFailClosedAndExemptsOnlyUnconfigured(t *testing.T) {
 	var out bytes.Buffer
-	if err := report(&out, []Check{{Name: "shared skills", State: stateNA, Detail: "not configured"}}); err != nil {
+	if err := report(&out, []Check{{Name: "shared skills", State: stateNA, Detail: "not configured", Optional: true}}); err != nil {
 		t.Errorf("unconfigured observation failed the report: %v", err)
 	}
 	for _, state := range []string{stateFail, stateUnavailable} {

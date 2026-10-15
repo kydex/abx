@@ -128,6 +128,17 @@ fi`)
 	}
 }
 
+// The version probe's own failures belong to the run error: the deadline and
+// cancellation branches do not fire, so reporting the value that made the
+// probe fail must not report the deadline context, whose Err() is nil there.
+func TestOpenReportsVersionProbeFailure(t *testing.T) {
+	path := writeScript(t, `exit 3`)
+	_, err := open(context.Background(), path, false)
+	if err == nil || !strings.Contains(err.Error(), "bubblewrap version: exit status 3") {
+		t.Fatalf("probe failure not reported: %v", err)
+	}
+}
+
 func TestEnvironmentValuesStaySingleArgvElements(t *testing.T) {
 	env, err := sandbox.Session("tester", "/bin/sh", "/home/agent", []string{
 		"TERM=xterm", "LC_SPACED=a b", "LC_DOLLAR=$(x)", "LC_QUOTE=a'b\"c", "LC_EMPTY=",

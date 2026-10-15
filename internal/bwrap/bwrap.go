@@ -143,9 +143,10 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		// check is the 5s probe deadline; ctx is the caller's context. The
 		// probe deadline is what kills a wedged binary, so report it as such
 		// instead of the misleading "signal: killed", and keep caller
-		// cancellation distinct from the probe budget.
-		switch err := check.Err(); {
-		case errors.Is(err, context.DeadlineExceeded):
+		// cancellation distinct from the probe budget. Everything else is the
+		// run error itself.
+		switch checkErr := check.Err(); {
+		case errors.Is(checkErr, context.DeadlineExceeded):
 			return nil, errors.New("bubblewrap version probe timed out after 5s")
 		case ctx.Err() != nil:
 			return nil, fmt.Errorf("bubblewrap version probe cancelled: %w", ctx.Err())

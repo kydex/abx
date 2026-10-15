@@ -48,7 +48,7 @@ One commit does one thing. Write the subject as `<type>(<scope>): <description>`
 | `revert` | undoing a change |
 | `release` | cutting a version; an extension to the specification |
 
-Scopes in use: `host`, `sandbox`, `bwrap`, `app`, `cli`, `probe`, `profile`, `packaging`, `docs`, `ci`, `live`. The scope is optional.
+Examples of scopes in use: `host`, `sandbox`, `bwrap`, `app`, `cli`, `probe`, `profile`, `packaging`, `docs`, `ci`, `live`. The scope is optional.
 
 Mark a breaking change with `!` after the type and/or a `BREAKING CHANGE:` footer saying what changed and why. Messages are English.
 

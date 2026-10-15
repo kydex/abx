@@ -51,6 +51,9 @@ type Input struct {
 	Command               []string
 }
 
+// planKind records which caller built the plan. Validate treats planWork
+// exactly like planRun: no rule branches on it alone, and a work plan
+// differs from a run plan only in the command app supplies.
 type planKind uint8
 
 const (

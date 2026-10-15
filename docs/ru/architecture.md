@@ -39,7 +39,7 @@ host state -> host.Inputs -> sandbox.Plan -> bwrap translation/execution
 8. Bubblewrap запускается через retained descriptor. Стандартные потоки подключаются напрямую; INT/TERM/HUP/QUIT передаются дочернему процессу.
 9. `app` закрывает принадлежащие ему ресурсы. Ошибка cleanup не скрывается успешным завершением child process.
 
-`run` подключает проект и запускает агента. `shell` не подключает проект и запускает passwd login shell. `work` подключает проект и запускает тот же login shell, начиная в `/workspace`. Остальная isolation policy строится общим кодом. Явный режим хранится в `host.Inputs`; `app` преобразует его в режим `sandbox.Input` и выбирает согласованный `PWD`. `Plan` сохраняет отдельный `planWork`, проверяющий ожидаемые источники, mounts и cwd; выбор shell argv проверяется в host/app-тестах.
+`run` подключает проект и запускает агента. `shell` не подключает проект и запускает passwd login shell. `work` подключает проект и запускает тот же login shell, начиная в `/workspace`. Остальная isolation policy строится общим кодом. Явный режим хранится в `host.Inputs`; `app` преобразует его в режим `sandbox.Input` и выбирает согласованный `PWD`. `Plan` записывает режим как `planKind`, но ни одно правило не ветвится по `planWork` отдельно: он проверяется ровно как `planRun`, и work-план отличается от run-плана только командой, которую подставляет `app`; выбор shell argv проверяется в host/app-тестах.
 
 Выбор shared skills и подготовка mountpoint находятся в `internal/host/skills.go`; владение дескрипторами остаётся в `host.Inputs`. Структурная валидация плана находится в `internal/sandbox/validate.go` и по-прежнему выполняется после построения плана и перед переводом в аргументы Bubblewrap.
 

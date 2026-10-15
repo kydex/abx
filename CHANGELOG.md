@@ -25,6 +25,7 @@
 - Fixed: the release guide and the smoke check's comments now say that a non-root `make package-smoke` executes `abx version` from the unpacked binary archive, instead of claiming the binary is never run. (English and Russian.)
 - Fixed: a symlink cycle in a sensitive home tree (`~/.ssh -> .ssh`) no longer stops every command at startup. Like a dangling link, a link that cannot resolve is compared by the literal target its own text names; a cycle never resolves, so no data can sit behind it.
 - Fixed: a missing Bubblewrap no longer reports only a bare `lstat` error, and a dangling `/usr/bin/bwrap` link names the path ABX checked (`resolve Bubblewrap executable "/usr/bin/bwrap": ...`) instead of only its target.
+- The `abx help` storage line now says that `$XDG_DATA_HOME` is used only when absolute, matching the guides.
 
 ## 0.8.25
 

@@ -41,7 +41,7 @@ const Usage = `abx:
   abx verify <profile>
   abx help | -h | --help
   abx version | -v | --version
-Storage: $XDG_DATA_HOME/abx, or .local/share/abx in the passwd home.`
+Storage: $XDG_DATA_HOME/abx (used only when absolute), or .local/share/abx in the passwd home.`
 
 func Parse(args []string) (Command, error) {
 	if len(args) == 0 {

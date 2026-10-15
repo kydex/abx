@@ -18,6 +18,7 @@
 - The `inspect` isolation summary gained two lines: `nested user namespaces: disabled` and `lifetime: killed with the launcher`. Both properties were enforced all along by the shared Bubblewrap arguments; the summary just did not name them.
 - The mutation sweep measures every guard in its file list -- the filter that skipped `Kind ==` guards is gone and `internal/app` joined the list -- and gives each package its own copy of the scratch tree: package tests link one another, and in a shared tree one package's mutant was recorded against another package's guard (a full run read 54 of `internal/app`'s 76 guards killed; in its own tree the number is 38). Runs from before these changes are not comparable. Its eighth run measured 288 of 425 guards killed, 137 survived and none unmeasurable.
 - `make package-check` rehearses release packaging without a release tag: it builds both archives into a temporary directory and runs the same smoke checks as `make package-smoke`, and `make check` runs it, so a packaging regression fails on a branch instead of only at the tag.
+- The security guide records the `__probe` gate's limit: it proves the mode the private entry point runs under (the binary executing as the read-only `/abx-probe` mount), not the origin of the call. (English and Russian.)
 
 ## 0.8.25
 

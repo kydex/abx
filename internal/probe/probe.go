@@ -319,8 +319,6 @@ func checkNamespaces(host map[string]string, readlink func(string) (string, erro
 	return checks
 }
 
-// checkEnvironment compares full assignments, including duplicates, but discloses only variable names.
-
 // sanitizeEnvironment puts both sides of the comparison through the same lossy
 // transform. The expected values reach the probe by being marshalled to JSON,
 // and the JSON encoder replaces every byte of an invalid UTF-8 sequence with
@@ -351,6 +349,8 @@ func sanitizeEnvironment(entries []string) []string {
 	return out
 }
 
+// checkEnvironment compares full assignments, including duplicates, but
+// discloses only variable names.
 func checkEnvironment(actual, expected []string) Check {
 	actual, expected = sanitizeEnvironment(actual), sanitizeEnvironment(expected)
 	slices.Sort(actual)

@@ -92,6 +92,12 @@ func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 			return err
 		}
 	}
+	// The /etc resources mount as discovered, without a mode or owner check
+	// of their own. /etc/passwd is the one that holds a trust anchor, and its
+	// strictness -- a regular file group and other cannot rewrite -- is
+	// enforced by the ResolveShell branch reading passwdPath in shell.go,
+	// which runs after this loop; moving that read without moving
+	// checkPasswdFile with it would leave the mounted copy unchecked.
 	for _, name := range layout.etc {
 		p := "/etc/" + name
 		path := physical(p)

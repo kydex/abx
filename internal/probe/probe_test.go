@@ -73,10 +73,12 @@ func TestOptionalChecksExemptOnlyUnconfiguredState(t *testing.T) {
 	}
 }
 
+// These five malformed inputs are decode's business. They used to go through
+// Run, which checks the host gate first and on an ordinary machine never let
+// decode see them, so a disabled decode check left this test green.
 func TestPrivateProbeRejectsMissingObservations(t *testing.T) {
 	for _, raw := range []string{"", "{}", "null", "[]", strings.Repeat("x", 65537)} {
-		var out bytes.Buffer
-		if err := Run(raw, &out); err == nil || out.Len() != 0 {
+		if _, err := decode(raw); err == nil {
 			t.Fatal("accepted incomplete input")
 		}
 	}

@@ -244,6 +244,8 @@ already printed on stdout. Like `work`, `verify` accepts only the profile name, 
 
 Individual checks use `PASS`, `FAIL`, `UNAVAILABLE`, and `N/A`. `N/A` is expected when shared skills are not configured. A failed or incomplete mandatory check makes `verify` fail. Failure details describe the expected and observed state where available. Environment mismatches list only differing variable names, without their values.
 
+The input the launcher hands the probe is limited to 64 KiB, environment included; an environment that exceeds the bound fails verification rather than being silently truncated.
+
 The read-only checks inspect mount flags at the selected mountpoints; they do not independently check every nested mount. Read-only enforcement is delegated to Bubblewrap. See the [verification scope](security.md#verification).
 
 Verification temporarily creates probe files in the real home and removes them before reporting final success. A forced process kill or host crash can leave such temporary files behind.
@@ -306,6 +308,8 @@ Only these host settings are forwarded when present:
 ```text
 TERM COLORTERM LANG LANGUAGE TZ NO_COLOR FORCE_COLOR LC_*
 ```
+
+A forwarded value is limited to 64 KiB: a longer value stops the session with an error naming the variable.
 
 Arbitrary host environment variables, including proxy or credential variables, are not copied automatically, and the host SSH-agent socket is not exposed. Configure anything the agent needs inside its profile.
 

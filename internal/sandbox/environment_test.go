@@ -178,3 +178,25 @@ func TestSessionRejectsNulUsernameAndHostValues(t *testing.T) {
 		t.Fatalf("dropped clean host value: %#v", m)
 	}
 }
+
+func TestSessionBoundsHostValueLength(t *testing.T) {
+	// Independent literals: 64 KiB is a documented bound, so changing the
+	// constant must also touch the guides and this test.
+	atLimit := strings.Repeat("x", 65536)
+	entries, err := Session("tester", "/usr/bin/bash", "/workspace", []string{"LANG=" + atLimit})
+	if err != nil {
+		t.Fatalf("refused a value at the limit: %v", err)
+	}
+	if toMap(entries)["LANG"] != atLimit {
+		t.Fatal("value at the limit was not forwarded")
+	}
+	over := strings.Repeat("x", 65536+1)
+	_, err = Session("tester", "/usr/bin/bash", "/workspace", []string{"LC_CTYPE=" + over})
+	if err == nil || !strings.Contains(err.Error(), "LC_CTYPE") || !strings.Contains(err.Error(), "65536") {
+		t.Fatalf("oversized value not refused by name and bound: %v", err)
+	}
+	// A value outside the allowlist is dropped before its size matters.
+	if _, err := Session("tester", "/usr/bin/bash", "/workspace", []string{"SECRET=" + over}); err != nil {
+		t.Fatalf("non-allowlisted oversized value refused: %v", err)
+	}
+}

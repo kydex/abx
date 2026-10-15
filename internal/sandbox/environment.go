@@ -14,6 +14,13 @@ type Entry struct {
 	Value string
 }
 
+// maxEnvironmentValueBytes bounds one allowlisted host value. The kernel
+// rejects a single execve argument past MAX_ARG_STRLEN (128 KiB), and the
+// verify probe carries the same environment in a payload with a 64 KiB limit
+// of its own; a value past this bound is refused by name instead of surfacing
+// as a raw "argument list too long".
+const maxEnvironmentValueBytes = 64 * 1024
+
 // Session builds the clean environment for run, shell, work, and self-test.
 func Session(username, shell, workingDirectory string, host []string) ([]Entry, error) {
 	if username == "" {
@@ -32,6 +39,11 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 		return nil, fmt.Errorf("unsupported sandbox working directory %q", workingDirectory)
 	}
 	values := allowlistedHost(host)
+	for key, value := range values {
+		if len(value) > maxEnvironmentValueBytes {
+			return nil, fmt.Errorf("environment variable %q value is %d bytes, above the %d byte limit", key, len(value), maxEnvironmentValueBytes)
+		}
+	}
 	fixed := map[string]string{
 		"HOME": "/home/agent", "USER": username, "LOGNAME": username,
 		"SHELL": shell, "PWD": workingDirectory, "TMPDIR": "/tmp",

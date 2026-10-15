@@ -131,10 +131,9 @@ here so nobody starts the same discussion from scratch.
   correct where it was checked; closing the gap needs test seams that the
   project's own rules discourage. The mutation sweep behind this list measured
   the size of the gap: one of eleven orchestrator mutations is caught.
-- The aggregate coverage floor is 74.0% against an actual 90.8%, and `internal/app` is 264 of the
-  311 statements its own profile covers (84.9%). Halving that package's own coverage still leaves the
-  aggregate at 82.5%, so the gate stays silent; only dropping it to zero trips the gate, at 74.2%, just
-  over the floor. The aggregate catches gross
+- The aggregate coverage floor is 74.0% against an actual 91.5%, and `internal/app` is 280 of its
+  325 statements (86.2%). Halving that package's coverage still leaves the aggregate at 83.1%; even
+  zeroing it leaves 74.7%, still above the floor, so the gate does not fire on this package. The aggregate catches gross
   regressions and nothing finer. A coverage drop with every test still green means tests were deleted
   or skipped, and the skip path is the one worth watching.
   `host.ResolveAccount` is a one-line wrapper over the tested seam; unit tests

@@ -180,6 +180,9 @@ func markInheritedFDsCloseOnExec() (func(), error) {
 		flag int
 	}
 	var saved []savedFlag
+	// restore runs either from the caller's defer on success or from an error
+	// branch below before returning -- never from both for one call, because
+	// the error branches are the paths that skip the caller's defer.
 	restore := func() {
 		for _, s := range saved {
 			if cur, err := os.Stat(fmt.Sprintf("/proc/self/fd/%d", s.fd)); err != nil || !os.SameFile(cur, s.info) {

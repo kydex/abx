@@ -267,6 +267,19 @@ func TestCreateErrorIncludesFullDirectoryPath(t *testing.T) {
 	if !errors.Is(err, ErrProfileExists) || !strings.Contains(err.Error(), filepath.Join(paths.Profiles, "demo")) {
 		t.Fatalf("missing full path or error classification: %v", err)
 	}
+	// A symlink reports 0777 on its own, so its refusal must name the kind
+	// without a mode that would misread as real permissions.
+	profile := filepath.Join(paths.Profiles, "demo")
+	if err := os.Rename(profile, profile+"-saved"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(profile+"-saved", profile); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = CreateProfile(a, paths, "demo"); !errors.Is(err, ErrProfileExists) ||
+		!strings.Contains(err.Error(), "(existing symlink)") || strings.Contains(err.Error(), "mode 0777") {
+		t.Fatalf("symlink refusal text: %v", err)
+	}
 }
 
 // profile show and profile list go through ShowProfile, which resolved the

@@ -137,9 +137,9 @@ here so nobody starts the same discussion from scratch.
   project's own rules discourage. The mutation sweep behind this list measured
   the size of the gap: its tests catch 38 of the package's 76 guards, and the
   other 38 survive deletion.
-- The aggregate coverage floor is 74.0% against an actual 91.5%, and `internal/app` is 280 of its
-  325 statements (86.2%). Halving that package's coverage still leaves the aggregate at 83.1%; even
-  zeroing it leaves 74.7%, still above the floor, so the gate does not fire on this package. The aggregate catches gross
+- The aggregate coverage floor is 74.0% against an actual 91.6%, and `internal/app` is 280 of its
+  325 statements (86.2%). Halving that package's coverage still leaves the aggregate at 83.2%; even
+  zeroing it leaves 74.8%, still above the floor, so the gate does not fire on this package. The aggregate catches gross
   regressions and nothing finer. A coverage drop with every test still green means tests were deleted
   or skipped, and the skip path is the one worth watching.
   `host.ResolveAccount` is a one-line wrapper over the tested seam; unit tests

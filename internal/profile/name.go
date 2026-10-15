@@ -14,9 +14,11 @@ func ValidateName(name string) error {
 	for i, c := range []byte(name) {
 		letter := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
 		digit := c >= '0' && c <= '9'
-		extra := i > 0 && (c == '.' || c == '_' || c == '-')
-		if !(letter || digit || extra) {
-			return fmt.Errorf("invalid profile name %q: start with a letter or digit; use only ASCII letters, digits, dot, underscore or hyphen", name)
+		if i == 0 && !letter && !digit {
+			return fmt.Errorf("invalid profile name %q: must start with a letter or digit", name)
+		}
+		if !letter && !digit && c != '.' && c != '_' && c != '-' {
+			return fmt.Errorf("invalid profile name %q: only ASCII letters, digits, dot, underscore or hyphen are allowed", name)
 		}
 	}
 	return nil

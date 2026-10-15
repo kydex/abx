@@ -26,6 +26,7 @@
 - Fixed: a symlink cycle in a sensitive home tree (`~/.ssh -> .ssh`) no longer stops every command at startup. Like a dangling link, a link that cannot resolve is compared by the literal target its own text names; a cycle never resolves, so no data can sit behind it.
 - Fixed: a missing Bubblewrap no longer reports only a bare `lstat` error, and a dangling `/usr/bin/bwrap` link names the path ABX checked (`resolve Bubblewrap executable "/usr/bin/bwrap": ...`) instead of only its target.
 - The `abx help` storage line now says that `$XDG_DATA_HOME` is used only when absolute, matching the guides.
+- Fixed: the invalid-profile-name message now names the rule the input broke -- `must start with a letter or digit` or the allowed character set -- instead of asserting both for a name like `a b`.
 
 ## 0.8.25
 

@@ -18,6 +18,9 @@ func TestEscape(t *testing.T) {
 		{"named controls", "\a\b\f\n\r\t\v", `\a\b\f\n\r\t\v`},
 		{"ASCII control", "a\x1bb", `a\u001bb`},
 		{"Unicode controls", "a\u202eb\u2028c\U000e0001d", `a\u202eb\u2028c\U000e0001d`},
+		{"invalid byte", "/tmp/caf\xe9", `/tmp/caf\xe9`},
+		{"invalid bytes mixed", "/tmp/a\x80\xffb", `/tmp/a\x80\xffb`},
+		{"replacement character", "caf\uFFFD", "caf\uFFFD"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

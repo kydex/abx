@@ -10,6 +10,7 @@
 - Fixed: a Bubblewrap version probe that fails for a reason other than its 5s deadline or caller cancellation now reports that reason. The message wrapped the probe deadline context instead of the run error and rendered the nil value as `%!w(<nil>)`.
 - Fixed: when selected sources changed between validation and preparation, the error now names the same object every time -- the first in sorted order -- and says what it is (profile home, data root, project, and so on). The name used to depend on map order and carry no role.
 - Fixed: an option-like profile name, as in `abx run --version`, is refused as an unknown option with a pointer to `abx --help` instead of the profile name rules; `abx -h extra` names the token as typed.
+- Fixed: diagnostic text keeps invalid UTF-8 bytes as `\xNN` instead of replacing each one with U+FFFD, so a path with such bytes is reported exactly.
 
 ## 0.8.25
 

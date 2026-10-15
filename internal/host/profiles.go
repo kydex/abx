@@ -59,6 +59,12 @@ func ShowProfile(account Account, paths Paths, name string) (status ProfileStatu
 		return status, err
 	}
 	status.Exists = true
+	// Fill the mounted system sources before the placement check, the way run
+	// does: without them its system branch was dead, and show refused a link
+	// into /usr that run accepts and executes.
+	if err := in.discoverSystem("/"); err != nil {
+		return status, err
+	}
 	status.Executable, status.AgentError = resolveAgent(in.home, name)
 	if status.AgentError == nil {
 		// resolveAgent alone accepts a link that ends outside the profile and

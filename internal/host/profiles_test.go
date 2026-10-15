@@ -317,3 +317,35 @@ func TestShowProfileRefusesAgentThatRunWouldRefuse(t *testing.T) {
 		t.Fatalf("list reports %+v, show reported %+v", list[0], status)
 	}
 }
+
+// A package manager installs the real binary under a mounted system path and
+// points the profile entry at it; the security guide calls this supported and
+// run accepts it. The placement check reads the mounted system sources, and
+// with none discovered it refused exactly that supported layout.
+func TestShowProfileAcceptsAgentInstalledUnderSystemPath(t *testing.T) {
+	a, p := profileStorage(t)
+	if _, err := CreateProfile(a, p, "demo"); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(p.Profiles, "demo", ".local", "bin")
+	if err := os.MkdirAll(bin, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/usr/bin/true", filepath.Join(bin, "demo")); err != nil {
+		t.Fatal(err)
+	}
+	status, err := ShowProfile(a, p, "demo")
+	if err != nil {
+		t.Fatalf("show: %v", err)
+	}
+	if status.AgentError != nil || status.Executable != "/home/agent/.local/bin/demo" {
+		t.Fatalf("show refused an agent run accepts: %+v", status)
+	}
+	list, err := ListProfiles(a, p)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(list) != 1 || list[0].AgentError != nil || list[0].Executable != status.Executable {
+		t.Fatalf("list reports %+v, show reported %+v", list, status)
+	}
+}

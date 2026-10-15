@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed: `profile show` and `profile list` no longer reject an agent installed as a symlink under a mounted system path such as `/usr`. Profile inputs carried no discovered system sources, so the placement check refused the layout `run` accepts and the security guide calls supported.
+
 ## 0.8.25
 
 Closed the fourth audit round: 40 findings, and from this release every one of them

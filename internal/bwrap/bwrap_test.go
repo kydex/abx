@@ -309,6 +309,15 @@ func TestOpenUsesFixedBubblewrapPath(t *testing.T) {
 	if _, err := Open(context.Background()); err != nil && !strings.Contains(err.Error(), Path) {
 		t.Fatalf("Open error does not name %q: %v", Path, err)
 	}
+	// A dangling link must name the configured path too: the raw EvalSymlinks
+	// error named only the link target.
+	dangling := filepath.Join(t.TempDir(), "bwrap")
+	if err := os.Symlink(filepath.Join(t.TempDir(), "missing"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := open(context.Background(), dangling, false); err == nil || !strings.Contains(err.Error(), dangling) {
+		t.Fatalf("dangling Open error does not name %q: %v", dangling, err)
+	}
 }
 
 func TestChildStreamsExitAndCleanHostEnvironment(t *testing.T) {

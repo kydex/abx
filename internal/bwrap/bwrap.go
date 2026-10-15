@@ -98,7 +98,7 @@ func Open(ctx context.Context) (*Tool, error) { return open(ctx, Path, true) }
 func open(ctx context.Context, path string, system bool) (tool *Tool, err error) {
 	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolve Bubblewrap executable %q: %w", path, err)
 	}
 	fd, err := unix.Open(resolved, unix.O_PATH|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
 	if err != nil {

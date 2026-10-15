@@ -57,9 +57,9 @@ package-smoke:
 	version=$$(cat internal/app/VERSION); \
 	work=$$(mktemp -d); \
 	trap 'rm -rf "$$work"' EXIT HUP INT TERM; \
-	test -f "dist/abx-$$version-linux-amd64.tar.gz"; \
-	test -f "dist/abx-$$version-source.tar.gz"; \
-	test -f "dist/abx-$$version-SHA256SUMS"; \
+	test -f "dist/abx-$$version-linux-amd64.tar.gz" || { echo "error: dist/abx-$$version-linux-amd64.tar.gz is missing; run 'make package' first" >&2; exit 1; }; \
+	test -f "dist/abx-$$version-source.tar.gz" || { echo "error: dist/abx-$$version-source.tar.gz is missing; run 'make package' first" >&2; exit 1; }; \
+	test -f "dist/abx-$$version-SHA256SUMS" || { echo "error: dist/abx-$$version-SHA256SUMS is missing; run 'make package' first" >&2; exit 1; }; \
 	(cd dist && sha256sum -c "abx-$$version-SHA256SUMS"); \
 	tar -xzf "dist/abx-$$version-linux-amd64.tar.gz" -C "$$work"; \
 	test -x "$$work/abx-$$version-linux-amd64/abx"; \

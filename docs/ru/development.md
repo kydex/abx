@@ -21,6 +21,15 @@ make build
 ./abx version
 ```
 
+Сборка релизных архивов и проверка их структуры:
+
+```sh
+make package
+make package-smoke
+```
+
+`make package-smoke` распаковывает архивы из `dist/`. `make package` требует тег релиза на `HEAD`; порядок выпуска — в [Releases](releases.md).
+
 Полный набор локальных проверок:
 
 ```sh

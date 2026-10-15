@@ -21,6 +21,15 @@ make build
 ./abx version
 ```
 
+Build the release archives and check their structure:
+
+```sh
+make package
+make package-smoke
+```
+
+`make package-smoke` unpacks the archives from `dist/`. `make package` requires the release tag on `HEAD`; see [Releases](releases.md) for the release flow.
+
 Run the full local check suite:
 
 ```sh

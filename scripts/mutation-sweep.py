@@ -14,9 +14,20 @@ lines until the brace included. Four outcomes:
                    broke, not the code -- retried once, recorded loudly, and
                    the run exits 1 instead of reporting counts
 
-Scope note: earlier runs only saw single-line `if ... {`, and runs before the
-textual filter was dropped skipped guards matching it, so their counts are not
-comparable with runs from the current version on.
+Scope note: earlier runs only saw single-line `if ... {`, the version before
+`internal/app` joined the file list skipped guards matching a textual filter,
+and the version before the per-package trees measured every package in one
+tree, so none of their counts are comparable with runs from the current
+version on.
+
+Each package is measured in its own copy of the tree. Package tests link other
+packages -- `internal/app` links five of the six others, and `internal/bwrap`
+and `internal/probe` link `internal/sandbox` -- so in one shared tree a test
+run compiles whatever mutant another worker happens to hold in a linked
+package, and that failure is recorded against the guard being measured. A full
+run with `internal/app` in the file list read 22 of its 76 guards surviving;
+its own tree reads 38, the same as a run of the package alone. One
+`internal/host` guard was read killed the same way.
 
 The condition is neutralised as `false && (<cond>)` rather than replaced by a
 plain `false`, so the compiler still sees every variable the condition uses.
@@ -171,6 +182,9 @@ def sweep_package(repo: pathlib.Path, rels: list[str]) -> None:
     the first is mid-measurement, and each would report the other's outcome.
     That is not theoretical -- it is how the first parallel version of this
     script lost four of the ten documented debts without saying so.
+
+    `repo` is this package's own copy of the tree (see `main`); no other
+    worker writes to it, so the packages its tests link read as `HEAD`.
     """
     for rel in rels:
         sweep_file(repo, rel)
@@ -290,12 +304,25 @@ def main() -> int:
                 print(f"     {name}")
             print()
 
+        def sweep_in_own_tree(files: list[str]) -> None:
+            # One copy per package, so a linked package reads as HEAD even
+            # while another worker mutates its own copy. With one shared tree
+            # the two workers would measure each other's mutants.
+            name = pathlib.PurePosixPath(files[0]).parent.as_posix().replace("/", "-")
+            copy = work / f"repo-{name}"
+            shutil.copytree(repo, copy)
+            try:
+                sweep_package(copy, files)
+            finally:
+                shutil.rmtree(copy, ignore_errors=True)
+
         # One worker per package. A package's tests see every file in it, so two
-        # files of the same package must not be mutated at the same time. Across
-        # packages nothing is shared, and bwrap alone is slower than the rest put
-        # together, so this is the difference between half an hour and minutes.
+        # files of the same package must not be mutated at the same time. Each
+        # worker owns its copy of the tree, and bwrap alone is slower than the
+        # rest put together, so this is the difference between half an hour and
+        # minutes.
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(by_pkg)) as pool:
-            futures = [pool.submit(sweep_package, repo, files) for files in by_pkg.values()]
+            futures = [pool.submit(sweep_in_own_tree, files) for files in by_pkg.values()]
             for future in concurrent.futures.as_completed(futures):
                 # Surface worker exceptions: a thread that dies quietly leaves
                 # its guards uncounted and the totals lying by omission.

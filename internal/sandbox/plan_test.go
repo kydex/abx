@@ -415,9 +415,9 @@ func TestValidateRejectsExpectedMutations(t *testing.T) {
 		{name: "unexpected probe mount", want: "unexpected verification probe", mutate: func(_ *testing.T, p *Plan) {
 			p.mounts = append(p.mounts, Mount{Kind: ReadOnly, Source: "/proc/self/exe", Target: ProbePath})
 		}},
-		{name: "writable expected usr", want: "invalid expected system mount", mutate: func(t *testing.T, p *Plan) { p.expected.system[usrExpected(t, p)].Kind = Writable }},
-		{name: "usr with mode", want: "invalid expected system mount", mutate: func(t *testing.T, p *Plan) { p.expected.system[usrExpected(t, p)].Mode = 0o755 }},
-		{name: "missing expected usr", want: "expected system /usr is required", mutate: func(t *testing.T, p *Plan) {
+		{name: "writable expected usr", want: "invalid system mount", mutate: func(t *testing.T, p *Plan) { p.expected.system[usrExpected(t, p)].Kind = Writable }},
+		{name: "usr with mode", want: "invalid system mount", mutate: func(t *testing.T, p *Plan) { p.expected.system[usrExpected(t, p)].Mode = 0o755 }},
+		{name: "missing expected usr", want: "system /usr is required", mutate: func(t *testing.T, p *Plan) {
 			i := usrExpected(t, p)
 			p.expected.system = append(p.expected.system[:i], p.expected.system[i+1:]...)
 		}},

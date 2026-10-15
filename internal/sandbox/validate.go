@@ -7,6 +7,36 @@ import (
 	"strings"
 )
 
+// checkSystemMounts enforces the rules a system list must satisfy: one shared
+// implementation serves build as an early refusal and Validate as the barrier
+// before translation, so the two cannot drift apart.
+func checkSystemMounts(mounts []Mount) error {
+	seen := make(map[string]bool, len(mounts))
+	for _, m := range mounts {
+		compat := compatibilityTarget(m.Target)
+		if !allowedSystemTarget(m.Target) || m.Mode != 0 || (m.Kind != ReadOnly && !(compat && m.Kind == Symlink)) {
+			return fmt.Errorf("invalid system mount %q", m.Target)
+		}
+		if (m.Kind == ReadOnly && !CleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
+			return errors.New("invalid system source")
+		}
+		if m.Kind == Symlink && !compatibilitySourceKeptInUsr(m.Source) {
+			return fmt.Errorf("system link %q is not a relative path inside /usr: %q", m.Target, m.Source)
+		}
+		if m.Size != 0 {
+			return fmt.Errorf("invalid system mount %q", m.Target)
+		}
+		if seen[m.Target] {
+			return fmt.Errorf("duplicate system mount %q", m.Target)
+		}
+		seen[m.Target] = true
+	}
+	if !seen["/usr"] {
+		return errors.New("system /usr is required")
+	}
+	return nil
+}
+
 // Validate checks the structural invariants of an in-memory sandbox plan without touching the host filesystem.
 // It is the final structural guard before a plan is translated into Bubblewrap arguments.
 func (p Plan) Validate() error {
@@ -65,28 +95,8 @@ func (p Plan) Validate() error {
 	if len(p.mounts) < len(base) || !slices.Equal(p.mounts[:len(base)], base) {
 		return errors.New("invalid plan base directories")
 	}
-	seenSystem := make(map[string]bool, len(p.expected.system))
-	for _, m := range p.expected.system {
-		compat := compatibilityTarget(m.Target)
-		if !allowedSystemTarget(m.Target) || m.Mode != 0 || (m.Kind != ReadOnly && !(compat && m.Kind == Symlink)) {
-			return fmt.Errorf("invalid expected system mount %q", m.Target)
-		}
-		if (m.Kind == ReadOnly && !CleanPath(m.Source)) || (m.Kind == Symlink && (m.Source == "" || strings.ContainsRune(m.Source, 0))) {
-			return errors.New("invalid expected system source")
-		}
-		if m.Kind == Symlink && !compatibilitySourceKeptInUsr(m.Source) {
-			return fmt.Errorf("expected system link %q is not a relative path inside /usr: %q", m.Target, m.Source)
-		}
-		if m.Size != 0 {
-			return fmt.Errorf("invalid expected system mount %q", m.Target)
-		}
-		if seenSystem[m.Target] {
-			return fmt.Errorf("duplicate expected system mount %q", m.Target)
-		}
-		seenSystem[m.Target] = true
-	}
-	if !seenSystem["/usr"] {
-		return errors.New("expected system /usr is required")
+	if err := checkSystemMounts(p.expected.system); err != nil {
+		return err
 	}
 
 	index := len(base)

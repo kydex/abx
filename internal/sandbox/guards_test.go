@@ -68,7 +68,7 @@ func TestValidateRejectsPlanEditedAfterBuild(t *testing.T) {
 		last := p.expected.system[len(p.expected.system)-1]
 		q.expected.system = append(append([]Mount{}, p.expected.system...), last)
 		q.mounts = append(append([]Mount{}, p.mounts...), last)
-		if err := q.Validate(); err == nil || !strings.Contains(err.Error(), "duplicate expected system mount") {
+		if err := q.Validate(); err == nil || !strings.Contains(err.Error(), "duplicate system mount") {
 			t.Fatalf("duplicate expected mount accepted: %v", err)
 		}
 	})
@@ -82,7 +82,7 @@ func TestValidateRejectsPlanEditedAfterBuild(t *testing.T) {
 				q.mounts[len(baseMounts())+i].Size = 1 << 20
 			}
 		}
-		if err := q.Validate(); err == nil || !strings.Contains(err.Error(), "invalid expected system mount") {
+		if err := q.Validate(); err == nil || !strings.Contains(err.Error(), "invalid system mount") {
 			t.Fatalf("size accepted on an expected non-tmpfs mount: %v", err)
 		}
 	})
@@ -224,18 +224,33 @@ func TestBuildRejectsUnusableSkillsSource(t *testing.T) {
 // Without /usr the sandbox has no userspace: no shell, no loader, nothing to run.
 // Every other system entry is optional, so this is the one that cannot go missing.
 //
-// The requirement is enforced twice — once while constructing the plan and once
-// in Validate — so asserting only that Build fails passes whichever of the two
-// is still standing. This case pins the construction guard on its own, which is
-// the one that stops a plan with no /usr from ever existing.
+// One shared rule set holds the requirement, and both entry points run it:
+// build refuses before a plan with no /usr can exist, and Validate runs the
+// same check before translation. Asserting both keeps either caller from
+// dropping the call.
 func TestBuildRequiresUsrInSystemLayout(t *testing.T) {
 	in := testInput(t, Run)
 	in.System = []Mount{{Kind: Symlink, Source: "usr/bin", Target: "/bin"}}
 	if _, err := build(in); err == nil || !strings.Contains(err.Error(), "system /usr is required") {
 		t.Fatalf("built a plan without /usr: %v", err)
 	}
-	if _, err := Build(in); err == nil || !strings.Contains(err.Error(), "/usr is required") {
+	if _, err := Build(in); err == nil || !strings.Contains(err.Error(), "system /usr is required") {
 		t.Fatalf("accepted a system layout without /usr: %v", err)
+	}
+}
+
+// The same rules must hold when build runs alone, before Validate sees the
+// plan: a compatibility link that would resolve outside the mounted tree has
+// to stop the construction, not only the later barrier.
+func TestBuildAloneRefusesEscapingCompatibilityLink(t *testing.T) {
+	in := testInput(t, Run)
+	for i := range in.System {
+		if in.System[i].Target == "/bin" {
+			in.System[i].Source = "../../home/kdx/.ssh"
+		}
+	}
+	if _, err := build(in); err == nil || !strings.Contains(err.Error(), "not a relative path inside /usr") {
+		t.Fatalf("build let an escaping compatibility link through: %v", err)
 	}
 }
 

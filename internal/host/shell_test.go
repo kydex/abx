@@ -3,8 +3,10 @@ package host
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -100,9 +102,16 @@ func TestVisibleInSandboxBoundaries(t *testing.T) {
 
 func TestResolveUsesHostPasswd(t *testing.T) {
 	selection := ResolveShell(os.Getuid())
-	if selection.Path == "" {
-		t.Fatalf("Resolve = %#v", selection)
+	if selection.Path != "" {
+		return
 	}
+	// A uid without a passwd row is the one legitimate absence; the same
+	// independent lookup the account tests use decides between an
+	// environment without the row and a real refusal.
+	if _, err := user.LookupId(strconv.Itoa(os.Getuid())); err != nil {
+		t.Skipf("no passwd entry for the invoking uid: %v", err)
+	}
+	t.Fatalf("Resolve = %#v", selection)
 }
 
 func TestShellFromPasswdMalformedAndRelative(t *testing.T) {

@@ -89,6 +89,36 @@ func TestRevalidateNamesSortedFirstChangeWithRole(t *testing.T) {
 	}
 }
 
+// role() labels the changed object in the refusal text; every kind a source
+// can have must name itself, and the fallback must stay honest.
+func TestRoleNamesEverySourceKind(t *testing.T) {
+	in := &Inputs{
+		paths:   Paths{Root: "/data", Profiles: "/data/profiles", Shared: "/data/shared", SharedSkills: "/data/shared/agents/skills"},
+		home:    "/data/profiles/demo",
+		project: "/host/project",
+		skills:  "/data/shared/skills-source",
+		system:  []Source{{Path: "/usr", Target: "/usr"}},
+	}
+	for _, test := range []struct {
+		path string
+		want string
+	}{
+		{in.home, "profile home"},
+		{in.paths.Root, "data root"},
+		{in.paths.Profiles, "profiles directory"},
+		{in.paths.Shared, "shared directory"},
+		{in.project, "project"},
+		{in.skills, "shared skills"},
+		{filepath.Dir(in.paths.SharedSkills), "shared skills directory"},
+		{"/usr", "system source"},
+		{"/other", "source"},
+	} {
+		if got := in.role(test.path); got != test.want {
+			t.Errorf("role(%q) = %q, want %q", test.path, got, test.want)
+		}
+	}
+}
+
 // Prepare's first step is a revalidation the application relies on: an input
 // replaced between Resolve and Prepare must be refused before preparation
 // touches anything. This pins that step on its own; the app tests pin the

@@ -42,24 +42,25 @@ func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 	// Discovered targets must stay within sandbox.allowedSystemTarget;
 	// anything else fails closed in plan.Build instead of widening the sandbox.
 	physical := func(p string) string { return filepath.Join(root, strings.TrimPrefix(p, "/")) }
-	add := func(path, target string) error {
+	add := func(path, target string) (string, error) {
 		resolved, err := filepath.EvalSymlinks(path)
 		if err != nil {
-			return fmt.Errorf("resolve system source %q: %w", path, err)
+			return "", fmt.Errorf("resolve system source %q: %w", path, err)
 		}
 		if overlaps(resolved, in.account.Home) || overlaps(resolved, in.paths.Root) {
-			return fmt.Errorf("protected data overlaps system source %q", resolved)
+			return "", fmt.Errorf("protected data overlaps system source %q", resolved)
 		}
 		if err = in.retain(resolved); err != nil {
-			return err
+			return "", err
 		}
 		in.system = append(in.system, Source{Path: resolved, Target: target})
-		return nil
+		return resolved, nil
 	}
-	if err := add(physical(layout.usr), layout.usr); err != nil {
+	usr, err := add(physical(layout.usr), layout.usr)
+	if err != nil {
 		return err
 	}
-	if !in.objects[in.system[len(in.system)-1].Path].info.IsDir() {
+	if !in.objects[usr].info.IsDir() {
 		return fmt.Errorf("%s is not a directory", layout.usr)
 	}
 	for _, p := range layout.compat {
@@ -88,7 +89,7 @@ func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 			}
 			in.links[path] = link
 			in.system = append(in.system, Source{Target: p, Link: link})
-		} else if err = add(path, p); err != nil {
+		} else if _, err = add(path, p); err != nil {
 			return err
 		}
 	}
@@ -106,7 +107,7 @@ func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 		} else if err != nil {
 			return fmt.Errorf("inspect system path %q: %w", p, err)
 		}
-		if err := add(path, p); err != nil {
+		if _, err := add(path, p); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				// A dangling entry is absent, not broken: nothing can be
 				// mounted for a link that resolves nowhere, and one broken

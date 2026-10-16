@@ -104,7 +104,8 @@ func TestPrivateProbeRejectsOversizedValidJSON(t *testing.T) {
 func TestRunComposesGateDecodeAndReport(t *testing.T) {
 	// The three glue lines of Run execute only on a live host; here the gate
 	// and the observer are substituted so the composition itself is pinned:
-	// a passing world must report PASS, a failing gate must win over decode.
+	// a passing world must report PASS, a failing gate must win over decode,
+	// and a failed decode must still stop before any report.
 	runtime := t.TempDir()
 	if err := os.Chmod(runtime, 0o700); err != nil {
 		t.Fatal(err)
@@ -156,6 +157,10 @@ func TestRunComposesGateDecodeAndReport(t *testing.T) {
 	var gated bytes.Buffer
 	if err := run(func() error { return gateErr }, "not json", &gated, obs); !errors.Is(err, gateErr) || gated.Len() != 0 {
 		t.Fatalf("gate failure = %q, %v", gated.String(), err)
+	}
+	var malformed bytes.Buffer
+	if err := run(func() error { return nil }, "not json", &malformed, obs); err == nil || !strings.Contains(err.Error(), "invalid character") || malformed.Len() != 0 {
+		t.Fatalf("decode failure = %q, %v", malformed.String(), err)
 	}
 }
 

@@ -186,6 +186,22 @@ func TestResolvePathsRejectsUnsafeDataBase(t *testing.T) {
 			t.Fatalf("data base in sensitive tree accepted: %v", err)
 		}
 	})
+	t.Run("default route", func(t *testing.T) {
+		// The ancestor conditions hold for the default ~/.local/share route
+		// too; the guide names them for both routes.
+		home := mkhome(t)
+		local := filepath.Join(home, ".local")
+		if err := os.Mkdir(local, 0o777); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(local, 0o777); err != nil {
+			t.Fatal(err)
+		}
+		account := Account{UID: os.Getuid(), Username: "tester", Home: home}
+		if _, err := ResolvePaths(account, ""); err == nil || !strings.Contains(err.Error(), "world-writable") {
+			t.Fatalf("unsafe default base accepted: %v", err)
+		}
+	})
 	t.Run("unowned ancestor", func(t *testing.T) {
 		account := Account{UID: uid, Username: "tester", Home: mkhome(t)}
 		if _, err := ResolvePaths(account, "/usr/abx-test-unowned-data"); err == nil || !strings.Contains(err.Error(), "not owned") {

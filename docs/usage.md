@@ -296,7 +296,7 @@ env XDG_DATA_HOME="$ABX_DATA" abx run opencode
 
 ABX appends its own `abx` component, so this example stores profiles under `$ABX_DATA/abx/profiles`.
 
-The base must satisfy six conditions, each with its own refusal message: it must not be the filesystem root (`data base "<path>" is the filesystem root`); it must not overlap a sensitive home tree such as `~/.config` or `~/.ssh` (`data base "<path>" overlaps sensitive home tree "<path>"`); and its nearest existing ancestor must be a directory (`data base ancestor "<path>" is not a directory`), must belong to you (`data base ancestor "<path>" is not owned by the invoking user`), must not be world-writable unless it carries the sticky bit (`data base ancestor "<path>" is world-writable`), and must not carry setuid or setgid bits (`data base ancestor "<path>" has a setuid or setgid bit`). Missing components below that ancestor are created for you with mode `0700`, so only the ancestor has to exist.
+The base -- the default one as well as a custom `XDG_DATA_HOME` -- must satisfy six conditions, each with its own refusal message: it must not be the filesystem root (`data base "<path>" is the filesystem root`); it must not overlap a sensitive home tree such as `~/.config` or `~/.ssh` (`data base "<path>" overlaps sensitive home tree "<path>"`); and its nearest existing ancestor must be a directory (`data base ancestor "<path>" is not a directory`), must belong to you (`data base ancestor "<path>" is not owned by the invoking user`), must not be world-writable unless it carries the sticky bit (`data base ancestor "<path>" is world-writable`), and must not carry setuid or setgid bits (`data base ancestor "<path>" has a setuid or setgid bit`). Missing components below that ancestor are created for you with mode `0700`, so only the ancestor has to exist.
 
 Changing `XDG_DATA_HOME` selects different storage; it does not move existing profiles.
 
@@ -340,7 +340,7 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | `verify` reports `FAIL` or `UNAVAILABLE` | Read the failing observation; the sandbox did not complete verification successfully |
 | `must not run as root` / `must not run with effective privileges` | Run as a regular user; the real and effective UID/GID must match, so neither `sudo` nor `sg`/`newgrp` work |
 | `login shell ... is outside read-only system mounts` or `... resolves outside ...` | The passwd shell and its resolved target must both live under `/usr`, `/bin`, `/sbin`, `/lib`, `/lib64`, or `/etc/alternatives`; `/snap`, Nix and `~/.local` shells are not visible inside the sandbox |
-| `data base ancestor ... is not owned by the invoking user` | The nearest existing ancestor of `XDG_DATA_HOME` must be yours; pick another base |
+| `data base ancestor ... is not owned by the invoking user` | The nearest existing ancestor of the ABX data base, default or `XDG_DATA_HOME`, must be yours; pick another base |
 
 ## Exit codes and signals
 

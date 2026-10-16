@@ -291,7 +291,7 @@ env XDG_DATA_HOME="$ABX_DATA" abx run opencode
 
 ABX сам добавляет компонент `abx`, поэтому в этом примере профили находятся в `$ABX_DATA/abx/profiles`.
 
-База должна удовлетворять шести условиям, у каждого своё сообщение об отказе: она не должна быть корнем файловой системы (`data base "<путь>" is the filesystem root`); не должна пересекаться с чувствительным домашним каталогом вроде `~/.config` или `~/.ssh` (`data base "<путь>" overlaps sensitive home tree "<путь>"`); а её ближайший существующий предок должен быть каталогом (`data base ancestor "<путь>" is not a directory`), принадлежать вам (`data base ancestor "<путь>" is not owned by the invoking user`), не быть доступным для записи посторонним, если не несёт sticky-бит (`data base ancestor "<путь>" is world-writable`), и не иметь битов setuid или setgid (`data base ancestor "<путь>" has a setuid or setgid bit`). Недостающие компоненты ниже предка создаются автоматически с режимом `0700`, поэтому существовать должен только предок.
+База — и по умолчанию, и выбранная через `XDG_DATA_HOME`, — должна удовлетворять шести условиям, у каждого своё сообщение об отказе: она не должна быть корнем файловой системы (`data base "<путь>" is the filesystem root`); не должна пересекаться с чувствительным домашним каталогом вроде `~/.config` или `~/.ssh` (`data base "<путь>" overlaps sensitive home tree "<путь>"`); а её ближайший существующий предок должен быть каталогом (`data base ancestor "<путь>" is not a directory`), принадлежать вам (`data base ancestor "<путь>" is not owned by the invoking user`), не быть доступным для записи посторонним, если не несёт sticky-бит (`data base ancestor "<путь>" is world-writable`), и не иметь битов setuid или setgid (`data base ancestor "<путь>" has a setuid or setgid bit`). Недостающие компоненты ниже предка создаются автоматически с режимом `0700`, поэтому существовать должен только предок.
 
 Изменение `XDG_DATA_HOME` выбирает другое хранилище и не переносит существующие профили.
 
@@ -335,7 +335,7 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | `verify` показывает `FAIL` или `UNAVAILABLE` | Прочитайте ошибку конкретной проверки; полная проверка песочницы не завершилась успешно |
 | `must not run as root` / `must not run with effective privileges` | Запускайте обычным пользователем: реальный и эффективный UID/GID должны совпадать, поэтому не подходят ни `sudo`, ни `sg`/`newgrp` |
 | `login shell ... is outside read-only system mounts` или `... resolves outside ...` | Оболочка из passwd и её разрешённая цель должны обе лежать в `/usr`, `/bin`, `/sbin`, `/lib`, `/lib64` или `/etc/alternatives`; оболочки в `/snap`, Nix и `~/.local` внутри песочницы не видны |
-| `data base ancestor ... is not owned by the invoking user` | Ближайший существующий предок `XDG_DATA_HOME` должен принадлежать вам; выберите другую базу |
+| `data base ancestor ... is not owned by the invoking user` | Ближайший существующий предок базы ABX — по умолчанию или выбранной через `XDG_DATA_HOME` — должен принадлежать вам; выберите другую базу |
 
 ## Коды завершения и сигналы
 

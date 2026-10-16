@@ -113,7 +113,7 @@ _total = 0
 
 
 def run(args: list[str], cwd: pathlib.Path) -> tuple[int, str]:
-    proc = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
+    proc = subprocess.run(args, cwd=cwd, capture_output=True, text=True, check=False)
     return proc.returncode, proc.stdout + proc.stderr
 
 
@@ -262,7 +262,9 @@ def main() -> int:
     repo = work / "repo"
     repo.mkdir()
     try:
-        archived = subprocess.run(["git", "-C", str(ROOT), "archive", "HEAD"], capture_output=True)
+        archived = subprocess.run(
+            ["git", "-C", str(ROOT), "archive", "HEAD"], capture_output=True, check=False
+        )
         if archived.returncode != 0:
             print("error: could not export HEAD", file=sys.stderr)
             return 1
@@ -273,7 +275,7 @@ def main() -> int:
             kwargs = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
             tar.extractall(repo, **kwargs)
 
-        if subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet"]).returncode:
+        if subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet"], check=False).returncode:
             print("note: uncommitted changes present; the sweep measures HEAD, not them.")
 
         by_pkg: dict[str, list[str]] = {}

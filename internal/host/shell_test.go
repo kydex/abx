@@ -119,6 +119,26 @@ func TestShellFromPasswdMalformedAndRelative(t *testing.T) {
 	}
 }
 
+// FuzzShellFromPasswd drives the passwd row rules with arbitrary file
+// contents: an accepted row must yield an absolute, cleaned shell path, and no
+// malformed database may panic the parser.
+func FuzzShellFromPasswd(f *testing.F) {
+	f.Add(1000, "root:x:0:0:root:/root:/bin/bash\ntester:x:1000:1000::/home/tester:/usr/bin/fish\n")
+	f.Add(0, "")
+	f.Add(65534, "nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\n")
+	f.Add(1000, "tester:x:1000:1000::/home/tester:relative\n")
+	f.Add(1000, "malformed\n#comment:column:x:y:z\n")
+	f.Fuzz(func(t *testing.T, uid int, data string) {
+		shell, err := shellFromPasswdData(uid, []byte(data))
+		if err != nil {
+			return
+		}
+		if !filepath.IsAbs(shell) || filepath.Clean(shell) != shell {
+			t.Fatalf("accepted shell %q for uid %d from %q", shell, uid, data)
+		}
+	})
+}
+
 func TestValidateExecutableRejectsDirectoryAndNonExecutable(t *testing.T) {
 	dir := t.TempDir()
 	if _, err := validateExecutable(dir); err == nil {

@@ -412,9 +412,11 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 // waitResult turns the outcome of cmd.Wait into a process status. A child that
 // exited on its own keeps its real status even when a cancellation raced with
 // the exit; only a termination attributable to the cancelled context is
-// reported as cancelled. The launcher is the only source of signals a child
-// sees (see forwardSignal), so a signalled child under an active cancellation
-// must keep saying so instead of reading as a crash.
+// reported as cancelled. The signals a child sees while a cancellation is
+// active are the cancellation's own: the launcher forwards what it receives
+// (see forwardSignal), and with no new session or separate process group the
+// terminal delivers its copy to the payload too. A signalled child is
+// therefore reported as cancelled, not as a crash.
 func waitResult(waitErr, ctxErr error) (int, error) {
 	var exited *exec.ExitError
 	if errors.As(waitErr, &exited) {

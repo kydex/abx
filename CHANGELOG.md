@@ -9,6 +9,7 @@
 - Fixed: the security guide now describes the close-on-exec sweep correctly: every descriptor above the standard streams is marked, the exported ones included, because os/exec clears the flag on the child's copy. The old wording said the exported descriptors were exempt and invited a "fix" that would make the child see each one twice. (English and Russian.)
 - Fixed: the security guide no longer promises that a login shell under a location the host lacks fails only at exec time; it is refused during resolution, and the guide now names both refusal texts. (English and Russian.)
 - The security and usage guides now state the data-base conditions for both routes -- the default `~/.local/share` in the passwd home and a custom `XDG_DATA_HOME` -- and a regression test pins the refusal on the default route. (English and Russian.)
+- The environment sections now spell out what `LC_*` forwarding means: any name of that form passes (`LC_` plus letters, digits, or underscores), the name is not limited to locale settings, and values are not inspected. (English and Russian.)
 
 ## 0.8.26
 

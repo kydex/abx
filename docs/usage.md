@@ -310,6 +310,8 @@ Only these host settings are forwarded when present:
 TERM COLORTERM LANG LANGUAGE TZ NO_COLOR FORCE_COLOR LC_*
 ```
 
+`LC_*` stands for any name of that form, `LC_` plus letters, digits, or underscores -- not only locale settings; the rest of the name and the value's content are not inspected.
+
 A forwarded value is limited to 64 KiB: a longer value stops the session with an error naming the variable.
 
 Arbitrary host environment variables, including proxy or credential variables, are not copied automatically, and the host SSH-agent socket is not exposed. Configure anything the agent needs inside its profile.

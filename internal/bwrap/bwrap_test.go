@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -124,6 +125,49 @@ func TestOptionLikeCommandStaysAfterDoubleDash(t *testing.T) {
 	want := []string{"--", "/bin/sh", "--unshare-all", "-l"}
 	if got := args[len(args)-len(want):]; !reflect.DeepEqual(got, want) {
 		t.Fatalf("tail = %q, want %q", got, want)
+	}
+}
+
+// Compatibility links reach Bubblewrap as symlink creation, not as borrowed
+// descriptors: the pair must keep the link text and target, must not consume a
+// child FD, and must be created before the bind it resolves through.
+func TestTranslateLendsCompatibilityLinksAsSymlinkArguments(t *testing.T) {
+	p, err := sandbox.Build(sandbox.Input{
+		Home:    "/profile",
+		Project: "/project",
+		Mode:    sandbox.Run,
+		System: []sandbox.Mount{
+			{Kind: sandbox.Symlink, Source: "usr/bin", Target: "/bin"},
+			{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"},
+		},
+		Environment: []sandbox.Entry{{Name: "PWD", Value: "/workspace"}},
+		Command:     []string{"/home/agent/bin/agent"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	devnull, err := os.Open("/dev/null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer devnull.Close()
+	var borrowed []string
+	args, files, err := Translate(p, func(path string) (*os.File, error) {
+		borrowed = append(borrowed, path)
+		return devnull, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(borrowed, []string{"/usr", "/profile", "/project"}) || len(files) != 3 {
+		t.Fatalf("borrowed = %v, files = %d", borrowed, len(files))
+	}
+	link := slices.Index(args, "--symlink")
+	if link < 0 || link+2 >= len(args) || args[link+1] != "usr/bin" || args[link+2] != "/bin" {
+		t.Fatalf("symlink arguments = %q", args)
+	}
+	if bind := slices.Index(args, "--ro-bind-fd"); bind < link {
+		t.Fatalf("symlink must precede the bind it resolves through: %q", args)
 	}
 }
 

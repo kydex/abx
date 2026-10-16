@@ -172,8 +172,12 @@ func (p *probeFiles) Close() error {
 	return result
 }
 
-// Keep success reporting after runSession's descriptor and probe cleanup.
+// Keep success reporting after runSession's descriptor and probe cleanup. A
+// failed write must not read as a failed verification: name what actually
+// happened before the write error.
 func verifySuccess(out io.Writer) error {
-	_, err := io.WriteString(out, "Verification passed; temporary probe files removed.\n")
-	return err
+	if _, err := io.WriteString(out, "Verification passed; temporary probe files removed.\n"); err != nil {
+		return fmt.Errorf("verification passed, but its report could not be written: %w", err)
+	}
+	return nil
 }

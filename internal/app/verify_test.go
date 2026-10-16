@@ -129,6 +129,15 @@ func TestVerifySuccessReportsCleanup(t *testing.T) {
 	}
 }
 
+// A write failure after the check passed must say the check passed; the raw
+// write error alone reads as if the verification itself had failed.
+func TestVerifySuccessNamesWriteFailure(t *testing.T) {
+	err := verifySuccess(brokenWriter{})
+	if err == nil || !strings.Contains(err.Error(), "verification passed, but its report could not be written") {
+		t.Fatalf("write failure = %v", err)
+	}
+}
+
 func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
 	in := inputs(t, host.Run)
 	home := t.TempDir()

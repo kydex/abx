@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -479,6 +480,61 @@ func TestDecodeRejectsNonCleanReadOnlyTargets(t *testing.T) {
 			}
 		})
 	}
+}
+
+// FuzzDecode runs arbitrary payloads through decode and then through check over
+// an observer that touches nothing. Anything decode accepts must survive its
+// own encoding, and a hostile value -- an environment entry, a path -- must not
+// drive check into a panic or an observation outside the four legal states.
+func FuzzDecode(f *testing.F) {
+	seed, err := json.Marshal(sandboxExpected())
+	if err != nil {
+		f.Fatal(err)
+	}
+	f.Add(string(seed))
+	f.Add("")
+	f.Add("{}")
+	f.Add("null")
+	f.Add("[]")
+	f.Add(`{"Home":"/host-home/","Environment":["X=\u0000"],"ReadOnly":["relative"]}`)
+	stubErr := errors.New("stub observer")
+	quiet := observer{
+		getwd:      func() (string, error) { return "", nil },
+		hostname:   func() (string, error) { return "", nil },
+		environ:    func() []string { return nil },
+		stat:       func(string) (os.FileInfo, error) { return nil, stubErr },
+		identify:   func(string) (Identity, error) { return Identity{}, stubErr },
+		readlink:   func(string) (string, error) { return "", stubErr },
+		statfs:     func(string, *unix.Statfs_t) error { return stubErr },
+		statDevice: func(string, *unix.Stat_t) error { return stubErr },
+		mountinfo:  func() ([]byte, error) { return nil, stubErr },
+		writeProbe: func(string) error { return nil },
+	}
+	f.Fuzz(func(t *testing.T, raw string) {
+		e, err := decode(raw)
+		if err != nil {
+			return
+		}
+		encoded, err := json.Marshal(e)
+		if err != nil {
+			t.Fatalf("accepted payload does not marshal: %v", err)
+		}
+		if _, err := decode(string(encoded)); err != nil {
+			t.Fatalf("accepted payload rejects its own encoding: %v", err)
+		}
+		checks := check(e, quiet)
+		for _, c := range checks {
+			switch c.State {
+			case statePass, stateUnavailable, stateFail, stateNA:
+			default:
+				t.Fatalf("check returned unknown state %q for %q", c.State, raw)
+			}
+			if c.Name == "" {
+				t.Fatalf("check returned an unnamed observation for %q", raw)
+			}
+		}
+		_ = report(io.Discard, checks)
+	})
 }
 
 type reportFailureWriter struct {

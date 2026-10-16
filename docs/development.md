@@ -130,10 +130,10 @@ here so nobody starts the same discussion from scratch.
   `Selection`, `Source` (host), and `Check` (probe). Unexporting them would
   make the compiler stop catching misspelled names across package boundaries,
   for no gain here.
-- The fuzz harnesses in `internal/sandbox`, `internal/profile`, and `internal/cli`
-  are built and run with their seed corpora on every `go test`, but the fuzzing
-  itself (`-fuzz`) never runs in CI. They document the input shape; running them
-  on a schedule is a separate decision.
+- The fuzz harnesses in `internal/sandbox`, `internal/profile`, `internal/cli`,
+  and `internal/probe` are built and run with their seed corpora on every
+  `go test`, but the fuzzing itself (`-fuzz`) never runs in CI. They document
+  the input shape; running them on a schedule is a separate decision.
 - The orchestrator in `internal/app` is knowingly under-covered. The code is
   correct where it was checked; closing the gap needs test seams that the
   project's own rules discourage. The mutation sweep behind this list measured

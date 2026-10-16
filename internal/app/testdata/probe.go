@@ -135,8 +135,7 @@ func main() {
 	if marker, e := os.ReadFile("/home/agent/.agents/skills/marker"); e != nil || string(marker) != "shared" {
 		die("skills unavailable")
 	}
-	if target, e := os.Readlink("/etc/ssl/cert.pem"); e == nil {
-		_ = target
+	if _, e := os.Readlink("/etc/ssl/cert.pem"); e == nil {
 		if _, e = os.ReadFile("/etc/ssl/cert.pem"); e != nil {
 			die("TLS certificate link broken")
 		}

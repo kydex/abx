@@ -216,8 +216,10 @@ const agentMountPoint = "/home/agent"
 // blaming the tool rather than the profile. Nothing is mounted there, so this
 // reports the real cause instead.
 func (in *Inputs) checkAgentPlacement() error {
+	// A component boundary, not a string prefix: /home/agentX is outside the
+	// mount even though it starts with the same text.
 	rel, ok := strings.CutPrefix(in.executable, agentMountPoint)
-	if !ok {
+	if !ok || (rel != "" && !strings.HasPrefix(rel, "/")) {
 		return fmt.Errorf("agent path %q is not inside the agent mount", in.executable)
 	}
 	host := filepath.Join(in.home, rel)

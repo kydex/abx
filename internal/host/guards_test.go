@@ -448,6 +448,16 @@ func TestResolvePathsRejectsSetgidDataBaseAncestor(t *testing.T) {
 
 func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
 	in := fixture(t)
+	// A path that merely shares the mount-point text is outside the mount,
+	// even when the matching host object exists: "inside" is a component.
+	if err := os.WriteFile(filepath.Join(in.home, "X"), []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	in.executable = agentMountPoint + "X"
+	if err := in.checkAgentPlacement(); err == nil ||
+		!strings.Contains(err.Error(), "not inside the agent mount") {
+		t.Fatalf("shared prefix accepted: %v", err)
+	}
 	outside := filepath.Join(t.TempDir(), "agent-bin")
 	if err := os.WriteFile(outside, []byte("#!/bin/sh\n"), 0o700); err != nil {
 		t.Fatal(err)

@@ -264,7 +264,9 @@ func check(e Expected, obs observer) []Check {
 	add("runtime directory mode", ok, err, detail)
 	var st unix.Stat_t
 	err = obs.statDevice("/dev/null", &st)
-	add("null device", st.Mode&unix.S_IFMT == unix.S_IFCHR && unix.Major(st.Rdev) == 1 && unix.Minor(st.Rdev) == 3, err, fmt.Sprintf("expected character device 1:3; observed file type=%#o device=%d:%d", st.Mode&unix.S_IFMT, unix.Major(st.Rdev), unix.Minor(st.Rdev)))
+	fileType, major, minor := st.Mode&unix.S_IFMT, unix.Major(st.Rdev), unix.Minor(st.Rdev)
+	detail = fmt.Sprintf("expected character device 1:3; observed file type=%#o device=%d:%d", fileType, major, minor)
+	add("null device", fileType == unix.S_IFCHR && major == 1 && minor == 3, err, detail)
 	raw, err := obs.mountinfo()
 	for _, target := range e.ReadOnly {
 		detail := readOnlyDetail(string(raw), target)
@@ -314,7 +316,8 @@ func checkNamespaces(host map[string]string, readlink func(string) (string, erro
 	var checks []Check
 	for _, name := range NamespaceNames() {
 		ns, err := readlink("/proc/self/ns/" + name)
-		checks = append(checks, observation(name+" namespace", host[name] != "" && ns != "" && ns != host[name], err, fmt.Sprintf("expected nonempty namespace identities to differ; host=%q sandbox=%q", host[name], ns)))
+		detail := fmt.Sprintf("expected nonempty namespace identities to differ; host=%q sandbox=%q", host[name], ns)
+		checks = append(checks, observation(name+" namespace", host[name] != "" && ns != "" && ns != host[name], err, detail))
 	}
 	return checks
 }

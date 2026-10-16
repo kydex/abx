@@ -1,4 +1,3 @@
-// Package app renders untrusted values safely for terminal diagnostics.
 package app
 
 import (

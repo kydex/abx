@@ -1,4 +1,3 @@
-// Package sandbox contains environment policy.
 package sandbox
 
 import (

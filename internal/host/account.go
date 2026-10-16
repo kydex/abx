@@ -1,4 +1,3 @@
-// Package host contains account and path resolution.
 package host
 
 import (

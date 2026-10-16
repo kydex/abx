@@ -1,4 +1,6 @@
-// Package host resolves and owns the host objects used by one invocation.
+// Package host resolves and owns the host objects used by one invocation:
+// the account, the storage layout, the project, the login shell, and the
+// system sources mounted into the sandbox. See docs/architecture.md.
 package host
 
 import (

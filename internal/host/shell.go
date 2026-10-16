@@ -1,4 +1,3 @@
-// Package host contains login-shell selection.
 package host
 
 import (

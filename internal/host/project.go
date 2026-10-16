@@ -1,4 +1,3 @@
-// Package host contains project policy; see docs/development.md.
 package host
 
 import (

@@ -12,6 +12,7 @@
 - The environment sections now spell out what `LC_*` forwarding means: any name of that form passes (`LC_` plus letters, digits, or underscores), the name is not limited to locale settings, and values are not inspected. (English and Russian.)
 - The usage guide now clarifies that `profile show` covers the entry point and shared skills but not the login shell, which comes from the host's `/etc/passwd` and is resolved when a session starts. (English and Russian.)
 - The `inspect` isolation summary now states `cgroup namespace: shared with host`, matching the flags ABX passes and the network line.
+- `profile create` and `profile show` now explain a leading-hyphen name (`-x`, `--version`) as the mistyped option it is and point at the help, matching the session commands, instead of reciting the profile name rules.
 
 ## 0.8.26
 

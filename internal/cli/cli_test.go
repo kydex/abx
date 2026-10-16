@@ -73,6 +73,14 @@ func TestOptionLikeProfileNameGetsAHint(t *testing.T) {
 	if err == nil || err.Error() != `unknown option "--version" for run; run "abx --help"` {
 		t.Fatalf("option-like profile name: %v", err)
 	}
+	_, err = Parse([]string{"profile", "create", "-x"})
+	if err == nil || err.Error() != `unknown option "-x" for profile create; run "abx --help"` {
+		t.Fatalf("option-like profile create name: %v", err)
+	}
+	_, err = Parse([]string{"profile", "show", "--version"})
+	if err == nil || err.Error() != `unknown option "--version" for profile show; run "abx --help"` {
+		t.Fatalf("option-like profile show name: %v", err)
+	}
 	_, err = Parse([]string{"-h", "extra"})
 	if err == nil || err.Error() != "-h takes no arguments" {
 		t.Fatalf("-h with an argument: %v", err)

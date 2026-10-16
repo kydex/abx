@@ -74,6 +74,9 @@ func Parse(args []string) (Command, error) {
 			if len(args) != 3 {
 				return Command{}, errors.New(string(k) + " requires exactly one name")
 			}
+			if strings.HasPrefix(args[2], "-") {
+				return Command{}, unknownOption(args[2], k)
+			}
 			if err := profile.ValidateName(args[2]); err != nil {
 				return Command{}, err
 			}
@@ -93,7 +96,7 @@ func Parse(args []string) (Command, error) {
 		// A leading hyphen is a mistyped flag, not a name: say so and point
 		// at the help, instead of reciting the profile name rules.
 		if strings.HasPrefix(args[1], "-") {
-			return Command{}, fmt.Errorf("unknown option %q for %s; run \"abx --help\"", args[1], k)
+			return Command{}, unknownOption(args[1], k)
 		}
 		if err := profile.ValidateName(args[1]); err != nil {
 			return Command{}, err
@@ -113,4 +116,10 @@ func Parse(args []string) (Command, error) {
 	default:
 		return Command{}, fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+// unknownOption explains a leading-hyphen token in a name position as the
+// mistyped flag it is, pointing at the help instead of the name rules.
+func unknownOption(arg string, k Kind) error {
+	return fmt.Errorf("unknown option %q for %s; run \"abx --help\"", arg, k)
 }

@@ -174,6 +174,15 @@ func TestVerificationAddsOnlyFixedReadOnlyProbe(t *testing.T) {
 	}
 }
 
+// A shape-valid probe input can still fail the builder; the builder's refusal
+// must reach the caller instead of a plan assembled around the error.
+func TestVerificationPropagatesBuildRefusal(t *testing.T) {
+	in := Input{Mode: Run, Home: "relative", Project: "/project", Command: []string{ProbePath, "__probe", "{}"}, System: []Mount{{Kind: ReadOnly, Source: "/usr", Target: "/usr"}}, Environment: []Entry{{Name: "PWD", Value: "/workspace"}}}
+	if _, err := BuildVerification(in); err == nil || !strings.Contains(err.Error(), "invalid session inputs") {
+		t.Fatalf("BuildVerification = %v", err)
+	}
+}
+
 func TestAlternativesOnlyReadOnlyInAllModes(t *testing.T) {
 	for _, mode := range []Mode{Run, Shell, Work} {
 		for _, kind := range []Kind{ReadOnly, Writable, Symlink} {

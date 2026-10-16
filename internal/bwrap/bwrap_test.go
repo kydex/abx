@@ -752,6 +752,27 @@ exit 23`)
 	}
 }
 
+// A retained binary that disappears between checks must surface the stat
+// failure itself, not a comparison against a missing object.
+func TestRevalidateReportsVanishedBinary(t *testing.T) {
+	path := writeScript(t, `if [ "$1" = "--version" ]; then
+  printf 'bubblewrap 0.12.0\n'
+  exit 0
+fi
+exit 23`)
+	tool, err := open(context.Background(), path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tool.Close()
+	if err = os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err = tool.Revalidate(); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("vanished binary = %v", err)
+	}
+}
+
 func TestExecuteRevalidatesToolBeforeLendingSources(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
   printf 'bubblewrap 0.12.0\n'

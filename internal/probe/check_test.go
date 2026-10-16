@@ -12,9 +12,10 @@ import (
 
 // check forms the entire verdict of abx verify. On a host it is reachable only
 // through Run, and Run always dies at gate(), so this is its first execution by
-// any ordinary test. No seam is required: check takes an Expected and returns a
-// slice. The test pins the FORM — which observations exist, which states are
-// legal, and that report refuses to report success when any of them is not PASS.
+// any ordinary test. No seam is required: check takes an Expected and an
+// observer, and returns a slice. The test pins the FORM — which observations
+// exist, which states are legal, and that report refuses to report success when
+// any of them is not PASS.
 // It asserts nothing about PASS itself: the sandbox observations cannot pass on
 // a host, and that half still needs a live stand.
 func TestCheckProducesEveryObservation(t *testing.T) {
@@ -140,8 +141,7 @@ func TestCheckEnvironmentIgnoresJSONOnlyDifference(t *testing.T) {
 
 // sanitizeEnvironment leaves valid entries alone and rewrites invalid bytes to
 // U+FFFD, so that verify compares like with like: a value the host could not
-// have rendered is replaced by the one the sandbox reports. The idempotency test
-// above feeds it valid strings only, so this branch never ran there.
+// have rendered is replaced by the one the sandbox reports.
 func TestSanitizeEnvironmentRewritesInvalidBytes(t *testing.T) {
 	cases := []struct {
 		name string

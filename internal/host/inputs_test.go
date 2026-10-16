@@ -89,6 +89,24 @@ func TestRevalidateNamesSortedFirstChangeWithRole(t *testing.T) {
 	}
 }
 
+// Prepare's first step is a revalidation the application relies on: an input
+// replaced between Resolve and Prepare must be refused before preparation
+// touches anything. This pins that step on its own; the app tests pin the
+// protection as a whole, so only removing both copies can hide a regression.
+func TestPrepareRevalidatesBeforePreparing(t *testing.T) {
+	in := fixture(t)
+	if err := os.Rename(in.home, in.home+"-replaced"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(in.home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	want := fmt.Sprintf("selected source changed: %q (profile home)", in.home)
+	if err := in.Prepare(); err == nil || err.Error() != want {
+		t.Fatalf("Prepare = %v, want %q", err, want)
+	}
+}
+
 // Source encodes bind and link in two plain fields, and consumers read
 // Link == "" to tell them apart: a Source that names both or neither must be
 // refused before it can be reinterpreted.

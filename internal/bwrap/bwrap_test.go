@@ -400,6 +400,59 @@ func TestWaitDelayPreservesFailedExit(t *testing.T) {
 	}
 }
 
+// waitResult decides the whole status table in one place: a child that exited
+// on its own keeps its status even when a cancellation raced with its exit,
+// while a signalled child under an active cancellation is still reported as
+// cancelled.
+func TestWaitResultKeepsChildExitOverRacingCancellation(t *testing.T) {
+	exitErr := func(t *testing.T, script string) error {
+		t.Helper()
+		err := exec.Command("/bin/sh", "-c", script).Run()
+		if _, ok := err.(*exec.ExitError); !ok {
+			t.Fatalf("%q = %v", script, err)
+		}
+		return err
+	}
+	seven := exitErr(t, "exit 7")
+	killed := exitErr(t, "kill -KILL $$")
+	waitFailure := errors.New("wait failed")
+	cancelled := "execution cancelled: context deadline exceeded"
+	for _, test := range []struct {
+		name       string
+		waitErr    error
+		ctxErr     error
+		wantStatus int
+		wantErr    string
+	}{
+		{"success", nil, nil, 0, ""},
+		{"success over cancellation", nil, context.DeadlineExceeded, 0, ""},
+		{"own exit", seven, nil, 7, ""},
+		{"own exit racing cancellation", seven, context.DeadlineExceeded, 7, ""},
+		{"signal", killed, nil, 128 + int(syscall.SIGKILL), ""},
+		{"signal under cancellation", killed, context.DeadlineExceeded, 1, cancelled},
+		{"wait delay", exec.ErrWaitDelay, nil, 0, ""},
+		{"wait delay under cancellation", exec.ErrWaitDelay, context.DeadlineExceeded, 1, cancelled},
+		{"wait error", waitFailure, nil, 1, "wait failed"},
+		{"wait error under cancellation", waitFailure, context.DeadlineExceeded, 1, cancelled},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			status, err := waitResult(test.waitErr, test.ctxErr)
+			if status != test.wantStatus {
+				t.Fatalf("status = %d, want %d", status, test.wantStatus)
+			}
+			if test.wantErr == "" {
+				if err != nil {
+					t.Fatalf("error = %v", err)
+				}
+				return
+			}
+			if err == nil || err.Error() != test.wantErr {
+				t.Fatalf("error = %v, want %q", err, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestMarkInheritedFDsCloseOnExec(t *testing.T) {
 	explicit, err := os.CreateTemp(t.TempDir(), "explicit")
 	if err != nil {

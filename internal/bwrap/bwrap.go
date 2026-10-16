@@ -401,27 +401,40 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	if forwardErr != nil {
 		return 1, errors.Join(err, forwardErr)
 	}
-	if err == nil {
+	return waitResult(err, ctx.Err())
+}
+
+// waitResult turns the outcome of cmd.Wait into a process status. A child that
+// exited on its own keeps its real status even when a cancellation raced with
+// the exit; only a termination attributable to the cancelled context is
+// reported as cancelled. The launcher is the only source of signals a child
+// sees (see forwardSignal), so a signalled child under an active cancellation
+// must keep saying so instead of reading as a crash.
+func waitResult(waitErr, ctxErr error) (int, error) {
+	var exited *exec.ExitError
+	if errors.As(waitErr, &exited) {
+		if status := exited.Sys().(syscall.WaitStatus); !status.Signaled() {
+			// The child finished on its own; the cancellation lost the race
+			// and must not overwrite what it actually did.
+			return status.ExitStatus(), nil
+		}
+	}
+	if waitErr == nil {
 		return 0, nil
 	}
-	if ctx.Err() != nil {
-		return 1, fmt.Errorf("execution cancelled: %w", ctx.Err())
+	if ctxErr != nil {
+		return 1, fmt.Errorf("execution cancelled: %w", ctxErr)
 	}
 	// A successful child that leaves its I/O pipes to an orphaned descendant
 	// reports ErrWaitDelay instead of nil once WaitDelay expires. That is the
 	// child's real exit, not a launcher failure.
-	if errors.Is(err, exec.ErrWaitDelay) {
+	if errors.Is(waitErr, exec.ErrWaitDelay) {
 		return 0, nil
 	}
-	var exited *exec.ExitError
-	if !errors.As(err, &exited) {
-		return 1, err
+	if exited == nil {
+		return 1, waitErr
 	}
-	status := exited.Sys().(syscall.WaitStatus)
-	if status.Signaled() {
-		return 128 + int(status.Signal()), nil
-	}
-	return status.ExitStatus(), nil
+	return 128 + int(exited.Sys().(syscall.WaitStatus).Signal()), nil
 }
 
 // forwardSignal preserves both failures; an already-reaped child needs no signal.

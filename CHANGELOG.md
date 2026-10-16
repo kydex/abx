@@ -5,6 +5,7 @@
 - The development guides now name the `THIRD_PARTY_LICENSES` check among the `make check` steps; the Russian guide now carries the 12 October date for the `/etc/passwd` root-ownership removal and a translated releases link text. (English and Russian.)
 - README and the release guide now point at the project's GitHub Releases page as the download channel; the release workflow still does not publish releases itself. (English and Russian.)
 - Fixed: a failure to write the `verify` success line now says the verification passed and only its report could not be written; the raw write error read as if the check itself had failed.
+- Fixed: a session child that exits on its own keeps its real status when a cancellation races with the exit; the launcher used to report `execution cancelled` over the status the child actually returned.
 
 ## 0.8.26
 

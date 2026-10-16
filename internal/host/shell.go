@@ -102,9 +102,8 @@ func checkPasswdFile(path string) error {
 // host whose database an unprivileged user can rewrite, that user is already
 // outside the model ABX protects.
 
-// shellFromPasswd takes the shell from the first passwd row with the uid.
-// A database with duplicate uids would pair another route's home with this
-// row's shell; that is a broken database, not a case to reconcile.
+// shellFromPasswd reads the account database and takes the shell from the
+// first passwd row with the uid via shellFromPasswdData.
 func shellFromPasswd(uid int, path string) (string, error) {
 	if err := checkPasswdFile(path); err != nil {
 		return "", err
@@ -114,6 +113,14 @@ func shellFromPasswd(uid int, path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("open passwd database: %w", err)
 	}
+	return shellFromPasswdData(uid, data)
+}
+
+// shellFromPasswdData is the pure part of shellFromPasswd: the row rules
+// without the file read, so a fuzz harness can drive arbitrary database
+// contents. A database with duplicate uids would pair another route's home
+// with this row's shell; that is a broken database, not a case to reconcile.
+func shellFromPasswdData(uid int, data []byte) (string, error) {
 	for _, line := range strings.Split(string(data), "\n") {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue

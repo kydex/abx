@@ -106,6 +106,11 @@ func TestIsolationSummaryMatchesBubblewrapNamespacePolicy(t *testing.T) {
 	if slices.Contains(args, "--unshare-net") {
 		t.Fatalf("summary claims shared network but translation unshares it: %v", args)
 	}
+	for _, flag := range []string{"--unshare-cgroup", "--unshare-cgroup-try"} {
+		if slices.Contains(args, flag) {
+			t.Fatalf("summary claims shared cgroup but translation passes %s: %v", flag, args)
+		}
+	}
 	for _, want := range []string{
 		"user namespace: private",
 		"pid namespace: private",
@@ -113,6 +118,7 @@ func TestIsolationSummaryMatchesBubblewrapNamespacePolicy(t *testing.T) {
 		"uts namespace: private",
 		"mount namespace: private",
 		"network: shared with host",
+		"cgroup namespace: shared with host",
 		"nested user namespaces: disabled",
 		"lifetime: killed with the launcher",
 	} {

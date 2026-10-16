@@ -11,6 +11,7 @@
 - The security and usage guides now state the data-base conditions for both routes -- the default `~/.local/share` in the passwd home and a custom `XDG_DATA_HOME` -- and a regression test pins the refusal on the default route. (English and Russian.)
 - The environment sections now spell out what `LC_*` forwarding means: any name of that form passes (`LC_` plus letters, digits, or underscores), the name is not limited to locale settings, and values are not inspected. (English and Russian.)
 - The usage guide now clarifies that `profile show` covers the entry point and shared skills but not the login shell, which comes from the host's `/etc/passwd` and is resolved when a session starts. (English and Russian.)
+- The `inspect` isolation summary now states `cgroup namespace: shared with host`, matching the flags ABX passes and the network line.
 
 ## 0.8.26
 

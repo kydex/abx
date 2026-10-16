@@ -14,6 +14,7 @@ const isolationSummary = `isolation:
   uts namespace: private
   mount namespace: private
   network: shared with host
+  cgroup namespace: shared with host
   nested user namespaces: disabled
   lifetime: killed with the launcher
 `

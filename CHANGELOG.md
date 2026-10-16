@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.27
 
 - The development guides now name the `THIRD_PARTY_LICENSES` check among the `make check` steps; the Russian guide now carries the 12 October date for the `/etc/passwd` root-ownership removal and a translated releases link text. (English and Russian.)
 - README and the release guide now point at the project's GitHub Releases page as the download channel; the release workflow still does not publish releases itself. (English and Russian.)

@@ -2,12 +2,12 @@
 package host
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 )
 
@@ -239,8 +239,9 @@ func TestResolveFromChecksResolvedShellVisibility(t *testing.T) {
 	}
 
 	selection := resolveFrom(1000, passwd, func(path string) bool { return path == link })
-	if selection.Path != "" || len(selection.Argv) != 0 || !strings.Contains(selection.Reason, "resolves outside read-only system mounts") {
-		t.Fatalf("selection = %#v", selection)
+	want := fmt.Sprintf("login shell %q resolves outside read-only system mounts to %q", link, target)
+	if selection.Path != "" || len(selection.Argv) != 0 || selection.Reason != want {
+		t.Fatalf("selection = %#v, want reason %q", selection, want)
 	}
 
 	selection = resolveFrom(1000, passwd, func(path string) bool { return path == link || path == target })
@@ -264,7 +265,8 @@ func TestResolveFromRejectsShellPathOutsideSystemMounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	selection := resolveFrom(1000, passwd, func(candidate string) bool { return candidate == target })
-	if selection.Path != "" || !strings.Contains(selection.Reason, "outside read-only system mounts") {
-		t.Fatalf("selection = %#v", selection)
+	want := fmt.Sprintf("login shell %q is outside read-only system mounts", path)
+	if selection.Path != "" || selection.Reason != want {
+		t.Fatalf("selection = %#v, want reason %q", selection, want)
 	}
 }

@@ -34,23 +34,29 @@ func resolveShellFrom(uid int, passwdFile string) Selection {
 	return resolveFrom(uid, passwdFile, visibleInSandbox)
 }
 
+// resolveFrom picks the login shell or states why there is none. The chain is
+// explicit because the outcomes differ: a shell whose path is fine but whose
+// target left the mounts needs both named, while an invisible path is the
+// whole story.
 func resolveFrom(uid int, passwdPath string, visible func(string) bool) Selection {
 	path, err := shellFromPasswd(uid, passwdPath)
-	if err == nil {
-		var resolved string
-		if resolved, err = validateExecutable(path); err == nil && visible(path) && visible(resolved) {
-			return Selection{Path: resolved, Argv: []string{resolved, "-l"}}
-		}
-		if err == nil && visible(path) && !visible(resolved) {
-			err = fmt.Errorf("login shell %q resolves outside read-only system mounts to %q", path, resolved)
-		}
-	}
 	if err != nil {
 		return Selection{Reason: err.Error()}
 	}
-	// With err == nil the resolved shell is visible (otherwise err would be
-	// set above) while path is not (otherwise we would have returned early).
-	return Selection{Reason: fmt.Sprintf("login shell %q is outside read-only system mounts", path)}
+	resolved, err := validateExecutable(path)
+	if err != nil {
+		return Selection{Reason: err.Error()}
+	}
+	if visible(path) && visible(resolved) {
+		return Selection{Path: resolved, Argv: []string{resolved, "-l"}}
+	}
+	reason := fmt.Sprintf("login shell %q is outside read-only system mounts", path)
+	if visible(path) {
+		// Only the target left the mounts; naming the path alone would send
+		// the reader looking at the wrong object.
+		reason = fmt.Sprintf("login shell %q resolves outside read-only system mounts to %q", path, resolved)
+	}
+	return Selection{Reason: reason}
 }
 
 // unsafeModeReason reports why a trusted host object may not be used, for the

@@ -301,7 +301,7 @@ func TestCompatibilityLinkMustStayInUsr(t *testing.T) {
 		}
 	}
 	for _, src := range []string{
-		"/etc", "/bin", "../etc", "../../home/kdx/.ssh", "usr/../../etc",
+		"/etc", "/bin", "/usr/bin", "../etc", "../../home/kdx/.ssh", "usr/../../etc",
 		"/", ".", "", "usr/../../../..",
 		"usr/bin/../../etc", "usr/a/b/../../../etc",
 		"usr/lib/x86_64-linux-gnu/../../../etc", "-foo", "usr",

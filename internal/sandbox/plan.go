@@ -144,6 +144,10 @@ func compatibilityTarget(target string) bool {
 // outside the mounted tree or reads as an argument to Bubblewrap, so the agent
 // would find no binaries and no error would say why; refusing it here names the
 // cause instead of producing a silently broken sandbox.
+//
+// The first guard carries one case the Rel check does not: an absolute text
+// that stays inside the tree, "/usr/bin", passes Rel, while the relative
+// convention above refuses it. Every other guard case fails Rel as well.
 func compatibilitySourceKeptInUsr(source string) bool {
 	if source == "" || filepath.IsAbs(source) || strings.HasPrefix(source, "-") {
 		return false

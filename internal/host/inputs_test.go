@@ -782,3 +782,35 @@ func TestCreateProfileRefusesNonAbsoluteRoot(t *testing.T) {
 		t.Fatalf("create with relative root = %v", err)
 	}
 }
+
+// A profile without an executable lists every candidate that was checked;
+// Stat follows links, so a dangling link used to disappear from the
+// diagnostics entirely.
+func TestResolveAgentNamesCheckedCandidates(t *testing.T) {
+	home := t.TempDir()
+	_, err := resolveAgent(home, "demo")
+	if err == nil || !strings.Contains(err.Error(), "has no executable") {
+		t.Fatalf("missing executable = %v", err)
+	}
+	for _, want := range []string{
+		filepath.Join(home, ".local", "bin", "demo"),
+		filepath.Join(home, ".local", "share", "mise", "shims", "demo"),
+		filepath.Join(home, ".bun", "bin", "demo"),
+		filepath.Join(home, "bin", "demo"),
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q does not name %q", err, want)
+		}
+	}
+	link := filepath.Join(home, ".local", "bin", "demo")
+	if err := os.MkdirAll(filepath.Dir(link), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(home, "missing"), link); err != nil {
+		t.Fatal(err)
+	}
+	_, err = resolveAgent(home, "demo")
+	if err == nil || !strings.Contains(err.Error(), "dangling link") {
+		t.Fatalf("dangling candidate = %v, want a dangling-link note", err)
+	}
+}

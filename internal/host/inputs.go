@@ -251,12 +251,22 @@ func (in *Inputs) withinSystemSource(resolved string) bool {
 
 func resolveAgent(home, name string) (string, error) {
 	var invalid error
+	var missing []string
 	// Mise shims come second: they are the managed toolchain, while plain
 	// installs in .bun/bin or bin stay as further fallbacks.
 	for _, dir := range []string{".local/bin", ".local/share/mise/shims", ".bun/bin", "bin"} {
 		p := filepath.Join(home, dir, name)
 		info, err := os.Stat(p)
 		if errors.Is(err, os.ErrNotExist) {
+			// Stat follows links, so a dangling symlink lands here too. An
+			// object that Lstat sees at the path is exactly that dangling
+			// link, and the final error has to name it: silence used to make
+			// it indistinguishable from a path that was never there.
+			entry := fmt.Sprintf("%q", p)
+			if _, lerr := os.Lstat(p); lerr == nil {
+				entry += " (dangling link)"
+			}
+			missing = append(missing, entry)
 			continue
 		}
 		if err != nil {
@@ -296,7 +306,7 @@ func resolveAgent(home, name string) (string, error) {
 	if invalid != nil {
 		return "", invalid
 	}
-	return "", fmt.Errorf("profile %q has no executable", name)
+	return "", fmt.Errorf("profile %q has no executable; checked %s", name, strings.Join(missing, ", "))
 }
 
 // role names a retained object for diagnostics: the same failure covers

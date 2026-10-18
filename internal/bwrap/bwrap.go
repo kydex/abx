@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"syscall"
 	"time"
@@ -351,7 +352,7 @@ func Execute(ctx context.Context, t *Tool, plan sandbox.Plan, source func(string
 	// #nosec G204 -- this descriptor holds validated /usr/bin/bwrap; argv is not shell-parsed.
 	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Args[0] = Path
-	cmd.ExtraFiles = append(files, t.file)
+	cmd.ExtraFiles = append(slices.Clone(files), t.file)
 	return execute(ctx, cmd, stdio)
 }
 

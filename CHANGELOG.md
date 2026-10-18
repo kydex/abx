@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.28
 
 - Fixed: the sweep script now splits an `if` header at the first `;` outside string, rune and raw literals; a condition embedding `;` in a string literal used to be written off as not applicable instead of measured.
 - The development guide and the sweep header now carry the tenth run's numbers: 304 guards killed of 432, 128 survived and none not applicable; `internal/app` reads 40 killed of 77 guards, and the coverage bullet matches the current tree (92.6% aggregate, `internal/app` 282 of 326 statements).

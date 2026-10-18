@@ -167,8 +167,12 @@ func TestAlternativesRetainedAndProtectedTargetsRejected(t *testing.T) {
 				if err := os.Symlink(in.account.Home, path); err != nil {
 					t.Fatal(err)
 				}
-				if err := in.discoverSystem(root); err == nil {
-					t.Fatal("exposed protected home")
+				// Pin the refusal text: removing the overlap condition makes
+				// discoverSystem accept the link outright, and a reworded
+				// message must not slip through silently either.
+				if err := in.discoverSystem(root); err == nil ||
+					!strings.Contains(err.Error(), "protected data overlaps system source") {
+					t.Fatalf("exposed protected home: %v", err)
 				}
 				return
 			}
@@ -189,5 +193,25 @@ func TestAlternativesRetainedAndProtectedTargetsRejected(t *testing.T) {
 			}
 			t.Fatal("alternatives omitted")
 		})
+	}
+}
+
+// A compatibility symlink resolving into protected data gets its own refusal
+// text. Without this case the condition could be neutralized silently: the
+// next check refuses the same link as outside the mounted sources.
+func TestCompatLinkIntoProtectedHomeRefused(t *testing.T) {
+	root := t.TempDir()
+	for _, p := range []string{"usr", "etc"} {
+		if err := os.Mkdir(filepath.Join(root, p), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	in := fixture(t)
+	if err := os.Symlink(in.account.Home, filepath.Join(root, "lib64")); err != nil {
+		t.Fatal(err)
+	}
+	if err := in.discoverSystem(root); err == nil ||
+		!strings.Contains(err.Error(), "protected data overlaps system link") {
+		t.Fatalf("compat link into the home: %v", err)
 	}
 }

@@ -30,8 +30,8 @@ run compiles whatever mutant another worker happens to hold in a linked
 package, and that failure is recorded against the guard being measured. A full
 run with `internal/app` in the file list read 22 of its then-76 guards
 surviving where the package's own tree read 38 killed; a run of the package
-alone agrees with the own tree, and the tenth full run reads 41 killed and 37
-survived of the package's 79 guards (one not applicable). One
+alone agrees with the own tree, and the tenth full run reads 40 killed and 37
+survived of the package's 77 guards. One
 `internal/host` guard was read killed the same way.
 
 The condition is neutralised as `false && (<cond>)` rather than replaced by a

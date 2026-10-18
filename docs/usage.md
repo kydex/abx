@@ -310,7 +310,7 @@ Only these host settings are forwarded when present:
 TERM COLORTERM LANG LANGUAGE TZ NO_COLOR FORCE_COLOR LC_*
 ```
 
-`LC_*` stands for any name of that form, `LC_` plus one or more characters from `A-Z`, `0-9`, or `_` -- not only locale settings; the value's content is not inspected.
+`LC_*` stands for any name of that form, `LC_` plus one or more characters from `A-Z`, `0-9`, or `_` -- not only locale settings; a value carrying a NUL byte is not forwarded, and the content is otherwise not validated.
 
 A forwarded value is limited to 64 KiB: a longer value stops the session with an error naming the variable.
 

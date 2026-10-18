@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the sweep script now splits an `if` header at the first `;` outside string, rune and raw literals; a condition embedding `;` in a string literal used to be written off as not applicable instead of measured.
 - The development guide and the sweep header now carry the tenth run's numbers: 304 guards killed of 433, 128 survived and one not applicable; `internal/app` reads 41 killed of 79 guards, and the coverage bullet matches the current tree (92.6% aggregate, `internal/app` 288 of 332 statements).
 - Fixed: name-position refusals are consistent now: an option-like token where the `profile` subcommand goes gets the same unknown-option hint as everywhere else, and a bare `-` or `--` is answered by naming what is missing -- `profile requires create, show or list` in the subcommand position, a profile name elsewhere -- instead of being called an unknown option.
 - Fixed: the release and security notes now name the exceptions to floating versions (the live gate's pinned Bubblewrap build and the linter schema) and the real source of byte-level differences between a local build and the workflow archives -- the build toolchain, not archive metadata alone. (English and Russian.)

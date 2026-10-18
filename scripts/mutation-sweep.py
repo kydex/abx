@@ -16,9 +16,12 @@ lines until the brace included. Four outcomes:
 
 Scope note: earlier runs only saw single-line `if ... {`, the version before
 `internal/app` joined the file list skipped guards matching a textual filter,
-and the version before the per-package trees measured every package in one
-tree, so none of their counts are comparable with runs from the current
-version on.
+the version before the per-package trees measured every package in one tree,
+and the version before the quote-aware split read the first `;` of an `if`
+header as the init separator even inside a string literal -- one
+`internal/app` guard was written off as not applicable in the tenth run's
+first pass -- so none of their counts are comparable with runs from the
+current version on.
 
 Each package is measured in its own copy of the tree. Package tests link other
 packages -- `internal/app` links five of the six others, and `internal/bwrap`
@@ -162,17 +165,53 @@ def find_guards(text_lines: list[str]) -> list[tuple[int, int, str, str, str]]:
     return spans
 
 
+def split_init(full: str) -> tuple[str, str] | None:
+    """Split an `if` header into its init statement and its condition.
+
+    The separator is the first `;` outside string, rune and raw literals and
+    outside brackets; the `;` in `if err := f("a; b"); err != nil` splits at
+    the one after the call. Returns None when the header has no init.
+    """
+    depth = 0
+    quote = ""
+    escaped = False
+    for i, ch in enumerate(full):
+        if quote:
+            if quote == "`":
+                if ch == "`":
+                    quote = ""
+            elif escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == quote:
+                quote = ""
+            continue
+        if ch in "\"'`":
+            quote = ch
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == ";" and depth == 0:
+            return full[:i], full[i + 1 :]
+    return None
+
+
 def rewrite_guard(indent: str, else_kw: str, full: str, ending: str) -> str:
     """Return the replacement text for one guard span.
 
     `full` is the whole condition with the trailing `{` removed, possibly
-    spanning lines. `if x, err := f(); err != nil {` keeps its init statement.
+    spanning lines. `if x, err := f(); err != nil {` keeps its init statement:
+    the split is the first top-level `;`, so one inside a string literal does
+    not count.
     """
-    if ";" in full:
-        init, _, rest = full.partition(";")
-        opener = f"{indent}{else_kw}if {init}; false && ({rest.strip()}"
-    else:
+    split = split_init(full)
+    if split is None:
         opener = f"{indent}{else_kw}if false && ({full.strip()}"
+    else:
+        init, rest = split
+        opener = f"{indent}{else_kw}if {init}; false && ({rest.strip()}"
     return opener + ") {" + ending
 
 

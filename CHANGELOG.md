@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the agent-placement refusal now also suggests a link target relative to the link's directory; an absolute host target can pass the host-side check and still point nowhere inside the sandbox.
 - Fixed: a closed standard stream (`stdin`, `stdout`, or `stderr`) is now refused before startup with a message naming the stream. The first retained source otherwise took the freed descriptor number, and the session inherited the ABX data root as its stdio.
 
 ## 0.8.27

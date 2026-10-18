@@ -87,4 +87,4 @@ Do not move an already published version tag to different contents. Publish late
 
 Pushing all tags at once with `git push --force` starts no workflow: the remote tags move and GitHub runs nothing — no check job, no live job, no release artifacts, and no error anywhere to say why. It reads as a broken Actions setup. A single retargeted tag sent with `--force` is untested. Push tags without `--force`; a branch may be forced when its history is being replaced.
 
-Archive metadata is not normalized for byte-for-byte reproducibility, and the workflow currently produces no build attestation.
+Archives are not byte-for-byte reproducible: archive metadata is not normalized, and the binary differs with the build toolchain, which the workflow does not pin by patch version, so a local archive never matches the workflow artifact byte for byte. The workflow currently produces no build attestation.

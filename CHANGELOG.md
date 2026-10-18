@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the release and security notes now name the exceptions to floating versions (the live gate's pinned Bubblewrap build and the linter schema) and the real source of byte-level differences between a local build and the workflow archives -- the build toolchain, not archive metadata alone. (English and Russian.)
 - Fixed: the guides now describe the signal mechanics exactly: Bubblewrap installs no handler and reads `SIGCHLD` through `signalfd`, and the monitor's death fires the parent-death signal rather than arming it. (English and Russian.)
 - Fixed: the filesystem and environment sections now match the code: a forwarded value carrying a NUL byte is not passed and content is otherwise unvalidated; on the default route the account home is the nearest existing ancestor of the data base, so the setuid/setgid rule applies to it; and replacing `/etc/passwd` needs write access to the file or its directory, which a group-writable `/etc` leaves open within the accepted ancestor boundary. (English and Russian.)
 - Fixed: when a profile has no executable, the error now names every candidate that was checked, and a candidate that is a dangling link is called out as such.

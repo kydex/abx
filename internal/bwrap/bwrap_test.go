@@ -79,7 +79,7 @@ func TestSessionModesUseSameNamespaceAndFDPolicy(t *testing.T) {
 			}
 		}
 		joined := strings.Join(args, " ")
-		for _, s := range []string{"--ro-bind-fd 3 /usr", "--bind-fd 4 /home/agent", "--ro-bind-fd 5 /home/agent/.agents/skills", "--perms 0700 --dir /run/user", "--size 4294967296 --tmpfs /tmp", "--size 4294967296 --tmpfs /var/tmp", "--size 4294967296 --tmpfs /run"} {
+		for _, s := range []string{"--ro-bind-fd 3 /usr", "--bind-fd 4 /home/agent", "--ro-bind-fd 5 /home/agent/.agents/skills", "--perms 0700 --dir /run/user", "--size 4294967296 --tmpfs /tmp", "--size 4294967296 --tmpfs /var/tmp", "--size 4294967296 --tmpfs /run", "--proc /proc", "--dev /dev"} {
 			if !strings.Contains(joined, s) {
 				t.Fatalf("missing %s", s)
 			}

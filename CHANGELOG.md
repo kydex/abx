@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The development guide and the sweep header now carry the tenth run's numbers: 304 guards killed of 433, 128 survived and one not applicable; `internal/app` reads 41 killed of 79 guards, and the coverage bullet matches the current tree (92.6% aggregate, `internal/app` 288 of 332 statements).
 - Fixed: name-position refusals are consistent now: an option-like token where the `profile` subcommand goes gets the same unknown-option hint as everywhere else, and a bare `-` or `--` says a profile name is required instead of calling it an unknown option.
 - Fixed: the release and security notes now name the exceptions to floating versions (the live gate's pinned Bubblewrap build and the linter schema) and the real source of byte-level differences between a local build and the workflow archives -- the build toolchain, not archive metadata alone. (English and Russian.)
 - Fixed: the guides now describe the signal mechanics exactly: Bubblewrap installs no handler and reads `SIGCHLD` through `signalfd`, and the monitor's death fires the parent-death signal rather than arming it. (English and Russian.)

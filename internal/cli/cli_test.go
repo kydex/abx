@@ -100,6 +100,8 @@ func TestBareDashesAreNotOptions(t *testing.T) {
 	}{
 		{[]string{"run", "-"}, `run requires a profile name; "-" is not one`},
 		{[]string{"run", "--"}, `run requires a profile name; "--" is not one`},
+		{[]string{"profile", "-"}, `profile requires create, show or list; "-" is not one`},
+		{[]string{"profile", "--"}, `profile requires create, show or list; "--" is not one`},
 		{[]string{"profile", "create", "-"}, `profile create requires a profile name; "-" is not one`},
 		{[]string{"profile", "show", "--"}, `profile show requires a profile name; "--" is not one`},
 	} {

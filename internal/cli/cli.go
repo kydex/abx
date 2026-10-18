@@ -67,7 +67,13 @@ func Parse(args []string) (Command, error) {
 		}
 		// An option-like token is a mistyped flag wherever a subcommand or a
 		// name can go, not only in the name positions inside the subcommands.
+		// The bare dashes are not options at all: here they name the missing
+		// subcommand.
 		if strings.HasPrefix(args[1], "-") {
+			if args[1] == "-" || args[1] == "--" {
+				return Command{}, fmt.Errorf(
+					"profile requires create, show or list; %q is not one", args[1])
+			}
 			return Command{}, namePositionError(args[1], k)
 		}
 		k = Kind("profile " + args[1])

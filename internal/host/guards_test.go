@@ -446,6 +446,13 @@ func TestResolvePathsRejectsSetgidDataBaseAncestor(t *testing.T) {
 	}
 }
 
+// The static tail of the agent-placement refusal, pinned as one piece: the
+// hint was already reworded once (an absolute host target passes the check
+// but points nowhere inside the sandbox), and a silent reword is exactly what
+// this assertion exists to prevent.
+const agentOutsideHint = "put the binary inside the profile -- link it with a relative target " +
+	"such as ../lib/demo -- or under a mounted system path such as /usr"
+
 func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
 	in := fixture(t)
 	// A path that merely shares the mount-point text is outside the mount,
@@ -474,7 +481,8 @@ func TestCheckAgentPlacementRefusesUnmountedTarget(t *testing.T) {
 	// path the sandbox has no mount for: the session would die at exec time
 	// blaming the tool. It has to be refused while the profile is resolved.
 	if err := in.checkAgentPlacement(); err == nil ||
-		!strings.Contains(err.Error(), "does not mount") {
+		!strings.Contains(err.Error(), "does not mount") ||
+		!strings.Contains(err.Error(), agentOutsideHint) {
 		t.Fatalf("agent outside the sandbox accepted: %v", err)
 	}
 	// A link that stays inside the profile is the package-manager layout and
@@ -535,7 +543,8 @@ func TestResolveRefusesAgentThatLeavesTheSandbox(t *testing.T) {
 	}
 	account := Account{UID: os.Getuid(), Username: "tester", Home: home}
 	if _, err := resolve(account, paths, "demo", project, Run, true, nil); err == nil ||
-		!strings.Contains(err.Error(), "does not mount") {
+		!strings.Contains(err.Error(), "does not mount") ||
+		!strings.Contains(err.Error(), agentOutsideHint) {
 		t.Fatalf("resolve accepted an agent the sandbox cannot mount: %v", err)
 	}
 	// The same layout with the binary inside the profile must still resolve:

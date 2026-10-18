@@ -81,9 +81,32 @@ func TestOptionLikeProfileNameGetsAHint(t *testing.T) {
 	if err == nil || err.Error() != `unknown option "--version" for profile show; run "abx --help"` {
 		t.Fatalf("option-like profile show name: %v", err)
 	}
+	_, err = Parse([]string{"profile", "--help"})
+	if err == nil || err.Error() != `unknown option "--help" for profile; run "abx --help"` {
+		t.Fatalf("option-like profile subcommand: %v", err)
+	}
 	_, err = Parse([]string{"-h", "extra"})
 	if err == nil || err.Error() != "-h takes no arguments" {
 		t.Fatalf("-h with an argument: %v", err)
+	}
+}
+
+// A bare dash is not an option: the message names the missing profile instead
+// of reciting option syntax.
+func TestBareDashesAreNotOptions(t *testing.T) {
+	for _, tc := range []struct {
+		argv []string
+		want string
+	}{
+		{[]string{"run", "-"}, `run requires a profile name; "-" is not one`},
+		{[]string{"run", "--"}, `run requires a profile name; "--" is not one`},
+		{[]string{"profile", "create", "-"}, `profile create requires a profile name; "-" is not one`},
+		{[]string{"profile", "show", "--"}, `profile show requires a profile name; "--" is not one`},
+	} {
+		_, err := Parse(tc.argv)
+		if err == nil || err.Error() != tc.want {
+			t.Fatalf("%q: %v", tc.argv, err)
+		}
 	}
 }
 

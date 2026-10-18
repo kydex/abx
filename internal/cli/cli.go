@@ -65,6 +65,11 @@ func Parse(args []string) (Command, error) {
 		if len(args) < 2 {
 			return Command{}, errors.New("profile requires create, show or list")
 		}
+		// An option-like token is a mistyped flag wherever a subcommand or a
+		// name can go, not only in the name positions inside the subcommands.
+		if strings.HasPrefix(args[1], "-") {
+			return Command{}, namePositionError(args[1], k)
+		}
 		k = Kind("profile " + args[1])
 		switch k {
 		case ProfileList:
@@ -77,7 +82,7 @@ func Parse(args []string) (Command, error) {
 				return Command{}, errors.New(string(k) + " requires exactly one name")
 			}
 			if strings.HasPrefix(args[2], "-") {
-				return Command{}, unknownOption(args[2], k)
+				return Command{}, namePositionError(args[2], k)
 			}
 			if err := profile.ValidateName(args[2]); err != nil {
 				return Command{}, err
@@ -98,7 +103,7 @@ func Parse(args []string) (Command, error) {
 		// A leading hyphen is a mistyped flag, not a name: say so and point
 		// at the help, instead of reciting the profile name rules.
 		if strings.HasPrefix(args[1], "-") {
-			return Command{}, unknownOption(args[1], k)
+			return Command{}, namePositionError(args[1], k)
 		}
 		if err := profile.ValidateName(args[1]); err != nil {
 			return Command{}, err
@@ -120,8 +125,13 @@ func Parse(args []string) (Command, error) {
 	}
 }
 
-// unknownOption explains a leading-hyphen token in a name position as the
-// mistyped flag it is, pointing at the help instead of the name rules.
-func unknownOption(arg string, k Kind) error {
+// namePositionError explains a token in a name position that cannot be a
+// name: a bare "-" or "--" is not an option at all, and any other
+// option-like token is a mistyped flag, so both point at the help instead of
+// the name rules.
+func namePositionError(arg string, k Kind) error {
+	if arg == "-" || arg == "--" {
+		return fmt.Errorf("%s requires a profile name; %q is not one", k, arg)
+	}
 	return fmt.Errorf("unknown option %q for %s; run \"abx --help\"", arg, k)
 }

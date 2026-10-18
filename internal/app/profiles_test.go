@@ -58,6 +58,18 @@ func TestProfileCommandsReportWithoutRuntime(t *testing.T) {
 	if code, err := invoke(cli.ProfileList, ""); code != 0 || err != nil || !strings.Contains(out.String(), "demo     unavailable  not-configured") {
 		t.Fatal(code, err, out.String())
 	}
+	// A present but unusable skills layout gets its own detail line.
+	if err := os.MkdirAll(filepath.Dir(p.SharedSkills), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p.SharedSkills, []byte("not a directory\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, err := invoke(cli.ProfileShow, "demo"); code != 0 || err != nil ||
+		!strings.Contains(out.String(), "Skills: invalid") ||
+		!strings.Contains(out.String(), "Skills detail: skills source is not a directory") {
+		t.Fatal(code, err, out.String())
+	}
 }
 
 type brokenWriter struct{}

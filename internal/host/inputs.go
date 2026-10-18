@@ -232,8 +232,8 @@ func (in *Inputs) checkAgentPlacement() error {
 	}
 	return fmt.Errorf(
 		"profile executable %q resolves to %q, which the sandbox does not mount; "+
-			"put the binary inside the profile or under a mounted system path such as /usr, "+
-			"with a relative link target such as ../lib/demo",
+			"put the binary inside the profile -- link it with a relative target such as ../lib/demo -- "+
+			"or under a mounted system path such as /usr",
 		host, resolved)
 }
 

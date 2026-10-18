@@ -170,7 +170,10 @@ def split_init(full: str) -> tuple[str, str] | None:
 
     The separator is the first `;` outside string, rune and raw literals and
     outside brackets; the `;` in `if err := f("a; b"); err != nil` splits at
-    the one after the call. Returns None when the header has no init.
+    the one after the call. Comments in the header are not tracked either: no
+    header in the tree has one, and if one appears, the corrupted rewrite stops
+    at the compile check, which reports it as not applicable -- loudly, never
+    as a verdict. Returns None when the header has no init.
     """
     depth = 0
     quote = ""

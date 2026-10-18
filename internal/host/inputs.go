@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -58,8 +58,8 @@ func (in *Inputs) Project() string   { return in.project }
 func (in *Inputs) Skills() string    { return in.skills }
 func (in *Inputs) Shell() string     { return in.shell }
 func (in *Inputs) Username() string  { return in.account.Username }
-func (in *Inputs) Command() []string { return append([]string(nil), in.command...) }
-func (in *Inputs) System() []Source  { return append([]Source(nil), in.system...) }
+func (in *Inputs) Command() []string { return slices.Clone(in.command) }
+func (in *Inputs) System() []Source  { return slices.Clone(in.system) }
 
 // SourceFile lends a descriptor until Inputs.Close. The borrower must not close it.
 func (in *Inputs) SourceFile(path string) (*os.File, error) {
@@ -358,7 +358,7 @@ func (in *Inputs) Revalidate() error {
 	for path := range in.objects {
 		paths = append(paths, path)
 	}
-	sort.Strings(paths)
+	slices.Sort(paths)
 	for _, path := range paths {
 		o := in.objects[path]
 		info, err := os.Lstat(path)
@@ -379,7 +379,7 @@ func (in *Inputs) Revalidate() error {
 	for path := range in.links {
 		links = append(links, path)
 	}
-	sort.Strings(links)
+	slices.Sort(links)
 	for _, path := range links {
 		got, err := os.Readlink(path)
 		if err != nil {

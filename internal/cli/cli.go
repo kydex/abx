@@ -4,6 +4,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/kydex/abx/internal/profile"
@@ -111,7 +112,7 @@ func Parse(args []string) (Command, error) {
 			if k != Run {
 				return Command{}, fmt.Errorf("unexpected arguments to %s", k)
 			}
-			c.Args = append([]string(nil), args[3:]...)
+			c.Args = slices.Clone(args[3:])
 		}
 		return c, nil
 	default:

@@ -3,7 +3,7 @@ package sandbox
 import (
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -62,7 +62,7 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 	for key := range values {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	out := make([]Entry, 0, len(keys))
 	for _, key := range keys {
 		out = append(out, Entry{Name: key, Value: values[key]})

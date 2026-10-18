@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: a closed standard stream (`stdin`, `stdout`, or `stderr`) is now refused before startup with a message naming the stream. The first retained source otherwise took the freed descriptor number, and the session inherited the ABX data root as its stdio.
+
 ## 0.8.27
 
 - The development guides now name the `THIRD_PARTY_LICENSES` check among the `make check` steps; the Russian guide now carries the 12 October date for the `/etc/passwd` root-ownership removal and a translated releases link text. (English and Russian.)

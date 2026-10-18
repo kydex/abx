@@ -15,7 +15,6 @@ import (
 	"github.com/kydex/abx/internal/host"
 	"github.com/kydex/abx/internal/probe"
 	"github.com/kydex/abx/internal/sandbox"
-	"golang.org/x/sys/unix"
 )
 
 //go:embed VERSION
@@ -25,9 +24,6 @@ var versionText string
 var Version = strings.TrimSpace(versionText)
 
 func Run(ctx context.Context, args []string, stdio bwrap.Stdio) int {
-	if err := validateStandardStreams(); err != nil {
-		return fail(1, err, stdio)
-	}
 	if err := validateEffectiveUID(os.Getuid(), os.Geteuid()); err != nil {
 		return fail(1, err, stdio)
 	}
@@ -81,22 +77,6 @@ func fail(status int, err error, stdio bwrap.Stdio) int {
 	}
 	_, _ = fmt.Fprintf(stdio.Err, "abx: %s\n", Escape(err.Error()))
 	return status
-}
-
-// standardStreams names descriptors 0-2 in diagnostics.
-var standardStreams = [...]string{"standard input", "standard output", "standard error"}
-
-// validateStandardStreams refuses a closed standard stream before anything
-// else runs. Without the check the first retained source would take the freed
-// descriptor number, and the session would inherit that source as its stdio
-// instead of the stream the caller thought it closed.
-func validateStandardStreams() error {
-	for fd, name := range standardStreams {
-		if _, err := unix.FcntlInt(uintptr(fd), unix.F_GETFD, 0); err != nil {
-			return fmt.Errorf("%s is closed", name)
-		}
-	}
-	return nil
 }
 
 func validateEffectiveUID(realUID, effectiveUID int) error {

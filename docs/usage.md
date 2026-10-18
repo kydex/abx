@@ -157,7 +157,7 @@ ABX rejects projects that would expose sensitive or system locations, including 
 
 `run` and `inspect` check the profile entry point using host paths before starting a sandbox. The command status in `profile show` and `profile list` uses the same check. ABX does not translate symlink targets between host paths and sandbox paths.
 
-An absolute link such as `.local/bin/demo -> /home/agent/.local/lib/demo` can work inside the sandbox but be reported as unavailable on the host. Conversely, a link to the profile's absolute host path can pass this check and then fail inside the sandbox, where that path is normally hidden. A candidate rejected by the host check is skipped in favour of the next usable entry in the search order.
+An absolute link such as `.local/bin/demo -> /home/agent/.local/lib/demo` can work inside the sandbox but be reported as unavailable on the host. Conversely, a link to the profile's absolute host path can pass this check and then fail inside the sandbox, where that path is normally hidden. A candidate that fails these file checks is skipped in favour of the next usable entry in the search order. A candidate that passes them is final: if its link resolves outside the profile and the mounted system sources, the command is refused with that error rather than falling back to a later entry.
 
 For links between files within a profile, use relative targets that stay within the profile, such as `.local/bin/demo -> ../lib/demo`. The entire link chain must remain valid. Avoid links to the profile's absolute host path.
 

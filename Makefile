@@ -31,13 +31,20 @@ build-check:
 	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./cmd/abx
 	CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /dev/null ./internal/app/testdata
 
-# Both archives carry THIRD_PARTY_LICENSES, so a module used by the build must
-# appear there; the rows are counted against go.mod's module list.
+# Both archives carry THIRD_PARTY_LICENSES, so every module used by the build
+# must appear there with its exact version; the list is compared with go.mod's
+# module list entry by entry, not just counted.
 licenses-check:
 	@set -eu; \
-	want=$$(($$(go list -m all | wc -l) - 1)); \
-	got=$$(sed -n '/^- /p' THIRD_PARTY_LICENSES | wc -l); \
-	[ "$$got" -eq "$$want" ] || { echo "error: THIRD_PARTY_LICENSES lists $$got modules, the build uses $$want" >&2; exit 1; }; \
+	dir=$$(mktemp -d); \
+	trap 'rm -rf "$$dir"' EXIT HUP INT TERM; \
+	go list -m all | tail -n +2 | LC_ALL=C sort > "$$dir/build"; \
+	sed -n 's/^- //p' THIRD_PARTY_LICENSES | awk -F ' - ' '{print $$1}' | LC_ALL=C sort > "$$dir/manifest"; \
+	if ! cmp -s "$$dir/build" "$$dir/manifest"; then \
+		echo "error: THIRD_PARTY_LICENSES does not match the build's module list" >&2; \
+		diff -u "$$dir/manifest" "$$dir/build" >&2 || true; \
+		exit 1; \
+	fi; \
 	echo "THIRD_PARTY_LICENSES matches the build's module list"
 
 coverage-check:

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The `THIRD_PARTY_LICENSES` check now compares the manifest with the build's module list entry by entry -- paths and versions -- instead of counting rows; a substituted or stale entry fails `make check`.
 - Fixed: the security table and the usage guide now describe the profile-executable link check exactly: it resolves links on the host and refuses targets outside the profile and mounted system sources, and a target that is the profile's absolute host path can pass it and still fail at exec inside the sandbox. The usage guide no longer claims every rejected candidate falls back to the next one. (English and Russian.)
 - Fixed: the agent-placement refusal now also suggests a link target relative to the link's directory; an absolute host target can pass the host-side check and still point nowhere inside the sandbox.
 - Fixed: a closed standard stream (`stdin`, `stdout`, or `stderr`) is now refused before startup with a message naming the stream. The first retained source otherwise took the freed descriptor number, and the session inherited the ABX data root as its stdio.

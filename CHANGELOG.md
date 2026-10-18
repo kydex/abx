@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the guides now describe the signal mechanics exactly: Bubblewrap installs no handler and reads `SIGCHLD` through `signalfd`, and the monitor's death fires the parent-death signal rather than arming it. (English and Russian.)
 - Fixed: the filesystem and environment sections now match the code: a forwarded value carrying a NUL byte is not passed and content is otherwise unvalidated; on the default route the account home is the nearest existing ancestor of the data base, so the setuid/setgid rule applies to it; and replacing `/etc/passwd` needs write access to the file or its directory, which a group-writable `/etc` leaves open within the accepted ancestor boundary. (English and Russian.)
 - Fixed: when a profile has no executable, the error now names every candidate that was checked, and a candidate that is a dangling link is called out as such.
 - The `THIRD_PARTY_LICENSES` check now compares the manifest with the build's module list entry by entry -- paths and versions -- instead of counting rows; a substituted or stale entry fails `make check`.

@@ -102,6 +102,7 @@ func TestNoVerificationPassedOnFailedRuns(t *testing.T) {
 // already exists: no new seam is needed to pin it.
 func TestInspectOutputFailureIsReported(t *testing.T) {
 	base := t.TempDir()
+	t.Chdir(t.TempDir())
 	home := filepath.Join(base, "realhome")
 	account := host.Account{UID: os.Getuid(), Username: "tester", Home: home}
 	data := filepath.Join(base, "data")

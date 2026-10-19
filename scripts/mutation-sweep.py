@@ -50,7 +50,9 @@ costume of a result.
 Read the skip report before trusting the counts. A skipped test does not fail, so
 a guard whose only test skips is indistinguishable from an uncovered one. The
 report names the skips so a survival list is never mistaken for a property of the
-code rather than of the machine.
+code rather than of the machine. Subtests are indented by `go test -v`, so the
+pattern must allow leading whitespace; otherwise the skips that pin setuid
+refusals disappear from the report exactly where they matter.
 
 Nothing is written to the repository. HEAD is exported to a scratch directory
 with no .git in it and the rewriting happens there.
@@ -337,7 +339,7 @@ def main() -> int:
 
         print("== baseline ==")
         code, out = run(["go", "test", "-count=1", "./...", "-v"], repo)
-        skips = re.findall(r"(?m)^--- SKIP: (\S+)", out)
+        skips = re.findall(r"(?m)^\s*--- SKIP: (\S+)", out)
         if code != 0:
             print("error: the baseline is red, a survival number would mean nothing", file=sys.stderr)
             return 1

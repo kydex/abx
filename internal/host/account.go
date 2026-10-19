@@ -171,14 +171,15 @@ func checkHomeTrust(info os.FileInfo, home string, uid int) error {
 	return nil
 }
 
-// checkDataBaseOwner requires the longest existing ancestor of the data base
-// to be a directory owned by the invoking user. This rejects roots under
-// another user's directory or under root-owned world-writable parents
-// without requiring an exact 0700 mode on shared ancestors such as
-// ~/.local/share or test TempDirs. A world-writable ancestor is additionally
-// rejected unless sticky, since any local user could otherwise replace the
-// storage root. Group-writable ancestors stay allowed: that is a team policy,
-// not an attack, and refusing it breaks umask-002 machines wholesale.
+// checkDataBaseOwner requires the nearest existing ancestor of the data base
+// to be a directory owned by the invoking user, without requiring an exact
+// 0700 mode on shared ancestors such as ~/.local/share or test TempDirs. The
+// walk stops at that ancestor: directories above it are not inspected, so the
+// rule permits a data base under a user-owned directory that itself sits under
+// a world-writable parent. A world-writable ancestor is rejected unless
+// sticky, since any local user could otherwise replace the storage root.
+// Group-writable ancestors stay allowed: that is a team policy, not an
+// attack, and refusing it breaks umask-002 machines wholesale.
 func checkDataBaseOwner(canonicalBase string, uid int) error {
 	current := canonicalBase
 	for {

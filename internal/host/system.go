@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // systemLayout is the fixed set of host paths ABX exposes into the sandbox.
@@ -102,20 +103,29 @@ func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 	for _, name := range layout.etc {
 		p := "/etc/" + name
 		path := physical(p)
-		if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+		// Stat follows the final link, so a dangling target, a cycle, and
+		// a non-directory in the middle all surface here as errno values
+		// that optionalEtcUnavailable recognises.
+		if _, err := os.Stat(path); optionalEtcUnavailable(err) {
 			continue
 		} else if err != nil {
 			return fmt.Errorf("inspect system path %q: %w", p, err)
 		}
 		if _, err := add(path, p); err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				// A dangling entry is absent, not broken: nothing can be
-				// mounted for a link that resolves nowhere, and one broken
-				// /etc resource must not abort every session.
+			if optionalEtcUnavailable(err) {
 				continue
 			}
 			return err
 		}
 	}
 	return nil
+}
+
+// optionalEtcUnavailable reports errors that leave an optional /etc candidate
+// with nothing to mount: a missing object, a non-directory in the middle of
+// the path, or a symlink cycle. They are skipped just like a missing file.
+func optionalEtcUnavailable(err error) bool {
+	return errors.Is(err, os.ErrNotExist) ||
+		errors.Is(err, syscall.ELOOP) ||
+		errors.Is(err, syscall.ENOTDIR)
 }

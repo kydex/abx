@@ -242,24 +242,61 @@ func TestProjectRejectsRelocatedSystemTree(t *testing.T) {
 	}
 }
 
-func TestProjectSystemTreeResolutionFailures(t *testing.T) {
-	base := t.TempDir()
-	home, project := filepath.Join(base, "home"), filepath.Join(base, "project")
-	for _, p := range []string{home, project} {
-		if err := os.Mkdir(p, 0o700); err != nil {
-			t.Fatal(err)
-		}
+// A protected system tree that does not resolve says only that there is
+// nothing to mount at that path: the project itself is already resolved, so
+// refusing the session protects nothing. Dangling links, cycles, and paths
+// through a non-directory must all leave project commands working.
+func TestProjectSystemTreeToleratesUnresolvableRoot(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(t *testing.T, base string) string
+	}{
+		{
+			name: "dangling link",
+			setup: func(t *testing.T, base string) string {
+				protected := filepath.Join(base, "opt")
+				if err := os.Symlink(filepath.Join(base, "missing"), protected); err != nil {
+					t.Fatal(err)
+				}
+				return protected
+			},
+		},
+		{
+			name: "symlink cycle",
+			setup: func(t *testing.T, base string) string {
+				protected := filepath.Join(base, "opt")
+				if err := os.Symlink(protected, protected); err != nil {
+					t.Fatal(err)
+				}
+				return protected
+			},
+		},
+		{
+			name: "non-directory in the middle",
+			setup: func(t *testing.T, base string) string {
+				blocker := filepath.Join(base, "blocker")
+				if err := os.WriteFile(blocker, nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				return filepath.Join(blocker, "opt")
+			},
+		},
 	}
-	protected := filepath.Join(base, "opt")
-	data := filepath.Join(home, "data", "abx")
-	if _, err := resolveProject(project, home, data, []string{protected}); err != nil {
-		t.Fatalf("absent optional system tree blocked project: %v", err)
-	}
-	if err := os.Symlink(filepath.Join(base, "missing"), protected); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := resolveProject(project, home, data, []string{protected}); err == nil {
-		t.Fatal("unresolved existing system link was ignored")
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			base := t.TempDir()
+			home, project := filepath.Join(base, "home"), filepath.Join(base, "project")
+			for _, p := range []string{home, project} {
+				if err := os.Mkdir(p, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			protected := tc.setup(t, base)
+			data := filepath.Join(home, "data", "abx")
+			if _, err := resolveProject(project, home, data, []string{protected}); err != nil {
+				t.Fatalf("unresolvable protected root blocked project: %v", err)
+			}
+		})
 	}
 }
 

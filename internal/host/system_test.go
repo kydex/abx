@@ -131,6 +131,28 @@ func TestDiscoverSystemSkipsDanglingCandidate(t *testing.T) {
 	}
 }
 
+func TestDiscoverSystemSkipsCyclicCandidate(t *testing.T) {
+	root := t.TempDir()
+	for _, p := range []string{"usr", "etc"} {
+		if err := os.MkdirAll(filepath.Join(root, p), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cyclic := filepath.Join(root, "etc", "localtime")
+	if err := os.Symlink("localtime", cyclic); err != nil {
+		t.Fatal(err)
+	}
+	in := fixture(t)
+	if err := in.discoverSystem(root); err != nil {
+		t.Fatalf("cyclic candidate aborted discovery: %v", err)
+	}
+	for _, s := range in.System() {
+		if s.Path == cyclic || s.Target == "/etc/localtime" {
+			t.Fatalf("cyclic candidate was mounted: %+v", s)
+		}
+	}
+}
+
 func TestSkillsRejectIntermediateSymlinks(t *testing.T) {
 	for _, level := range []string{"shared", "agents"} {
 		t.Run(level, func(t *testing.T) {

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: a sensitive home path whose leading component is a symlink cycle or a non-directory no longer blocks every command, a cyclic optional `/etc` candidate is skipped like a missing one, and a protected system root that does not resolve no longer disables project commands. There is nothing to mount at those paths, so the refusal protected nothing.
+
 ## 0.8.28
 
 - Fixed: the sweep script now splits an `if` header at the first `;` outside string, rune and raw literals; a condition embedding `;` in a string literal used to be written off as not applicable instead of measured.

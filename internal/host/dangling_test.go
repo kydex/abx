@@ -37,6 +37,30 @@ func TestSensitiveHomeTreeToleratesDanglingSymlink(t *testing.T) {
 		}
 	})
 
+	t.Run("cycle below a sensitive tree does not block", func(t *testing.T) {
+		home := t.TempDir()
+		// .gem/credentials is the sensitive path, so this cycle sits above
+		// the final component and Lstat itself fails with ELOOP.
+		if err := os.Symlink(".gem", filepath.Join(home, ".gem")); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ResolvePaths(accountWithHome(account, home), filepath.Join(home, "data")); err != nil {
+			t.Fatalf("cycle below a sensitive tree blocked every command: %v", err)
+		}
+	})
+
+	t.Run("file below a sensitive tree does not block", func(t *testing.T) {
+		home := t.TempDir()
+		// A regular file where .gem should be makes .gem/credentials
+		// unreachable: Lstat returns ENOTDIR.
+		if err := os.WriteFile(filepath.Join(home, ".gem"), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ResolvePaths(accountWithHome(account, home), filepath.Join(home, "data")); err != nil {
+			t.Fatalf("non-directory below a sensitive tree blocked every command: %v", err)
+		}
+	})
+
 	t.Run("working symlink is still resolved", func(t *testing.T) {
 		home, real := t.TempDir(), t.TempDir()
 		if err := os.Symlink(real, filepath.Join(home, ".config")); err != nil {

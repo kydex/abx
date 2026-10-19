@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 var systemRoots = []string{
@@ -137,33 +138,28 @@ func within(path, root string) bool {
 	return err == nil && !filepath.IsAbs(rel) && (rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))))
 }
 
+// canonicalProtectedTree resolves a protected system tree for the overlap
+// rules. A root that cannot resolve must not disable every project command:
+// there is nothing to mount at that path, and the project itself is already
+// resolved. The resolution follows canonicalSensitiveTree.
 func canonicalProtectedTree(path string) (string, error) {
-	if _, err := os.Lstat(path); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return filepath.Clean(path), nil
-		}
-		return "", fmt.Errorf("inspect protected tree %q: %w", path, err)
-	}
-	resolved, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		return "", fmt.Errorf("canonicalize protected tree %q: %w (remove the dangling symlink if one points here)", path, err)
-	}
-	return filepath.Clean(resolved), nil
+	return canonicalSensitiveTree(path)
 }
 
 // canonicalSensitiveTree resolves a sensitive home tree for the two overlap
-// rules, and it is deliberately forgiving about a link that does not resolve:
-// a dangling link still says where it is headed, and that target is what has
-// to be compared against, because a path that does not exist today can sit
-// inside the project or the data base tomorrow. A cycle resolves to nothing
-// ever; its first hop is the literal target the same way.
+// rules, and it is deliberately forgiving about a tree that does not resolve:
+// a dangling or cyclic link still says where it is headed, and that target is
+// what has to be compared against, because a path that does not exist today can
+// sit inside the project or the data base tomorrow. A path that cannot exist at
+// all -- missing, blocked by a non-directory in the middle, or caught in a
+// cycle above the final component -- is compared literally.
 //
 // The literal link would be safe too — nothing can exist underneath a link that
 // resolves nowhere, and both callers compare against an already resolved path —
 // but the target is the stronger statement and it costs nothing.
 func canonicalSensitiveTree(path string) (string, error) {
 	if _, err := os.Lstat(path); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
+		if errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ELOOP) || errors.Is(err, syscall.ENOTDIR) {
 			return filepath.Clean(path), nil
 		}
 		return "", fmt.Errorf("inspect protected tree %q: %w", path, err)

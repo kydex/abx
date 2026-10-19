@@ -97,6 +97,37 @@ func TestNoVerificationPassedOnFailedRuns(t *testing.T) {
 	}
 }
 
+// The mutation that drops the inspection write error used to survive the
+// sweep, although runSessionForAccount already takes stdio and brokenWriter
+// already exists: no new seam is needed to pin it.
+func TestInspectOutputFailureIsReported(t *testing.T) {
+	base := t.TempDir()
+	home := filepath.Join(base, "realhome")
+	account := host.Account{UID: os.Getuid(), Username: "tester", Home: home}
+	data := filepath.Join(base, "data")
+	paths, err := host.ResolvePaths(account, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(paths.Profiles, "demo", ".local", "bin")
+	if err := os.MkdirAll(bin, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bin, "demo"), []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	status, err := runSessionForAccount(
+		context.Background(),
+		cli.Command{Kind: cli.Inspect, Profile: "demo"},
+		[]string{"XDG_DATA_HOME=" + data},
+		bwrap.Stdio{Out: brokenWriter{}, Err: io.Discard},
+		account,
+	)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "write inspection") {
+		t.Fatalf("inspect output failure = status %d, %v", status, err)
+	}
+}
+
 func TestProbeInvocationRequiresPayload(t *testing.T) {
 	if os.Getuid() == 0 || os.Geteuid() == 0 || os.Geteuid() != os.Getuid() {
 		t.Skip("public CLI requires a non-root user")

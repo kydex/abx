@@ -76,6 +76,8 @@ Read the skip report it prints before trusting the numbers. A skipped test does 
 
 Two distinctions the output depends on. A build or vet failure is *not applicable*, not a kill: the guard cannot be neutered that way. And the classification reads the output text, not the exit code, because `go test` exits non-zero both for a build failure and for a failing test. A word in a test message can change the measurement — `unreachable` matches the build-failure pattern.
 
+Two limits of the number. Each guard is one whole `if` condition: operands of `&&` and `||` are not measured separately, and `switch` bodies and conditional `for` loops are not measured at all. And `survived` covers three different situations — a guard no test exercises, a guard whose removal a neighbouring check makes invisible, and a guard whose only test skipped on this machine. Read the survivor list line by line before treating it as debt.
+
 ## Live sandbox tests
 
 On a regular-user Linux host with Bubblewrap 0.12.0+ at `/usr/bin/bwrap` and working unprivileged user namespaces.
@@ -124,6 +126,11 @@ here so nobody starts the same discussion from scratch.
 
 - `Plan.Validate()` stays one long function. It sits between a built plan and the
   Bubblewrap arguments; splitting it risks that barrier to buy readability.
+  Eight more production functions run past 60 lines -- `cli.Parse`,
+  `host.discoverLayout`, `bwrap.open`, `sandbox.build`, `app.runVerify`,
+  `probe.gate`, `app.runProfiles`, and `host.resolveProject` -- but each is a
+  linear sequence (one switch, loops, or ordered checks), and splitting would
+  move state between the parts for no gain.
 - Eleven identifiers are exported although only their own package uses them:
   `Escape`, `Version` (app), `MinimumVersion`, `Path` (bwrap),
   `ErrProfileNotFound`, `ProfileStatus`, `ResolveProject`, `ResolveShell`,
@@ -136,11 +143,13 @@ here so nobody starts the same discussion from scratch.
   CI. They document the input shape; running them on a schedule is a separate
   decision.
 - The orchestrator in `internal/app` is knowingly under-covered. The code is
-  correct where it was checked; closing the gap needs test seams that the
-  project's own rules discourage. The mutation sweep behind this list measured
-  the size of the gap: its tests catch 40 of the package's 77 guards, and the
-  other 37 survive deletion. The tenth full run measured 304 guards killed and
-  128 survived of 432, none not applicable.
+  correct where it was checked. Part of the gap is reachable through existing
+  seams -- the `stdio` parameter and `brokenWriter` already pin a failed
+  inspection write -- while the rest needs a real Bubblewrap launch or test
+  seams that the project's own rules discourage. The mutation sweep behind this
+  list measured the size of the gap: its tests catch 40 of the package's 77
+  guards, and the other 37 survive deletion. The tenth full run measured 304
+  guards killed and 128 survived of 432, none not applicable.
 - The aggregate coverage floor is 74.0% against an actual 92.5%, and `internal/app` is 293 of its
   336 statements (87.2%). Halving that package's coverage still leaves the aggregate at 84.0%; even
   zeroing it leaves 75.5%, still above the floor, so the gate does not fire on this package. The aggregate catches gross

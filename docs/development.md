@@ -128,11 +128,12 @@ here so nobody starts the same discussion from scratch.
 
 - `Plan.Validate()` stays one long function. It sits between a built plan and the
   Bubblewrap arguments; splitting it risks that barrier to buy readability.
-  Eight more production functions run past 60 lines -- `cli.Parse`,
+  Nine more production functions run past 60 lines -- `cli.Parse`,
   `host.discoverLayout`, `bwrap.open`, `sandbox.build`, `app.runVerify`,
-  `probe.gate`, `app.runProfiles`, and `host.resolveProject` -- but each is a
-  linear sequence (one switch, loops, or ordered checks), and splitting would
-  move state between the parts for no gain.
+  `probe.check`, `app.runProfiles`, `host.resolveAgent`, and
+  `host.resolveProject` -- but each is a linear sequence (one switch, loops,
+  or ordered checks), and splitting would move state between the parts for no
+  gain.
 - Eleven identifiers are exported although only their own package uses them:
   `Escape`, `Version` (app), `MinimumVersion`, `Path` (bwrap),
   `ErrProfileNotFound`, `ProfileStatus`, `ResolveProject`, `ResolveShell`,

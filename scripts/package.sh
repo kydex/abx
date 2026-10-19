@@ -37,6 +37,13 @@ if [ "$mode" = release ]; then
         printf 'Tag %s does not match source version %s\n' "$tag" "$version" >&2
         exit 2
     fi
+    # Step 1 of the release procedure moves the Unreleased entries into a
+    # version section; nothing else checks that it happened, and the archive
+    # ships CHANGELOG.md as-is.
+    if ! grep -qxF "## $version" CHANGELOG.md; then
+        printf 'error: CHANGELOG.md has no "## %s" section; move the Unreleased entries before packaging\n' "$version" >&2
+        exit 2
+    fi
 fi
 # A source archive unpacked inside an unrelated repository (for example a
 # home directory under git) is not a release checkout: treat it as a plain

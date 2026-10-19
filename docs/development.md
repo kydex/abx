@@ -78,7 +78,7 @@ Read the skip report it prints before trusting the numbers. A skipped test does 
 
 Two distinctions the output depends on. A build or vet failure is *not applicable*, not a kill: the guard cannot be neutered that way. And the classification reads the output text, not the exit code, because `go test` exits non-zero both for a build failure and for a failing test. A word in a test message can change the measurement — `unreachable` matches the build-failure pattern.
 
-Two limits of the number. Each guard is one whole `if` condition: operands of `&&` and `||` are not measured separately, and `switch` bodies and conditional `for` loops are not measured at all. And `survived` covers three different situations — a guard no test exercises, a guard whose removal a neighbouring check makes invisible, and a guard whose only test skipped on this machine. Read the survivor list line by line before treating it as debt.
+Two limits of the number. Each guard is one whole `if` condition: operands of `&&` and `||` are not measured separately, and a `switch` statement or a conditional `for` loop is not a guard by itself — only the `if` statements inside it are measured. And `survived` covers three different situations — a guard no test exercises, a guard whose removal a neighbouring check makes invisible, and a guard whose only test skipped on this machine. Read the survivor list line by line before treating it as debt.
 
 ## Live sandbox tests
 

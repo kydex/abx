@@ -32,8 +32,15 @@ jobs:
             base=$PUSH_BEFORE
             head=$SHA
           fi
+          # A force-push can name a "before" commit the fresh checkout no
+          # longer has; the head's parent still bounds the pushed tip.
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
-            base=$(git rev-parse "$head^" 2>/dev/null || true)
+            base=""
+          elif ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null; then
+            base=""
+          fi
+          if [ -z "$base" ]; then
+            base=$(git rev-parse --verify --quiet "${head}^" || true)
           fi
           if [ -n "$base" ]; then
             range="$base..$head"

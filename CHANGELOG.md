@@ -7,6 +7,7 @@
 - The packaging smoke check now requires exactly two entries in the checksum manifest; a hand-edited manifest that lists one archive used to pass.
 - Release packaging now refuses a version without a matching `## X.Y.Z` section in `CHANGELOG.md`, so the release procedure cannot skip the changelog step silently.
 - CI now rejects a commit subject longer than 72 characters in the pushed or pull-request range; the check needs the full history, so the checkout fetches it.
+- Fixed: the commit-subject gate handles a push whose `before` commit is absent from the fresh checkout (a force-push) and a first commit without a parent; it falls back to the tip's parent, or to the tip itself for a first commit, instead of failing on an invalid revision range.
 - The development guide now spells out what the sweep does not measure (operands of `&&`/`||`, `switch` bodies, conditional loops) and that `survived` mixes uncovered, equivalent, and machine-skipped guards; it also names the nine other functions above 60 lines that are accepted. (English and Russian.)
 - Fixed: a `verify` probe file whose identity could not be read is no longer registered for name-based cleanup, so cleanup cannot remove a replacement it never compared.
 - Fixed: the sweep's skip report now matches indented subtest lines, so a subtest that skips (the setuid/setgid agent refusals on filesystems without those bits) is reported instead of leaving its guards looking uncovered.

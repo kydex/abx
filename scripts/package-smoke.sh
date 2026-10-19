@@ -18,6 +18,13 @@ done
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 (cd "$dir" && sha256sum -c "abx-$version-SHA256SUMS")
+# A manifest that lists only one archive still verifies; the count catches a
+# hand-edited or truncated file that would leave the other archive unchecked.
+manifest="$dir/abx-$version-SHA256SUMS"
+if [ "$(wc -l < "$manifest")" -ne 2 ]; then
+    printf 'error: %s lists %s entries, expected 2\n' "$manifest" "$(wc -l < "$manifest")" >&2
+    exit 1
+fi
 tar -xzf "$dir/abx-$version-linux-amd64.tar.gz" -C "$work"
 test -x "$work/abx-$version-linux-amd64/abx"
 if [ "$(id -u)" -ne 0 ]; then

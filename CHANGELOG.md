@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The packaging smoke check now requires exactly two entries in the checksum manifest; a hand-edited manifest that lists one archive used to pass.
 - Release packaging now refuses a version without a matching `## X.Y.Z` section in `CHANGELOG.md`, so the release procedure cannot skip the changelog step silently.
 - CI now rejects a commit subject longer than 72 characters in the pushed or pull-request range; the check needs the full history, so the checkout fetches it.
 - The development guide now spells out what the sweep does not measure (operands of `&&`/`||`, `switch` bodies, conditional loops) and that `survived` mixes uncovered, equivalent, and machine-skipped guards; it also names the eight other functions above 60 lines that are accepted. (English and Russian.)

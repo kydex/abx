@@ -19,12 +19,21 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          DELETED: ${{ github.event.deleted }}
           PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_COMMITS: ${{ join(github.event.commits.*.id, ' ') }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
           SHA: ${{ github.sha }}
+          LC_ALL: C.UTF-8
         run: |
           set -euo pipefail
+          # A deleted branch or tag adds no commit to check: the payload's SHA
+          # reverts to the default branch, and the range would then scan
+          # published history that is deliberately left unrewritten.
+          if [ "$DELETED" = true ]; then
+            exit 0
+          fi
           if [ "$EVENT_NAME" = pull_request ]; then
             base=$PR_BASE
             head=$PR_HEAD
@@ -33,28 +42,31 @@ jobs:
             head=$SHA
           fi
           # A force-push can name a "before" commit the fresh checkout no
-          # longer has; the head's parent still bounds the pushed tip.
-          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+          # longer has; the payload still lists the pushed commits.
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] ||
+            ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null; then
             base=""
-          elif ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null; then
-            base=""
-          fi
-          if [ -z "$base" ]; then
-            base=$(git rev-parse --verify --quiet "${head}^" || true)
           fi
           if [ -n "$base" ]; then
             range="$base..$head"
+            git rev-list --count "$range" >/dev/null
+            subjects=$(git log --format='%h %s' "$range")
+          elif [ -n "$PUSH_COMMITS" ]; then
+            read -r -a commits <<< "$PUSH_COMMITS"
+            git rev-list --no-walk=unsorted "${commits[@]}" >/dev/null
+            subjects=$(git log --no-walk=unsorted --format='%h %s' "${commits[@]}")
+          elif [ -n "$(git rev-parse --verify --quiet "${head}^")" ]; then
+            subjects=$(git log --format='%h %s' "${head}^..$head")
           else
-            range=$head
+            subjects=$(git log --format='%h %s' "$head")
           fi
-          git rev-list --count "$range" >/dev/null
           status=0
           while IFS=' ' read -r hash subject; do
             if [ "${#subject}" -gt 72 ]; then
               printf 'error: %s subject is %s characters (limit 72): %s\n' "$hash" "${#subject}" "$subject" >&2
               status=1
             fi
-          done < <(git log --format='%h %s' "$range")
+          done <<< "$subjects"
           exit "$status"
       - uses: actions/setup-go@v7
         with:

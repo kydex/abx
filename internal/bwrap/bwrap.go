@@ -324,10 +324,7 @@ func Translate(plan sandbox.Plan, source func(string) (*os.File, error)) ([]stri
 		case sandbox.Directory:
 			args = append(args, "--dir", m.Target)
 		case sandbox.Tmpfs:
-			if m.Size != 0 {
-				args = append(args, "--size", strconv.FormatUint(m.Size, 10))
-			}
-			args = append(args, "--tmpfs", m.Target)
+			args = append(args, "--size", strconv.FormatUint(m.Size, 10), "--tmpfs", m.Target)
 		case sandbox.Proc:
 			args = append(args, "--proc", m.Target)
 		case sandbox.Dev:

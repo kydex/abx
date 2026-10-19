@@ -21,7 +21,8 @@ and the version before the quote-aware split read the first `;` of an `if`
 header as the init separator even inside a string literal -- one
 `internal/app` guard was written off as not applicable in the tenth run's
 first pass -- so none of their counts are comparable with runs from the
-current version on.
+current version on. The tenth full run with the current version read 304
+guards killed and 128 survived of 432, none not applicable.
 
 Each package is measured in its own copy of the tree. Package tests link other
 packages -- `internal/app` links five of the six others, and `internal/bwrap`

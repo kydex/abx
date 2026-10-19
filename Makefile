@@ -1,4 +1,4 @@
-.PHONY: test check lint shellcheck actionlint local-diff-check security build-check licenses-check coverage-check build package package-smoke package-check clean live
+.PHONY: test check lint shellcheck actionlint python-check links-check local-diff-check security build-check licenses-check coverage-check build package package-smoke package-check clean live
 
 COVERAGE_MIN ?= 74.0
 
@@ -18,6 +18,16 @@ shellcheck:
 
 actionlint:
 	actionlint .github/workflows/*.yml
+
+# The Python tools below are not covered by any Go linter; parse both without
+# writing bytecode into the source tree.
+python-check:
+	python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filename=str(p)) for p in pathlib.Path("scripts").glob("*.py")]'
+
+# Language links must resolve in packaged artifacts, where the docs tree is
+# copied as-is. Only file targets are checked; heading anchors stay manual.
+links-check:
+	python3 scripts/check-links.py
 
 # Local helper: whitespace errors in uncommitted changes. Not part of make
 # check — on a fresh checkout the index matches HEAD and it can find nothing.
@@ -55,7 +65,7 @@ coverage-check:
 	total=$$(go tool cover -func="$$profile" | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v got="$$total" -v min="$(COVERAGE_MIN)" 'BEGIN { if (got + 0 < min + 0) { printf "coverage %.1f%% is below minimum %.1f%%\n", got, min; exit 1 } printf "coverage %.1f%% (minimum %.1f%%)\n", got, min }'
 
-check: lint shellcheck actionlint security build-check licenses-check package-check coverage-check
+check: lint shellcheck actionlint python-check links-check security build-check licenses-check package-check coverage-check
 	go vet ./...
 
 build:

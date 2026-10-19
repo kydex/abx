@@ -36,11 +36,13 @@ Run the full local check suite:
 make check
 ```
 
-`make check` expects `shellcheck`, `actionlint`, `govulncheck`, and `golangci-lint` to be available in PATH. It currently includes:
+`make check` expects `shellcheck`, `actionlint`, `govulncheck`, `golangci-lint`, and `python3` to be available in PATH. It currently includes:
 
 - `golangci-lint fmt` and `golangci-lint run` for Go packages (gofumpt/goimports formatting, vet, staticcheck, gosec, errcheck, ineffassign, unused);
 - ShellCheck for `scripts/*.sh`;
 - `actionlint` for GitHub Actions workflows;
+- a syntax parse of the Python tools in `scripts/`;
+- a check that every relative Markdown link resolves (`scripts/check-links.py`);
 - `govulncheck`;
 - static production build check;
 - a check that `THIRD_PARTY_LICENSES` matches the build's module list;

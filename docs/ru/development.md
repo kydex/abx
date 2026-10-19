@@ -36,11 +36,13 @@ make package-smoke
 make check
 ```
 
-Для `make check` команды `shellcheck`, `actionlint`, `govulncheck` и `golangci-lint` должны быть доступны в PATH. Сейчас проверка включает:
+Для `make check` команды `shellcheck`, `actionlint`, `govulncheck`, `golangci-lint` и `python3` должны быть доступны в PATH. Сейчас проверка включает:
 
 - `golangci-lint fmt` и `golangci-lint run` для Go-пакетов (форматирование gofumpt/goimports, vet, staticcheck, gosec, errcheck, ineffassign, unused);
 - ShellCheck для `scripts/*.sh`;
 - `actionlint` для GitHub Actions workflows;
+- разбор синтаксиса Python-инструментов в `scripts/`;
+- проверку, что каждая относительная ссылка Markdown разрешается (`scripts/check-links.py`);
 - `govulncheck`;
 - проверку статической production-сборки;
 - проверку соответствия `THIRD_PARTY_LICENSES` списку модулей сборки;

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `make check` now parses the Python tools in `scripts/` and resolves every relative Markdown link; a broken language or cross-document link fails before the archives are built.
 - The packaging smoke check now requires exactly two entries in the checksum manifest; a hand-edited manifest that lists one archive used to pass.
 - Release packaging now refuses a version without a matching `## X.Y.Z` section in `CHANGELOG.md`, so the release procedure cannot skip the changelog step silently.
 - CI now rejects a commit subject longer than 72 characters in the pushed or pull-request range; the check needs the full history, so the checkout fetches it.

@@ -407,6 +407,40 @@ printf 'exit=%s\n' "$?"
 
 Expected: `exit=131`, and **no goroutine dump** above the prompt. A dump means ABX itself took the signal by the default action, which is exactly what this check exists to catch: the launcher then dies with status `2` and the agent inside the sandbox is never told the session ended.
 
+### 5.5 Ctrl+C inside `abx shell`
+
+**Terminal A · host · ONE COMMAND — run separately**
+
+```sh
+abx shell smoke
+```
+
+At the sandbox prompt, press **Ctrl+C once**. The shell prints a fresh prompt and the session stays alive: the login shell owns the terminal, so this signal does not reach ABX. Then enter:
+
+**Terminal A · sandbox · ONE COMMAND — run separately**
+
+```sh
+printf 'inside=%s\n' "$?"
+```
+
+Expected: `inside=130`. ABX is still running; the host prompt has not returned. Enter:
+
+**Terminal A · sandbox · ONE COMMAND — run separately**
+
+```sh
+exit
+```
+
+When the host prompt returns, immediately run:
+
+**Terminal A · host · ONE COMMAND — run separately**
+
+```sh
+printf 'exit=%s\n' "$?"
+```
+
+Expected: `exit=0`. If Ctrl+C ends the whole session and returns the host prompt with `exit=130`, record it: the shell did not take the terminal, and the usage guide's `shell`/`work` description is wrong on this host.
+
 ## 6. Verify and shared skills
 
 **Terminal A · host · ONE COMMAND — run separately**

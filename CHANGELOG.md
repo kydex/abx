@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the guides now describe terminal signal ownership correctly: during `run` a terminal `Ctrl+C` reaches the monitor and the payload, while an interactive `shell` or `work` login shell takes the terminal for its own process group, so those sessions end with `exit` or `Ctrl+D`, not with status `130`; a payload killed with `SIGKILL` can leave the terminal in raw mode, and manual recovery (`reset`, `stty sane`) is now named. The signal manual check gained a `Ctrl+C` inside `abx shell` case, and the `verify` wording matches the 64 KiB input bound and the deadline's actual scope. (English and Russian.)
 - Fixed: `verify` refuses an input above the probe's 64 KiB limit before starting the sandbox, naming its size; a forwarded environment whose serialized observations summed past the bound used to fail inside the sandbox as a late probe refusal or a raw `execve` error. A deadline that expires during the host-side observation is now reported as `execution cancelled` instead of the raw `context deadline exceeded`.
 - Fixed: a sensitive home path whose leading component is a symlink cycle or a non-directory no longer blocks every command, a cyclic optional `/etc` candidate is skipped like a missing one, and a protected system root that does not resolve no longer disables project commands. There is nothing to mount at those paths, so the refusal protected nothing.
 

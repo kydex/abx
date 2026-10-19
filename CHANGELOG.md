@@ -6,7 +6,7 @@
 - Fixed: the link checker follows CommonMark more closely: inline code spans, escaped brackets, and a fence closed by the other marker are no longer read as links; destinations with a balanced parenthesis pair and a title, and reference targets on the next line, are now read.
 - Fixed: the commit-subject gate no longer scans published history on a deleted branch or tag, and a force-push whose `before` commit is missing from the checkout now checks the pushed commits from the event payload instead of only the tip; subjects are measured in a fixed C.UTF-8 locale.
 - The release guide now gives the real reason a push of many tags starts no workflow (GitHub suppresses the `push` event above three tags) and no longer treats a single retargeted tag as untested. (English and Russian.)
-- `make check` now parses the Python tools in `scripts/` and resolves every relative Markdown link; a broken language or cross-document link fails before the archives are built.
+- `make check` now parses the Python tools in `scripts/` and resolves the file target of every relative Markdown link (heading anchors stay manual); a broken language or cross-document link fails before the archives are built.
 - The packaging smoke check now requires exactly two entries in the checksum manifest; a hand-edited manifest that lists one archive used to pass.
 - Release packaging now refuses a version without a matching `## X.Y.Z` section in `CHANGELOG.md`, so the release procedure cannot skip the changelog step silently.
 - CI now rejects a commit subject longer than 72 characters in the pushed or pull-request range; the check needs the full history, so the checkout fetches it.

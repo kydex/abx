@@ -42,7 +42,7 @@ make check
 - ShellCheck for `scripts/*.sh`;
 - `actionlint` for GitHub Actions workflows;
 - a syntax parse of the Python tools in `scripts/`;
-- a check that every relative Markdown link resolves (`scripts/check-links.py`);
+- a check that the file target of every relative Markdown link resolves (`scripts/check-links.py`; heading anchors stay manual);
 - `govulncheck`;
 - static production build check;
 - a check that `THIRD_PARTY_LICENSES` matches the build's module list;

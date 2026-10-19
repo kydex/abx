@@ -97,9 +97,10 @@ func runVerify(
 
 // verifyInput serializes the host observations and refuses a payload the probe
 // cannot accept before the sandbox starts. The probe reads at most
-// probe.MaxInputBytes; a larger payload would fail inside execve as a raw
-// E2BIG. The per-value environment limit does not bound the sum, and JSON
-// escaping can expand values further.
+// probe.MaxInputBytes; a payload past that bound would either be refused by the
+// probe itself or, past the kernel's per-argument limit, fail inside execve as
+// a raw E2BIG. The per-value environment limit does not bound the sum, and
+// JSON escaping can expand values further.
 func verifyInput(expected probe.Expected) ([]byte, error) {
 	raw, err := json.Marshal(expected)
 	if err != nil {

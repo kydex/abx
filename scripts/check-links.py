@@ -7,8 +7,9 @@ anchors inside a target are not, because renderer slug rules differ and that
 check stays manual.
 
 The scan follows the CommonMark shape rather than the raw text: code spans and
-backslash-escaped brackets are not links, a fenced block closes only with the
-marker that opened it, a destination may carry one balanced pair of
+backslash-escaped brackets are not links, a fenced block closes only with a
+fence of the same character, not shorter than the opening one, and with
+nothing after it, a destination may carry one balanced pair of
 parentheses and an optional title, and a reference definition may put its
 target on the next line. Indented code blocks are not recognized, so a
 link-looking line inside one is scanned as text.
@@ -34,10 +35,10 @@ def targets(text):
     for number, line in enumerate(text.splitlines(), 1):
         match = FENCE.match(line)
         if match:
-            marker = match.group(1)[0]
+            run = match.group(1)
             if fence is None:
-                fence = marker
-            elif fence == marker:
+                fence = (run[0], len(run))
+            elif run[0] == fence[0] and len(run) >= fence[1] and not line[match.end():].strip():
                 fence = None
             pending = False
             continue

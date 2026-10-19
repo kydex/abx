@@ -127,7 +127,7 @@ Live tests нужны после изменений mounts, namespaces, retained
 - `Plan.Validate()` остаётся одной длинной функцией. Она стоит между собранным
   планом и аргументами Bubblewrap; её разбиение рискует этой границей ради
   читаемости. Ещё девять production-функций длиннее 60 строк — `cli.Parse`,
-  `host.discoverLayout`, `bwrap.open`, `sandbox.build`, `app.runVerify`,
+  `Inputs.discoverLayout`, `bwrap.open`, `sandbox.build`, `app.runVerify`,
   `probe.check`, `app.runProfiles`, `host.resolveAgent` и `host.resolveProject`, —
   но каждая из них линейная последовательность (один switch, циклы или
   упорядоченные проверки), и разбиение лишь переносило бы состояние между

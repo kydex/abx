@@ -129,7 +129,7 @@ here so nobody starts the same discussion from scratch.
 - `Plan.Validate()` stays one long function. It sits between a built plan and the
   Bubblewrap arguments; splitting it risks that barrier to buy readability.
   Nine more production functions run past 60 lines -- `cli.Parse`,
-  `host.discoverLayout`, `bwrap.open`, `sandbox.build`, `app.runVerify`,
+  `Inputs.discoverLayout`, `bwrap.open`, `sandbox.build`, `app.runVerify`,
   `probe.check`, `app.runProfiles`, `host.resolveAgent`, and
   `host.resolveProject` -- but each is a linear sequence (one switch, loops,
   or ordered checks), and splitting would move state between the parts for no

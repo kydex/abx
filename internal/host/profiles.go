@@ -149,10 +149,18 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 	created := false
 	completed := false
 	defer func() {
-		if closeErr := parent.Close(); closeErr != nil {
-			result = errors.Join(result, closeErr)
+		closeErr := parent.Close()
+		if closeErr == nil {
+			return
 		}
-		if result != nil && created && !completed {
+		if completed {
+			// The profile exists; only the descriptor cleanup failed, and
+			// that must not read as a failed creation.
+			result = errors.Join(result, fmt.Errorf("profile was created, but its directory descriptor could not be closed: %w", closeErr))
+			return
+		}
+		result = errors.Join(result, closeErr)
+		if created {
 			result = fmt.Errorf("profile creation incomplete; created directories may remain: %w", result)
 		}
 	}()
@@ -190,17 +198,24 @@ func openDirectoryAt(parent int, name string) (*os.File, error) {
 }
 
 // existingObjectError describes the object blocking exclusive creation so
-// "already exists" names the actual type and mode.
+// "already exists" names the actual type and mode, and reports an entry that
+// vanished after the failed create instead of claiming it still exists.
 func existingObjectError(dirfd int, name string) error {
 	fd, err := unix.Openat(dirfd, name, unix.O_PATH|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return fmt.Errorf("%w: %q", ErrProfileExists, name)
+		// The entry can disappear between Mkdirat's EEXIST and this open when
+		// another process of the same user removes it; "already exists" would
+		// then name an object that is not there.
+		if errors.Is(err, unix.ENOENT) {
+			return fmt.Errorf("profile entry %q disappeared during creation: %w", name, err)
+		}
+		return fmt.Errorf("%w: %q: %w", ErrProfileExists, name, err)
 	}
 	// The descriptor only carries a stat sample; a failing close has nothing left to protect.
 	defer func() { _ = unix.Close(fd) }()
 	var st unix.Stat_t
 	if err := unix.Fstat(fd, &st); err != nil {
-		return fmt.Errorf("%w: %q", ErrProfileExists, name)
+		return fmt.Errorf("%w: %q: %w", ErrProfileExists, name, err)
 	}
 	kind := "special file"
 	switch st.Mode & unix.S_IFMT {

@@ -282,6 +282,21 @@ func TestCreateErrorIncludesFullDirectoryPath(t *testing.T) {
 	}
 }
 
+// Between Mkdirat's EEXIST and the diagnostic open, another process of the
+// same user can remove the entry; the refusal must say the entry vanished
+// instead of claiming it still exists.
+func TestCreateProfileNamesVanishedEntry(t *testing.T) {
+	parent, err := openDirectoryAt(unix.AT_FDCWD, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = parent.Close() }()
+	err = existingObjectError(int(parent.Fd()), "gone")
+	if err == nil || errors.Is(err, ErrProfileExists) || !strings.Contains(err.Error(), "disappeared during creation") {
+		t.Fatalf("vanished entry reported as %v", err)
+	}
+}
+
 // profile show and profile list go through ShowProfile, which resolved the
 // agent but stopped before the placement check that run performs. A link ending
 // outside the profile and outside every mounted system source therefore showed

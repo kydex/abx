@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: `profile create` now says the profile was created when only the final descriptor close fails, and a profile entry that vanishes between the exclusive create and the diagnostic open is no longer reported as `profile already exists`; that error names what happened and keeps the underlying errno.
 - The development guide now carries the tenth sweep run's totals (304 killed, 128 survived of 432 guards, none not applicable) and the current coverage numbers (92.5% aggregate, `internal/app` 293 of 336 statements); the sweep header repeats the run's totals. (English and Russian.)
 - Fixed: `Translate` emits `--size` for a tmpfs mount only when the plan sets one, so a zero-size mount can no longer reach Bubblewrap as an invalid `--size 0`.
 - Fixed: the security guide no longer claims the final-file check covers mounted system sources, and now states that the agent executable's owner is not checked like the login shell's, that the retained-descriptor sweep includes descriptors not handed to the child, and that the cgroup namespace is shared with the host. The Russian guide's executable-symlink rule now says a link leading neither into the profile nor under a mounted system path is refused, and the usage guide says a data base must not sit inside a sensitive home tree, matching the code. (English and Russian.)

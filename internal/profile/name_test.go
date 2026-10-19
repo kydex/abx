@@ -27,6 +27,26 @@ func TestValidateName(t *testing.T) {
 	}
 }
 
+// The message must name the rule that was actually broken: a name beginning
+// with a non-ASCII letter breaks the ASCII rule, not the first-character rule.
+func TestValidateNameMessages(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		want string
+	}{
+		{"é", "only ASCII letters"},
+		{"имя", "only ASCII letters"},
+		{"_agent", "must start with a letter or digit"},
+		{".agent", "must start with a letter or digit"},
+		{"-agent", "must start with a letter or digit"},
+	} {
+		err := ValidateName(tc.name)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Fatalf("ValidateName(%q) = %v, want %q", tc.name, err, tc.want)
+		}
+	}
+}
+
 func FuzzValidateName(f *testing.F) {
 	for _, seed := range []string{"a", "Agent01", "a.b", "", ".agent", "a/b", "é", "a\x00b", strings.Repeat("a", 65)} {
 		f.Add(seed)

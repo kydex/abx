@@ -153,6 +153,18 @@ func TestDiscoverSystemSkipsCyclicCandidate(t *testing.T) {
 	}
 }
 
+// The login shell's visibility list is static while the mounted roots come
+// from hostSystemLayout. A new mountable root without a matching entry here
+// would refuse a valid shell with "outside read-only system mounts".
+func TestVisibleRootsCoverDiscoverableLayout(t *testing.T) {
+	roots := append([]string{hostSystemLayout.usr}, hostSystemLayout.compat...)
+	for _, root := range roots {
+		if !visibleInSandbox(root) {
+			t.Errorf("mountable system root %q is not visible to login shells", root)
+		}
+	}
+}
+
 func TestSkillsRejectIntermediateSymlinks(t *testing.T) {
 	for _, level := range []string{"shared", "agents"} {
 		t.Run(level, func(t *testing.T) {

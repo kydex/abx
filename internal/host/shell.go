@@ -175,6 +175,9 @@ func validateExecutable(path string) (string, error) {
 	return resolved, nil
 }
 
+// visibleInSandbox is a static allowlist. Keep it in sync with
+// hostSystemLayout: every root that layout can mount must be visible here,
+// or a valid login shell is refused with the wrong reason.
 func visibleInSandbox(path string) bool {
 	for _, root := range []string{"/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc/alternatives"} {
 		if path == root || strings.HasPrefix(path, root+"/") {

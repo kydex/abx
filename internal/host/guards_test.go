@@ -124,6 +124,7 @@ func TestObserveSkillsRejectsNonDirectorySharedSource(t *testing.T) {
 		objects: map[string]object{},
 		links:   map[string]string{},
 	}
+	t.Cleanup(func() { _ = in.Close() })
 	for _, p := range []string{in.account.Home, in.home} {
 		if err := os.MkdirAll(p, 0o700); err != nil {
 			t.Fatal(err)

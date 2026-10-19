@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kydex/abx/internal/bwrap"
 	"github.com/kydex/abx/internal/cli"
@@ -203,14 +204,14 @@ func TestVerifyRefusesOversizedEnvironmentBeforeExecute(t *testing.T) {
 func TestVerifyExpiredDeadlineReportsCancellation(t *testing.T) {
 	in := inputs(t, host.Run)
 	home := t.TempDir()
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
 	mustNotExecute := func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
 		t.Error("execute ran after the deadline expired")
 		return 0, nil
 	}
 	status, err := runVerify(ctx, in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard}, openStubTool(t), mustNotExecute)
-	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled") {
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled") || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expired deadline = status %d, %v", status, err)
 	}
 }

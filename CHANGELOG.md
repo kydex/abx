@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The release guide now gives the real reason a push of many tags starts no workflow (GitHub suppresses the `push` event above three tags) and no longer treats a single retargeted tag as untested. (English and Russian.)
 - `make check` now parses the Python tools in `scripts/` and resolves every relative Markdown link; a broken language or cross-document link fails before the archives are built.
 - The packaging smoke check now requires exactly two entries in the checksum manifest; a hand-edited manifest that lists one archive used to pass.
 - Release packaging now refuses a version without a matching `## X.Y.Z` section in `CHANGELOG.md`, so the release procedure cannot skip the changelog step silently.

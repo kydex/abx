@@ -171,6 +171,51 @@ func TestTranslateLendsCompatibilityLinksAsSymlinkArguments(t *testing.T) {
 	}
 }
 
+// Two host names can resolve to one path (for example /etc/pki and /etc/ssl).
+// Retain deduplicates the descriptor, so Translate lends the same *os.File
+// under two child numbers; that must keep working instead of surfacing as a
+// vague "Invalid fd" from Bubblewrap on such a host.
+func TestTranslateKeepsDuplicateSourceUnderTwoChildFDs(t *testing.T) {
+	p, err := sandbox.Build(sandbox.Input{
+		Home:    "/profile",
+		Project: "/project",
+		Mode:    sandbox.Run,
+		System: []sandbox.Mount{
+			{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"},
+			{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/lib64"},
+		},
+		Environment: []sandbox.Entry{{Name: "PWD", Value: "/workspace"}},
+		Command:     []string{"/home/agent/bin/agent"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	shared, err := os.CreateTemp(t.TempDir(), "shared")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer shared.Close()
+	other, err := os.CreateTemp(t.TempDir(), "other")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	byPath := map[string]*os.File{"/usr": shared, "/profile": other, "/project": other}
+	args, files, err := Translate(p, func(path string) (*os.File, error) { return byPath[path], nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 4 || files[0] != shared || files[1] != shared {
+		t.Fatalf("duplicate source not lent twice: %d files", len(files))
+	}
+	joined := strings.Join(args, " ")
+	for _, want := range []string{"--ro-bind-fd 3 /usr", "--ro-bind-fd 4 /lib64"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("missing %q in %q", want, args)
+		}
+	}
+}
+
 func countOpenFDs(t *testing.T) int {
 	t.Helper()
 	entries, err := os.ReadDir("/proc/self/fd")

@@ -267,6 +267,19 @@ func TestCreateErrorIncludesFullDirectoryPath(t *testing.T) {
 	if !errors.Is(err, ErrProfileExists) || !strings.Contains(err.Error(), filepath.Join(paths.Profiles, "demo")) {
 		t.Fatalf("missing full path or error classification: %v", err)
 	}
+	if !strings.Contains(err.Error(), "(existing directory, mode 0700)") {
+		t.Fatalf("existing directory not named exactly: %v", err)
+	}
+	// A regular file in the profile position gets the same treatment: the
+	// refusal names the object and its mode, not a generic "already exists".
+	fileProfile := filepath.Join(paths.Profiles, "fileprofile")
+	if err := os.WriteFile(fileProfile, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err = CreateProfile(a, paths, "fileprofile")
+	if !errors.Is(err, ErrProfileExists) || !strings.Contains(err.Error(), "(existing regular file, mode 0600)") {
+		t.Fatalf("existing regular file not named exactly: %v", err)
+	}
 	// A symlink reports 0777 on its own, so its refusal must name the kind
 	// without a mode that would misread as real permissions.
 	profile := filepath.Join(paths.Profiles, "demo")

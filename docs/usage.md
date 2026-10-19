@@ -220,9 +220,9 @@ The output contains:
 - detailed mount operations;
 - environment variables;
 - an isolation summary;
-- writable and private sandbox paths.
+- writable and private sandbox paths, the private tmpfs sizes, and the base directories left as writable scratch.
 
-`inspect` is useful for understanding what ABX intends to launch. It is not a runtime verification of the sandbox. Mount modes are shown only when explicitly set; omitted modes do not mean `0000` permissions.
+`inspect` is useful for understanding what ABX intends to launch. It is not a runtime verification of the sandbox. Mount modes and tmpfs sizes are shown only when explicitly set; omitted modes do not mean `0000` permissions.
 
 ## Verify the sandbox
 

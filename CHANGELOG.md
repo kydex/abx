@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The `inspect` output now prints explicit tmpfs sizes, lists the base directories left writable as `writable scratch`, and says `lifetime: killed with the launcher after sandbox setup`; the usage guide describes the added fields. (English and Russian.)
 - Fixed: a profile name starting with a non-ASCII letter is refused by the ASCII-character rule instead of being told it does not start with a letter or digit.
 - Fixed: when an agent candidate is unusable, the refusal now also lists the earlier candidate paths that were absent, dangling links included, instead of naming only the first unusable one.
 - Fixed: `profile create` now says the profile was created when only the final descriptor close fails, and a profile entry that vanishes between the exclusive create and the diagnostic open is no longer reported as `profile already exists`; that error names what happened and keeps the underlying errno.

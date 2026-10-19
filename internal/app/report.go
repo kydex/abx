@@ -16,7 +16,7 @@ const isolationSummary = `isolation:
   network: shared with host
   cgroup namespace: shared with host
   nested user namespaces: disabled
-  lifetime: killed with the launcher
+  lifetime: killed with the launcher after sandbox setup
 `
 
 // formatPlan returns a readable command description, never a reusable shell string.
@@ -32,6 +32,9 @@ func formatPlan(plan sandbox.Plan) string {
 		if m.Mode != 0 {
 			fmt.Fprintf(&b, " mode=%04o", m.Mode)
 		}
+		if m.Kind == sandbox.Tmpfs && m.Size != 0 {
+			fmt.Fprintf(&b, " size=%d", m.Size)
+		}
 		b.WriteByte('\n')
 	}
 	for _, e := range plan.Environment() {
@@ -44,16 +47,36 @@ func formatPlan(plan sandbox.Plan) string {
 func appendPlanSummary(b *strings.Builder, plan sandbox.Plan) {
 	b.WriteByte('\n')
 	b.WriteString(isolationSummary)
+	mounted := make(map[string]bool)
+	for _, m := range plan.Mounts() {
+		if m.Kind != sandbox.Directory {
+			mounted[m.Target] = true
+		}
+	}
 	b.WriteString("writable:\n")
 	for _, m := range plan.Mounts() {
 		if m.Kind == sandbox.Writable {
 			fmt.Fprintf(b, "  %s\n", m.Target)
 		}
 	}
+	// Base directories that no later mount covers stay writable as ephemeral
+	// scratch; listing them keeps "writable:" from reading as the full set.
+	b.WriteString("writable scratch:\n")
+	for _, m := range plan.Mounts() {
+		if m.Kind == sandbox.Directory && !mounted[m.Target] {
+			fmt.Fprintf(b, "  %s\n", m.Target)
+		}
+	}
 	b.WriteString("private:\n")
 	for _, m := range plan.Mounts() {
 		switch m.Kind {
-		case sandbox.Tmpfs, sandbox.Proc, sandbox.Dev:
+		case sandbox.Tmpfs:
+			if m.Size != 0 {
+				fmt.Fprintf(b, "  %s (size=%d)\n", m.Target, m.Size)
+				continue
+			}
+			fmt.Fprintf(b, "  %s\n", m.Target)
+		case sandbox.Proc, sandbox.Dev:
 			fmt.Fprintf(b, "  %s\n", m.Target)
 		}
 	}

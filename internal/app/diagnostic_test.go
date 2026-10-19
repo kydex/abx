@@ -75,7 +75,9 @@ func TestFormatPlanAppendsIsolationSummary(t *testing.T) {
 		if mode != sandbox.Shell {
 			wantWritable += "  /workspace\n"
 		}
-		if !strings.Contains(got, wantWritable+"private:\n  /tmp\n  /var/tmp\n  /run\n  /proc\n  /dev\n") {
+		if !strings.Contains(got, wantWritable+
+			"writable scratch:\n  /etc\n  /home\n  /opt\n  /var\n  /run/user\n"+
+			"private:\n  /tmp (size=4294967296)\n  /var/tmp (size=4294967296)\n  /run (size=4294967296)\n  /proc\n  /dev\n") {
 			t.Fatalf("unexpected mount summary: %q", got)
 		}
 		if mode == sandbox.Shell && strings.Contains(got[strings.Index(got, "\nisolation:\n"):], "  /workspace\n") {
@@ -120,7 +122,7 @@ func TestIsolationSummaryMatchesBubblewrapNamespacePolicy(t *testing.T) {
 		"network: shared with host",
 		"cgroup namespace: shared with host",
 		"nested user namespaces: disabled",
-		"lifetime: killed with the launcher",
+		"lifetime: killed with the launcher after sandbox setup",
 	} {
 		if !strings.Contains(isolationSummary, want) {
 			t.Fatalf("missing isolation summary line %q", want)
@@ -137,6 +139,15 @@ func TestInspectOmitsUnspecifiedMountFields(t *testing.T) {
 	}
 	if !strings.Contains(got, "mount: directory \"/run/user\" mode=0700\n") {
 		t.Fatal("explicit runtime directory permissions omitted")
+	}
+	if !strings.Contains(got, "private-tmpfs \"/tmp\" size=4294967296\n") {
+		t.Fatal("explicit tmpfs size omitted")
+	}
+	if !strings.Contains(got, "writable scratch:\n") || !strings.Contains(got, "  /etc\n") {
+		t.Fatal("base directories left writable omitted from the summary")
+	}
+	if strings.Contains(got, "size=0") {
+		t.Fatal("unspecified tmpfs size printed")
 	}
 	for _, line := range strings.Split(got, "\n") {
 		if strings.TrimRight(line, " \t") != line {

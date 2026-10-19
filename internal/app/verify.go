@@ -69,9 +69,10 @@ func runVerify(
 	if err = in.Revalidate(); err != nil {
 		return 1, err
 	}
-	// The host-side observation above is not interruptible, so the deadline
-	// can expire between the context check inside execute and this point.
-	// Report it with the same text the guide names for a timeout.
+	// The host-side phases above are not interruptible, so the deadline may
+	// already have expired when execute is about to start; its own context
+	// check would return the raw context error. Report the timeout here with
+	// the same text the guide names.
 	if err := ctx.Err(); err != nil {
 		return 1, fmt.Errorf("execution cancelled: %w", err)
 	}

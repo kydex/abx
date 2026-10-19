@@ -5,6 +5,13 @@ Inline links, images, and reference definitions are followed. External URLs,
 mail links, and bare anchors are skipped. File existence is checked; heading
 anchors inside a target are not, because renderer slug rules differ and that
 check stays manual.
+
+The scan follows the CommonMark shape rather than the raw text: code spans and
+backslash-escaped brackets are not links, a fenced block closes only with the
+marker that opened it, a destination may carry one balanced pair of
+parentheses and an optional title, and a reference definition may put its
+target on the next line. Indented code blocks are not recognized, so a
+link-looking line inside one is scanned as text.
 """
 import pathlib
 import re
@@ -12,26 +19,44 @@ import sys
 import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+LINK = re.compile(r"!?\[[^\]]*\]\(((?:[^()]|\([^()]*\))*)\)")
 REFERENCE = re.compile(r"^\s*\[[^\]]+\]:\s*(\S+)")
-FENCE = re.compile(r"^\s*(```|~~~)")
+REFERENCE_OPEN = re.compile(r"^\s*\[[^\]]+\]:\s*$")
+FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+CODE_SPAN = re.compile(r"(`+).*?\1")
 
 SKIP = ("#", "http://", "https://", "mailto:", "tel:")
 
 
 def targets(text):
-    in_fence = False
+    fence = None
+    pending = False
     for number, line in enumerate(text.splitlines(), 1):
-        if FENCE.match(line):
-            in_fence = not in_fence
+        match = FENCE.match(line)
+        if match:
+            marker = match.group(1)[0]
+            if fence is None:
+                fence = marker
+            elif fence == marker:
+                fence = None
+            pending = False
             continue
-        if in_fence:
+        if fence is not None:
+            pending = False
             continue
+        line = CODE_SPAN.sub(" ", line).replace("\\[", "")
+        if pending:
+            pending = False
+            stripped = line.strip()
+            if stripped:
+                yield number, stripped.split()[0]
         for match in LINK.finditer(line):
             yield number, match.group(1)
         match = REFERENCE.match(line)
         if match:
             yield number, match.group(1)
+        elif REFERENCE_OPEN.match(line):
+            pending = True
 
 
 def main():
@@ -42,8 +67,8 @@ def main():
         text = path.read_text(encoding="utf-8")
         for number, raw in targets(text):
             target = raw.strip()
-            if target.startswith("<") and target.endswith(">"):
-                target = target[1:-1]
+            if target.startswith("<") and ">" in target:
+                target = target[1:target.index(">")]
             else:
                 target = target.split()[0]
             if not target or target.startswith(SKIP):

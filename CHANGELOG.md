@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the link checker follows CommonMark more closely: inline code spans, escaped brackets, and a fence closed by the other marker are no longer read as links; destinations with a balanced parenthesis pair and a title, and reference targets on the next line, are now read.
 - Fixed: the commit-subject gate no longer scans published history on a deleted branch or tag, and a force-push whose `before` commit is missing from the checkout now checks the pushed commits from the event payload instead of only the tip; subjects are measured in a fixed C.UTF-8 locale.
 - The release guide now gives the real reason a push of many tags starts no workflow (GitHub suppresses the `push` event above three tags) and no longer treats a single retargeted tag as untested. (English and Russian.)
 - `make check` now parses the Python tools in `scripts/` and resolves every relative Markdown link; a broken language or cross-document link fails before the archives are built.

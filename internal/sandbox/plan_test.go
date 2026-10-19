@@ -116,6 +116,18 @@ func TestRejectSystemPolicyEscape(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsUnknownMode(t *testing.T) {
+	_, err := Build(Input{
+		Home:    "/profile",
+		Project: "/project",
+		Mode:    Mode(99),
+		Command: []string{"/bin/true"},
+	})
+	if err == nil || err.Error() != "invalid session mode" {
+		t.Fatalf("unknown mode = %v", err)
+	}
+}
+
 func TestPlanCopiesInputsAndOutputs(t *testing.T) {
 	in := testInput(t, Run)
 	p, e := Build(in)

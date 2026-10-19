@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- CI now rejects a commit subject longer than 72 characters in the pushed or pull-request range; the check needs the full history, so the checkout fetches it.
 - The development guide now spells out what the sweep does not measure (operands of `&&`/`||`, `switch` bodies, conditional loops) and that `survived` mixes uncovered, equivalent, and machine-skipped guards; it also names the eight other functions above 60 lines that are accepted. (English and Russian.)
 - Fixed: a `verify` probe file whose identity could not be read is no longer registered for name-based cleanup, so cleanup cannot remove a replacement it never compared.
 - Fixed: the sweep's skip report now matches indented subtest lines, so a subtest that skips (the setuid/setgid agent refusals on filesystems without those bits) is reported instead of leaving its guards looking uncovered.

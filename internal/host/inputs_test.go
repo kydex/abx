@@ -814,3 +814,30 @@ func TestResolveAgentNamesCheckedCandidates(t *testing.T) {
 		t.Fatalf("dangling candidate = %v, want a dangling-link note", err)
 	}
 }
+
+// The first unusable candidate stays the reason, but a mixed case must still
+// name the earlier candidates that were absent: the operator may have put the
+// tool in .local/bin, where the dangling link is.
+func TestResolveAgentMixedCaseNamesEarlierCandidates(t *testing.T) {
+	home := t.TempDir()
+	link := filepath.Join(home, ".local", "bin", "demo")
+	if err := os.MkdirAll(filepath.Dir(link), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(home, "missing"), link); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(home, "bin", "demo")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	_, err := resolveAgent(home, "demo")
+	if err == nil || !strings.Contains(err.Error(), "not a regular file") {
+		t.Fatalf("mixed candidates = %v", err)
+	}
+	for _, want := range []string{link, "(dangling link)", dir} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q does not name %q", err, want)
+		}
+	}
+}

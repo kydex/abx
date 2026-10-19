@@ -304,6 +304,12 @@ func resolveAgent(home, name string) (string, error) {
 		return filepath.Join(agentMountPoint, dir, name), nil
 	}
 	if invalid != nil {
+		// The first unusable candidate keeps its priority, but the earlier
+		// paths that were simply absent still belong in the message: the
+		// operator may have installed the tool there.
+		if len(missing) > 0 {
+			return "", fmt.Errorf("%w; checked %s", invalid, strings.Join(missing, ", "))
+		}
 		return "", invalid
 	}
 	return "", fmt.Errorf("profile %q has no executable; checked %s", name, strings.Join(missing, ", "))

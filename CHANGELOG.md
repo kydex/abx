@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: when an agent candidate is unusable, the refusal now also lists the earlier candidate paths that were absent, dangling links included, instead of naming only the first unusable one.
 - Fixed: `profile create` now says the profile was created when only the final descriptor close fails, and a profile entry that vanishes between the exclusive create and the diagnostic open is no longer reported as `profile already exists`; that error names what happened and keeps the underlying errno.
 - The development guide now carries the tenth sweep run's totals (304 killed, 128 survived of 432 guards, none not applicable) and the current coverage numbers (92.5% aggregate, `internal/app` 293 of 336 statements); the sweep header repeats the run's totals. (English and Russian.)
 - Fixed: `Translate` emits `--size` for a tmpfs mount only when the plan sets one, so a zero-size mount can no longer reach Bubblewrap as an invalid `--size 0`.

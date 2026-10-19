@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: a `verify` probe file whose identity could not be read is no longer registered for name-based cleanup, so cleanup cannot remove a replacement it never compared.
 - Fixed: the sweep's skip report now matches indented subtest lines, so a subtest that skips (the setuid/setgid agent refusals on filesystems without those bits) is reported instead of leaving its guards looking uncovered.
 - The `inspect` output now prints explicit tmpfs sizes, lists the base directories left writable as `writable scratch`, and says `lifetime: killed with the launcher after sandbox setup`; the usage guide describes the added fields. (English and Russian.)
 - Fixed: a profile name starting with a non-ASCII letter is refused by the ASCII-character rule instead of being told it does not start with a letter or digit.

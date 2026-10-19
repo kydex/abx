@@ -164,12 +164,14 @@ func (p *probeFiles) create(home string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	p.files = append(p.files, probeFile{path: f.Name()})
 	info, err := f.Stat()
 	if err != nil {
+		// Register only after the identity sample exists: Close must never
+		// delete a path it cannot compare against the created file. The
+		// possible residue is covered by the best-effort cleanup rule.
 		return "", errors.Join(err, f.Close())
 	}
-	p.files[len(p.files)-1].info = info
+	p.files = append(p.files, probeFile{path: f.Name(), info: info})
 	if err = f.Close(); err != nil {
 		return "", err
 	}

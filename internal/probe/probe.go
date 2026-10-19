@@ -124,9 +124,12 @@ func checkGate(self, mounted Identity, mountinfo string) error {
 	return nil
 }
 
+// MaxInputBytes bounds the JSON payload the launcher hands to the probe.
+const MaxInputBytes = 65536
+
 func decode(raw string) (Expected, error) {
 	var e Expected
-	if len(raw) > 65536 {
+	if len(raw) > MaxInputBytes {
 		return e, errors.New("probe input too large")
 	}
 	if err := json.Unmarshal([]byte(raw), &e); err != nil {

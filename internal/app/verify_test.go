@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/kydex/abx/internal/bwrap"
+	"github.com/kydex/abx/internal/cli"
 	"github.com/kydex/abx/internal/host"
 	"github.com/kydex/abx/internal/probe"
 	"github.com/kydex/abx/internal/sandbox"
@@ -135,6 +136,82 @@ func TestVerifySuccessNamesWriteFailure(t *testing.T) {
 	err := verifySuccess(brokenWriter{})
 	if err == nil || !strings.Contains(err.Error(), "verification passed, but its report could not be written") {
 		t.Fatalf("write failure = %v", err)
+	}
+}
+
+func TestReportVerificationOutcome(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		kind   cli.Kind
+		status int
+		want   string
+	}{
+		{"verify success prints", cli.Verify, 0, "Verification passed; temporary probe files removed.\n"},
+		{"verify failure stays silent", cli.Verify, 1, ""},
+		{"run success stays silent", cli.Run, 0, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out strings.Builder
+			if err := reportVerificationOutcome(tc.kind, tc.status, &out); err != nil {
+				t.Fatal(err)
+			}
+			if out.String() != tc.want {
+				t.Fatalf("output = %q, want %q", out.String(), tc.want)
+			}
+		})
+	}
+}
+
+func TestVerifyInputRefusesOversizedPayload(t *testing.T) {
+	raw, err := verifyInput(probe.Expected{Home: "/home/agent"})
+	if err != nil || len(raw) == 0 {
+		t.Fatalf("small input = %d bytes, %v", len(raw), err)
+	}
+	big := probe.Expected{Environment: []string{"LC_A=" + strings.Repeat("a", probe.MaxInputBytes)}}
+	if _, err := verifyInput(big); err == nil || !strings.Contains(err.Error(), "byte probe limit") {
+		t.Fatalf("oversized input = %v", err)
+	}
+}
+
+// The per-value bound does not bound the sum, so a valid environment whose
+// total payload crosses the probe limit has to be refused before execve
+// turns it into a raw E2BIG or a late probe refusal.
+func TestVerifyRefusesOversizedEnvironmentBeforeExecute(t *testing.T) {
+	in := inputs(t, host.Run)
+	home := t.TempDir()
+	env := []string{
+		"LC_A=" + strings.Repeat("a", 40000),
+		"LC_B=" + strings.Repeat("b", 40000),
+	}
+	mustNotExecute := func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+		t.Error("execute ran for oversized verification input")
+		return 0, nil
+	}
+	status, err := runVerify(context.Background(), in, home, env, bwrap.Stdio{Out: io.Discard, Err: io.Discard}, openStubTool(t), mustNotExecute)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "byte probe limit") {
+		t.Fatalf("oversized environment = status %d, %v", status, err)
+	}
+	entries, readErr := os.ReadDir(home)
+	if readErr != nil || len(entries) != 0 {
+		t.Fatalf("probe residue after refusal: %v, %v", entries, readErr)
+	}
+}
+
+// The deadline can expire while a host-side observation is running; those
+// phases are not interruptible, so the run has to report the timeout the
+// guide names instead of the raw context error from inside execute.
+func TestVerifyExpiredDeadlineReportsCancellation(t *testing.T) {
+	in := inputs(t, host.Run)
+	home := t.TempDir()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	mustNotExecute := func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+		t.Error("execute ran after the deadline expired")
+		return 0, nil
+	}
+	status, err := runVerify(ctx, in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard}, openStubTool(t), mustNotExecute)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled") {
+		t.Fatalf("expired deadline = status %d, %v", status, err)
 	}
 }
 

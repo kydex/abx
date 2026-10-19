@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kydex/abx/internal/bwrap"
+	"github.com/kydex/abx/internal/cli"
 	"github.com/kydex/abx/internal/host"
 	"github.com/kydex/abx/internal/probe"
 	"github.com/kydex/abx/internal/sandbox"
@@ -53,7 +54,7 @@ func runVerify(
 	if err != nil {
 		return 1, err
 	}
-	raw, err := json.Marshal(expected)
+	raw, err := verifyInput(expected)
 	if err != nil {
 		return 1, err
 	}
@@ -67,6 +68,12 @@ func runVerify(
 	}
 	if err = in.Revalidate(); err != nil {
 		return 1, err
+	}
+	// The host-side observation above is not interruptible, so the deadline
+	// can expire between the context check inside execute and this point.
+	// Report it with the same text the guide names for a timeout.
+	if err := ctx.Err(); err != nil {
+		return 1, fmt.Errorf("execution cancelled: %w", err)
 	}
 	status, err = execute(ctx, tool, plan, func(path string) (*os.File, error) {
 		if path == "/proc/self/exe" {
@@ -85,6 +92,22 @@ func runVerify(
 	}
 	// Final success is printed only after outer resource and temporary-file cleanup.
 	return 0, nil
+}
+
+// verifyInput serializes the host observations and refuses a payload the probe
+// cannot accept before the sandbox starts. The probe reads at most
+// probe.MaxInputBytes; a larger payload would fail inside execve as a raw
+// E2BIG. The per-value environment limit does not bound the sum, and JSON
+// escaping can expand values further.
+func verifyInput(expected probe.Expected) ([]byte, error) {
+	raw, err := json.Marshal(expected)
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) > probe.MaxInputBytes {
+		return nil, fmt.Errorf("verification input is %d bytes, above the %d byte probe limit (environment included)", len(raw), probe.MaxInputBytes)
+	}
+	return raw, nil
 }
 
 func observeHost(home string, input sandbox.Input) (probe.Expected, error) {
@@ -180,4 +203,14 @@ func verifySuccess(out io.Writer) error {
 		return fmt.Errorf("verification passed, but its report could not be written: %w", err)
 	}
 	return nil
+}
+
+// reportVerificationOutcome decides whether the success line belongs to this
+// run. It is separate from Run so the decision is testable without a sandbox;
+// the mutation that dropped the print used to leave the suite green.
+func reportVerificationOutcome(kind cli.Kind, status int, out io.Writer) error {
+	if kind != cli.Verify || status != 0 {
+		return nil
+	}
+	return verifySuccess(out)
 }

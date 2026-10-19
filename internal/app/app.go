@@ -53,10 +53,8 @@ func Run(ctx context.Context, args []string, stdio bwrap.Stdio) int {
 		if e != nil {
 			return fail(status, e, stdio)
 		}
-		if c.Kind == cli.Verify && status == 0 {
-			if err := verifySuccess(stdio.Out); err != nil {
-				return fail(1, err, stdio)
-			}
+		if err := reportVerificationOutcome(c.Kind, status, stdio.Out); err != nil {
+			return fail(1, err, stdio)
 		}
 		return status
 	}

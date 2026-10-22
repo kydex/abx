@@ -167,6 +167,63 @@ func TestResolveRejectsCanonicalSensitiveSymlinkTarget(t *testing.T) {
 	}
 }
 
+func TestResolveRejectsMissingSensitiveFileBehindSymlinkedParent(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	store := filepath.Join(root, "store")
+	data := filepath.Join(home, ".local", "share", "abx")
+	for _, dir := range []string{home, store} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(store, filepath.Join(home, ".gem")); err != nil {
+		t.Fatal(err)
+	}
+	// ~/.gem is redirected into the project, but credentials does not exist
+	// yet. Resolving must still compare the future location, not the literal
+	// path under the home directory.
+	got, err := canonicalSensitiveTree(filepath.Join(home, ".gem", "credentials"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(store, "credentials"); got != want {
+		t.Fatalf("canonical sensitive path = %q, want %q", got, want)
+	}
+	if _, err := ResolveProject(store, home, data); err == nil {
+		t.Fatal("accepted project that will receive ~/.gem/credentials")
+	}
+	other := filepath.Join(root, "other")
+	if err := os.Mkdir(other, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolveProject(other, home, data); err != nil {
+		t.Fatalf("unrelated project rejected: %v", err)
+	}
+}
+
+func TestCanonicalSensitiveTreeAppendsAcrossDanglingParentLink(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	store := filepath.Join(root, "store")
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(store, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(store, "future"), filepath.Join(home, ".gem")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := canonicalSensitiveTree(filepath.Join(home, ".gem", "credentials"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(store, "future", "credentials"); got != want {
+		t.Fatalf("canonical sensitive path = %q, want %q", got, want)
+	}
+}
+
 func TestResolveRejectsDanglingSensitiveSymlinkTargetAncestors(t *testing.T) {
 	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles", ".aws", ".docker", ".kube", ".pki", ".cache", ".netrc", ".git-credentials", ".password-store", ".npmrc", ".gem/credentials", ".local/share/keyrings", ".mozilla", ".thunderbird"} {
 		for _, targetSuffix := range []string{"future", filepath.Join("missing", "future")} {

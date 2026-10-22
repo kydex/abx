@@ -199,4 +199,9 @@ func TestSessionBoundsHostValueLength(t *testing.T) {
 	if _, err := Session("tester", "/usr/bin/bash", "/workspace", []string{"SECRET=" + over}); err != nil {
 		t.Fatalf("non-allowlisted oversized value refused: %v", err)
 	}
+	// Map iteration order must not decide which oversized name is reported.
+	_, err = Session("tester", "/usr/bin/bash", "/workspace", []string{"LC_CTYPE=" + over, "LANG=" + over})
+	if err == nil || !strings.Contains(err.Error(), `"LANG"`) {
+		t.Fatalf("oversized names reported non-deterministically: %v", err)
+	}
 }

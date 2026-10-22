@@ -38,11 +38,6 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 		return nil, fmt.Errorf("unsupported sandbox working directory %q", workingDirectory)
 	}
 	values := allowlistedHost(host)
-	for key, value := range values {
-		if len(value) > maxEnvironmentValueBytes {
-			return nil, fmt.Errorf("environment variable %q value is %d bytes, above the %d byte limit", key, len(value), maxEnvironmentValueBytes)
-		}
-	}
 	fixed := map[string]string{
 		"HOME": "/home/agent", "USER": username, "LOGNAME": username,
 		"SHELL": shell, "PWD": workingDirectory, "TMPDIR": "/tmp",
@@ -63,6 +58,11 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 		keys = append(keys, key)
 	}
 	slices.Sort(keys)
+	for _, key := range keys {
+		if len(values[key]) > maxEnvironmentValueBytes {
+			return nil, fmt.Errorf("environment variable %q value is %d bytes, above the %d byte limit", key, len(values[key]), maxEnvironmentValueBytes)
+		}
+	}
 	out := make([]Entry, 0, len(keys))
 	for _, key := range keys {
 		out = append(out, Entry{Name: key, Value: values[key]})

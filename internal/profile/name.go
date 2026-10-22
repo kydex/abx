@@ -2,27 +2,29 @@
 package profile
 
 import (
-	"errors"
 	"fmt"
 )
 
 // ValidateName checks the profile name used by both CLI parsing and host storage.
 func ValidateName(name string) error {
 	if len(name) < 1 || len(name) > 64 {
-		return errors.New("invalid profile name length: use 1-64 ASCII characters")
+		return fmt.Errorf("invalid profile name %q: use 1-64 ASCII characters", name)
 	}
-	for i, c := range []byte(name) {
-		letter := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
-		digit := c >= '0' && c <= '9'
-		// The character-set rule comes first: for a name that starts with a
-		// multi-byte character, "must start with a letter or digit" would
-		// call a letter a non-letter and hide the real ASCII rule.
-		if !letter && !digit && c != '.' && c != '_' && c != '-' {
+	// Check the whole character set before the first-character rule. For a
+	// name such as "../run" the first byte is an allowed dot, so an
+	// interleaved check would report the start rule and hide the slash that
+	// actually makes the name invalid.
+	for _, c := range []byte(name) {
+		if !letterOrDigit(c) && c != '.' && c != '_' && c != '-' {
 			return fmt.Errorf("invalid profile name %q: only ASCII letters, digits, dot, underscore or hyphen are allowed", name)
 		}
-		if i == 0 && !letter && !digit {
-			return fmt.Errorf("invalid profile name %q: must start with a letter or digit", name)
-		}
+	}
+	if first := name[0]; !letterOrDigit(first) {
+		return fmt.Errorf("invalid profile name %q: must start with a letter or digit", name)
 	}
 	return nil
+}
+
+func letterOrDigit(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
 }

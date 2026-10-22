@@ -36,6 +36,8 @@ func TestValidateNameMessages(t *testing.T) {
 	}{
 		{"é", "only ASCII letters"},
 		{"имя", "only ASCII letters"},
+		{"../bad", "only ASCII letters"},
+		{"a/b", "only ASCII letters"},
 		{"_agent", "must start with a letter or digit"},
 		{".agent", "must start with a letter or digit"},
 		{"-agent", "must start with a letter or digit"},
@@ -44,6 +46,11 @@ func TestValidateNameMessages(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Fatalf("ValidateName(%q) = %v, want %q", tc.name, err, tc.want)
 		}
+	}
+	long := strings.Repeat("a", 65)
+	err := ValidateName(long)
+	if err == nil || !strings.Contains(err.Error(), long) || !strings.Contains(err.Error(), "1-64") {
+		t.Fatalf("length error does not name the value and the rule: %v", err)
 	}
 }
 

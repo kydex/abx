@@ -158,11 +158,13 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 		// instead of the misleading "signal: killed", and keep caller
 		// cancellation distinct from the probe budget. Everything else is the
 		// run error itself.
-		switch checkErr := check.Err(); {
-		case errors.Is(checkErr, context.DeadlineExceeded):
-			return nil, fmt.Errorf("bubblewrap version probe timed out after %s", bwrapProbeTimeout)
+		switch {
+		case errors.Is(ctx.Err(), context.DeadlineExceeded):
+			return nil, fmt.Errorf("bubblewrap version probe stopped by the caller deadline: %w", ctx.Err())
 		case ctx.Err() != nil:
 			return nil, fmt.Errorf("bubblewrap version probe cancelled: %w", ctx.Err())
+		case errors.Is(check.Err(), context.DeadlineExceeded):
+			return nil, fmt.Errorf("bubblewrap version probe timed out after %s", bwrapProbeTimeout)
 		default:
 			return nil, fmt.Errorf("bubblewrap version: %w", err)
 		}

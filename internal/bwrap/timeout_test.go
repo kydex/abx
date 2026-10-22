@@ -63,3 +63,27 @@ func TestVersionProbeFailureKeepsUnderlyingError(t *testing.T) {
 		t.Fatalf("probe failure = %v", err)
 	}
 }
+
+// A caller deadline shorter than the probe budget must name the caller, not
+// the probe's fixed five seconds: the child is killed by the parent deadline
+// and never reaches the probe's own limit.
+func TestVersionProbeCallerDeadlineIsNotProbeBudget(t *testing.T) {
+	dir := t.TempDir()
+	hang := filepath.Join(dir, "hang")
+	if err := os.WriteFile(hang, []byte("#!/bin/sh\nsleep 30\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	_, err := open(ctx, hang, false)
+	if err == nil {
+		t.Fatal("opened a hanging tool")
+	}
+	if !strings.Contains(err.Error(), "caller deadline") || strings.Contains(err.Error(), "timed out after") {
+		t.Fatalf("caller deadline reported as probe budget: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Fatalf("probe ignored the caller deadline: %s", elapsed)
+	}
+}

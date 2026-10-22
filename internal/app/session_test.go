@@ -473,11 +473,11 @@ func TestFinishCloseJoinsChildStatusWithCleanupError(t *testing.T) {
 // keep the status the session returned.
 func TestFailKeepsTheSessionStatus(t *testing.T) {
 	var errOut bytes.Buffer
-	joined := errors.Join(fmt.Errorf("child exited with status %d", 23), errors.New("close failed"))
+	joined := errors.Join(fmt.Errorf("child ended with status %d", 23), errors.New("close failed"))
 	if status := fail(23, joined, bwrap.Stdio{Err: &errOut}); status != 23 {
 		t.Fatalf("status = %d, want 23", status)
 	}
-	for _, want := range []string{"child exited with status 23", "close failed"} {
+	for _, want := range []string{"child ended with status 23", "close failed"} {
 		if !strings.Contains(errOut.String(), want) {
 			t.Fatalf("stderr %q does not mention %q", errOut.String(), want)
 		}

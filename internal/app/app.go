@@ -198,7 +198,7 @@ func finishClose(status *int, result *error, cleanup func() error) {
 		// every launcher-side failure returns an error together with its
 		// status, and such a failure must not be named as a child exit.
 		if *status != 0 && *result == nil {
-			err = errors.Join(fmt.Errorf("child exited with status %d", *status), err)
+			err = errors.Join(fmt.Errorf("child ended with status %d", *status), err)
 		}
 		*result = errors.Join(*result, err)
 		if *status == 0 {

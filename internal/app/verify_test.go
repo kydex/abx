@@ -263,7 +263,7 @@ func TestVerificationCleanupAggregatesFailuresAndContinues(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = files.Close()
-	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "replaced") || !strings.Contains(err.Error(), first) || !strings.Contains(err.Error(), second) {
+	if err == nil || errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "replaced") || !strings.Contains(err.Error(), second) {
 		t.Fatalf("lost cleanup failure: %v", err)
 	}
 	if _, err := os.Lstat(first); !errors.Is(err, os.ErrNotExist) {
@@ -369,4 +369,22 @@ func TestVerifyRunCycle(t *testing.T) {
 func openStubTool(t *testing.T) func(context.Context) (*bwrap.Tool, error) {
 	t.Helper()
 	return func(context.Context) (*bwrap.Tool, error) { return &bwrap.Tool{}, nil }
+}
+
+func TestVerificationCleanupOfAlreadyRemovedFileIsClean(t *testing.T) {
+	home := t.TempDir()
+	files := &probeFiles{}
+	sentinel, err := files.create(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(sentinel); err != nil {
+		t.Fatal(err)
+	}
+	if err := files.Close(); err != nil {
+		t.Fatalf("a probe file that is already gone failed cleanup: %v", err)
+	}
+	if _, err := os.Lstat(sentinel); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("cleanup recreated or reported %s: %v", sentinel, err)
+	}
 }

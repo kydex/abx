@@ -87,6 +87,9 @@ func TestProfileOutputFailureDoesNotDeleteCreatedProfile(t *testing.T) {
 	if code != 1 || err == nil {
 		t.Fatal(code, err)
 	}
+	if !strings.Contains(err.Error(), "profile was created") {
+		t.Fatalf("confirmation failure does not say the profile exists: %v", err)
+	}
 	if _, err = os.Stat(filepath.Join(p.Profiles, "demo")); err != nil {
 		t.Fatal("lost created profile", err)
 	}

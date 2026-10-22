@@ -62,7 +62,7 @@ if $in_git && [ "$mode" = release ]; then
     # List every tag on HEAD instead of git describe: describe needs --tags
     # to see lightweight tags and picks an arbitrary one when several exist.
     head_tags=$(git -C "$root" tag --points-at HEAD)
-    if ! printf '%s\n' "$head_tags" | grep -qx -- "$tag"; then
+    if ! printf '%s\n' "$head_tags" | grep -qxF -- "$tag"; then
         found=${head_tags:-none}
         found=$(printf '%s' "$found" | tr '\n' ' ')
         printf 'error: HEAD is not tagged %s (tags on HEAD: %s); tag the release commit before packaging\n' "$tag" "$found" >&2

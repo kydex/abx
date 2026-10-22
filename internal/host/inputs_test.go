@@ -219,11 +219,24 @@ func TestDiscoverSystemRejectsUnsafeCompatLinks(t *testing.T) {
 		if err := os.Mkdir(filepath.Join(root, "usr"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Symlink(filepath.Join(root, "usr"), filepath.Join(root, "bin")); err != nil {
+		if err := os.Symlink("usr", filepath.Join(root, "bin")); err != nil {
 			t.Fatal(err)
 		}
 		if err := in.discoverSystem(root); err != nil {
 			t.Fatalf("rejected safe compat link: %v", err)
+		}
+	})
+	t.Run("absolute link rejected", func(t *testing.T) {
+		in := fixture(t)
+		root := t.TempDir()
+		if err := os.Mkdir(filepath.Join(root, "usr"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(filepath.Join(root, "usr"), filepath.Join(root, "bin")); err != nil {
+			t.Fatal(err)
+		}
+		if err := in.discoverSystem(root); err == nil || !strings.Contains(err.Error(), "must be relative") {
+			t.Fatalf("accepted absolute compat link: %v", err)
 		}
 	})
 	t.Run("dangling link rejected", func(t *testing.T) {

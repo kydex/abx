@@ -241,7 +241,11 @@ func TestCompatLinkIntoProtectedHomeRefused(t *testing.T) {
 		}
 	}
 	in := fixture(t)
-	if err := os.Symlink(in.account.Home, filepath.Join(root, "lib64")); err != nil {
+	rel, err := filepath.Rel(root, in.account.Home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(rel, filepath.Join(root, "lib64")); err != nil {
 		t.Fatal(err)
 	}
 	if err := in.discoverSystem(root); err == nil ||

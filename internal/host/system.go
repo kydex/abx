@@ -78,6 +78,9 @@ func (in *Inputs) discoverLayout(root string, layout systemLayout) error {
 			if e != nil {
 				return fmt.Errorf("read compat system link %q: %w", path, e)
 			}
+			if filepath.IsAbs(link) {
+				return fmt.Errorf("compat system link %q must be relative, not %q", path, link)
+			}
 			resolved, e := filepath.EvalSymlinks(path)
 			if e != nil {
 				return fmt.Errorf("resolve compat system link %q: %w", path, e)

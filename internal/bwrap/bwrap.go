@@ -140,8 +140,8 @@ func open(ctx context.Context, path string, system bool) (tool *Tool, err error)
 	cmd.Dir = "/"
 	// The probe is the one child nothing else ties to the launcher's life:
 	// give it a parent-death signal so a launcher killed mid-probe cannot
-	// leave a wedged Bubblewrap behind. The session child gets the same
-	// containment from Bubblewrap's --die-with-parent.
+	// leave a wedged Bubblewrap behind. The session child gets its
+	// containment from Bubblewrap's --die-with-parent after sandbox setup.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
 	cmd.WaitDelay = time.Second
 	output := &limitedBuffer{limit: 4096}

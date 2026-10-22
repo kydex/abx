@@ -134,12 +134,12 @@ here so nobody starts the same discussion from scratch.
   `host.resolveProject` -- but each is a linear sequence (one switch, loops,
   or ordered checks), and splitting would move state between the parts for no
   gain.
-- Eleven identifiers are exported although only their own package uses them:
-  `Escape`, `Version` (app), `MinimumVersion`, `Path` (bwrap),
-  `ErrProfileNotFound`, `ProfileStatus`, `ResolveProject`, `ResolveShell`,
-  `Selection`, `Source` (host), and `Check` (probe). Unexporting them would
-  make the compiler stop catching misspelled names across package boundaries,
-  for no gain here.
+- Sixteen identifiers are exported although production code outside their own package does not use them:
+  `Escape`, `Version` (app), `MinimumVersion`, `Path`, `Translate` (bwrap),
+  `ErrProfileNotFound`, `ErrProfileExists`, `ProfileStatus`, `ResolveProject`,
+  `ResolveShell`, `Mode`, `Selection`, `Source` (host), `CleanPath`, `Entry`
+  (sandbox), and `Check` (probe). Unexporting them would make the compiler
+  stop catching misspelled names across package boundaries, for no gain here.
 - The fuzz harnesses in `internal/sandbox`, `internal/profile`, `internal/cli`,
   `internal/probe`, and `internal/host` are built and run with their seed
   corpora on every `go test`, but the fuzzing itself (`-fuzz`) never runs in
@@ -150,9 +150,12 @@ here so nobody starts the same discussion from scratch.
   seams -- the `stdio` parameter and `brokenWriter` already pin a failed
   inspection write -- while the rest needs a real Bubblewrap launch or test
   seams that the project's own rules discourage. The mutation sweep behind this
-  list measured the size of the gap: its tests catch 40 of the package's 77
-  guards, and the other 37 survive deletion. The tenth full run measured 304
-  guards killed and 128 survived of 432, none not applicable.
+  list measured the size of the gap, but its numbers are historical. The tenth
+  full run measured 304 guards killed and 128 survived of 432, none not
+  applicable; at that run `internal/app` tests caught 40 of the package's 77
+  guards. The current tree is not that run: at `9b85f9f` the guard finder
+  counts 84 guards in `internal/app` and 439 across the swept files, so do not
+  read the tenth-run pass rates as current.
 - The aggregate coverage floor is 74.0% against an actual 92.4%, and `internal/app` is 306 of its
   349 statements (87.7%). Halving that package's coverage still leaves the aggregate at 83.6%; even
   zeroing it leaves 74.8%, still above the floor, so the gate does not fire on this package. The aggregate catches gross

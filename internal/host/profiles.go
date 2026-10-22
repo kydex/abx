@@ -104,9 +104,16 @@ func ListProfiles(account Account, paths Paths) (statuses []ProfileStatus, resul
 		return nil, fmt.Errorf("open profiles directory %q: %w", paths.Profiles, err)
 	}
 	dir := os.NewFile(uintptr(fd), paths.Profiles)
-	entries, err := dir.ReadDir(-1)
-	if err = errors.Join(err, dir.Close()); err != nil {
-		return nil, fmt.Errorf("read profiles directory %q: %w", paths.Profiles, err)
+	entries, readErr := dir.ReadDir(-1)
+	closeErr := dir.Close()
+	if readErr != nil || closeErr != nil {
+		if readErr != nil {
+			readErr = fmt.Errorf("read profiles directory %q: %w", paths.Profiles, readErr)
+		}
+		if closeErr != nil {
+			closeErr = fmt.Errorf("close profiles directory %q: %w", paths.Profiles, closeErr)
+		}
+		return nil, errors.Join(readErr, closeErr)
 	}
 	// ReadDir on a file descriptor preserves filesystem order; sort explicitly.
 	slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })

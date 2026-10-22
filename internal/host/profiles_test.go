@@ -390,3 +390,24 @@ func TestShowProfileAcceptsAgentInstalledUnderSystemPath(t *testing.T) {
 		t.Fatalf("list reports %+v, show reported %+v", list, status)
 	}
 }
+
+func TestFinishProfileCreationKeepsOutcomesDistinct(t *testing.T) {
+	base := errors.New("creation failed")
+	closeErr := errors.New("close failed")
+
+	if got := finishProfileCreation(base, false, false, nil); !errors.Is(got, base) || strings.Contains(got.Error(), "incomplete") {
+		t.Fatalf("plain failure rewritten: %v", got)
+	}
+	if got := finishProfileCreation(base, true, false, nil); !errors.Is(got, base) ||
+		!strings.Contains(got.Error(), "profile creation incomplete") {
+		t.Fatalf("incomplete creation not named: %v", got)
+	}
+	if got := finishProfileCreation(nil, true, true, closeErr); !errors.Is(got, closeErr) ||
+		!strings.Contains(got.Error(), "profile was created, but") {
+		t.Fatalf("created profile reported as failed creation: %v", got)
+	}
+	if got := finishProfileCreation(base, false, false, closeErr); !errors.Is(got, base) ||
+		!errors.Is(got, closeErr) || strings.Contains(got.Error(), "incomplete") {
+		t.Fatalf("close failure without created directories misreported: %v", got)
+	}
+}

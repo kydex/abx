@@ -147,22 +147,9 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 		return "", err
 	}
 	created := false
-	completed := false
+	profileCreated := false
 	defer func() {
-		closeErr := parent.Close()
-		if closeErr == nil {
-			return
-		}
-		if completed {
-			// The profile exists; only the descriptor cleanup failed, and
-			// that must not read as a failed creation.
-			result = errors.Join(result, fmt.Errorf("profile was created, but its directory descriptor could not be closed: %w", closeErr))
-			return
-		}
-		result = errors.Join(result, closeErr)
-		if created {
-			result = fmt.Errorf("profile creation incomplete; created directories may remain: %w", result)
-		}
+		result = finishProfileCreation(result, created, profileCreated, parent.Close())
 	}()
 	components := strings.Split(strings.TrimPrefix(paths.Root, "/"), "/")
 	components = append(components, "profiles", name)
@@ -179,14 +166,36 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 		if err != nil {
 			return "", fmt.Errorf("prepare profile directory %q: %w", current, err)
 		}
+		if exclusive {
+			// The profile exists as soon as its own directory was created.
+			// Closing the parent is cleanup from here on, not creation.
+			profileCreated = true
+		}
 		closeErr := parent.Close()
 		parent = next
 		if closeErr != nil {
 			return "", closeErr
 		}
 	}
-	completed = true
 	return filepath.Join(paths.Profiles, name), nil
+}
+
+// finishProfileCreation keeps the two outcomes distinct: a profile that
+// exists but whose descriptor fails to close, and a creation that stopped
+// after making some directories. Before the last directory exists, the
+// caller must not be told that a profile was created.
+func finishProfileCreation(result error, created, profileCreated bool, closeErr error) error {
+	if closeErr != nil {
+		if profileCreated {
+			result = errors.Join(result, fmt.Errorf("profile was created, but its directory descriptor could not be closed: %w", closeErr))
+		} else {
+			result = errors.Join(result, closeErr)
+		}
+	}
+	if created && !profileCreated && result != nil {
+		result = fmt.Errorf("profile creation incomplete; created directories may remain: %w", result)
+	}
+	return result
 }
 
 func openDirectoryAt(parent int, name string) (*os.File, error) {

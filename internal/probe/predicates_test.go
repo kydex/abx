@@ -219,6 +219,24 @@ func TestCheckFailsEachPredicateWhenItsObservationIsWrong(t *testing.T) {
 			}
 			return o
 		}},
+		{runtimeMode, func(o observer) observer {
+			o.stat = func(p string) (os.FileInfo, error) {
+				if p == "/run/user" {
+					return fakeInfo{mode: 0o700, dir: false}, nil
+				}
+				return goodObserver(sandboxExpected()).stat(p)
+			}
+			return o
+		}},
+		{runtimeMode, func(o observer) observer {
+			o.stat = func(p string) (os.FileInfo, error) {
+				if p == "/run/user" {
+					return fakeInfo{mode: os.ModeDir | os.ModeSticky | os.ModeSetuid | os.ModeSetgid | 0o700, dir: true}, nil
+				}
+				return goodObserver(sandboxExpected()).stat(p)
+			}
+			return o
+		}},
 		{"null device", func(o observer) observer {
 			o.statDevice = func(p string, st *unix.Stat_t) error {
 				st.Mode = unix.S_IFREG

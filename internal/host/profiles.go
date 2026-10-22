@@ -181,6 +181,9 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 		closeErr := parent.Close()
 		parent = next
 		if closeErr != nil {
+			if profileCreated {
+				return "", fmt.Errorf("profile was created, but its directory descriptor could not be closed: %w", closeErr)
+			}
 			return "", closeErr
 		}
 	}

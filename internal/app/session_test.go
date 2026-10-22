@@ -613,3 +613,16 @@ func TestWorkProjectReplacementNeverExecutes(t *testing.T) {
 		t.Fatalf("replaced project: %v %d %v", called, status, err)
 	}
 }
+
+func TestHelpAndVersionReportOutputFailures(t *testing.T) {
+	for _, args := range [][]string{{"help"}, {"version"}} {
+		var stderr bytes.Buffer
+		status := Run(context.Background(), args, bwrap.Stdio{Out: brokenWriter{}, Err: &stderr})
+		if status != 1 {
+			t.Fatalf("%q with broken output = status %d, want 1", args, status)
+		}
+		if !strings.Contains(stderr.String(), "output failed") {
+			t.Fatalf("%q lost the write error: %q", args, stderr.String())
+		}
+	}
+}

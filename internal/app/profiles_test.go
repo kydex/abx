@@ -156,3 +156,31 @@ func TestProfileReadCommandsPropagateOutputFailure(t *testing.T) {
 		}
 	}
 }
+
+func TestProfileShowReportsFoundAgent(t *testing.T) {
+	base := t.TempDir()
+	a := host.Account{UID: os.Getuid(), Username: "tester", Home: base}
+	p, err := host.ResolvePaths(a, filepath.Join(base, "data"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, err := host.CreateProfile(a, p, "demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(home, ".local", "bin")
+	if err := os.MkdirAll(bin, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bin, "demo"), []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	code, err := runProfiles(cli.Command{Kind: cli.ProfileShow, Profile: "demo"}, a, p, &out)
+	if code != 0 || err != nil {
+		t.Fatalf("profile show = status %d, %v", code, err)
+	}
+	if !strings.Contains(out.String(), "Command: /home/agent/.local/bin/demo\n") {
+		t.Fatalf("profile show did not report the found agent: %q", out.String())
+	}
+}

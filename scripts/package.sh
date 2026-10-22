@@ -104,7 +104,7 @@ name="abx-$version-linux-amd64"
 mkdir "$stage/$name"
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false \
     -o "$stage/$name/abx" ./cmd/abx
-cp LICENSE THIRD_PARTY_LICENSES README.md README.ru.md CHANGELOG.md "$stage/$name/"
+cp -P LICENSE THIRD_PARTY_LICENSES README.md README.ru.md CHANGELOG.md "$stage/$name/"
 if $in_git; then
     # Stage exactly the tracked files so untracked clutter cannot leak
     # into the user-facing archive either. -P keeps a tracked symlink a
@@ -125,7 +125,7 @@ if $in_git; then
 else
     cp -R cmd internal scripts docs .github "$stage/$source/"
 fi
-cp go.mod go.sum Makefile README.md README.ru.md AGENTS.md AGENTS.ru.md CHANGELOG.md LICENSE THIRD_PARTY_LICENSES .gitignore .golangci.yml "$stage/$source/"
+cp -P go.mod go.sum Makefile README.md README.ru.md AGENTS.md AGENTS.ru.md CHANGELOG.md LICENSE THIRD_PARTY_LICENSES .gitignore .golangci.yml "$stage/$source/"
 if $in_git; then
     # M-020: every tracked top-level path must land in the source archive.
     # A new directory or root file that is not staged fails here instead of

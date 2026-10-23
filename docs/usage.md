@@ -330,7 +330,7 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | Problem | Check |
 |---|---|
 | `must not run as root` | Run without `sudo` |
-| Bubblewrap missing or too old | Check `/usr/bin/bwrap --version`; ABX requires 0.12.0+ |
+| Bubblewrap missing or too old | Check `/usr/bin/bwrap --version`; ABX requires 0.11.1+ |
 | Sandbox cannot start | Check that the host permits unprivileged user namespaces |
 | Profile not found | Check `abx profile show <profile>` and the `XDG_DATA_HOME` used for that command |
 | `private directory "<path>" must have exact mode 0700` | Run `chmod 700` on the storage root and `shared` (see Shared skills) |

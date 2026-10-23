@@ -9,7 +9,7 @@ import (
 )
 
 const workingProbe = `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 exit 23`

@@ -22,7 +22,7 @@ import (
 
 const (
 	Path           = "/usr/bin/bwrap"
-	MinimumVersion = "0.12.0"
+	MinimumVersion = "0.11.1"
 )
 
 // bwrapProbeTimeout bounds the retained binary's version probe. The diagnostic
@@ -245,7 +245,7 @@ func markInheritedFDsCloseOnExec() (func(), error) {
 var versionPattern = regexp.MustCompile(`^bubblewrap ([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`)
 
 // minimumVersion matches MinimumVersion above; kept numeric for comparison.
-var minimumVersion = [3]uint64{0, 12, 0}
+var minimumVersion = [3]uint64{0, 11, 1}
 
 func validateVersion(s string) error {
 	m := versionPattern.FindStringSubmatch(s)

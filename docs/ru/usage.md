@@ -325,7 +325,7 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | Проблема | Что проверить |
 |---|---|
 | `must not run as root` | Запускайте без `sudo` |
-| Bubblewrap отсутствует или слишком старый | Проверьте `/usr/bin/bwrap --version`; нужен 0.12.0+ |
+| Bubblewrap отсутствует или слишком старый | Проверьте `/usr/bin/bwrap --version`; нужен 0.11.1+ |
 | Песочница не запускается | Проверьте, что хост разрешает непривилегированные user namespaces |
 | Профиль не найден | Проверьте `abx profile show <profile>` и используемый `XDG_DATA_HOME` |
 | `private directory "<путь>" must have exact mode 0700` | Выполните `chmod 700` для корня хранилища и `shared` (см. Shared skills) |

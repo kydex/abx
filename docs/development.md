@@ -82,8 +82,8 @@ Two limits of the number. Each guard is one whole `if` condition: operands of `&
 
 ## Live sandbox tests
 
-On a regular-user Linux host with Bubblewrap 0.12.0+ at `/usr/bin/bwrap` and working unprivileged user namespaces.
-CachyOS is the distribution the live tests actually exercise; `ubuntu-latest` is the CI baseline, where the live suite runs automated on a source-built Bubblewrap. A host close to CachyOS is the one worth trusting when isolation or process lifetime
+On a regular-user Linux host with Bubblewrap 0.11.1+ at `/usr/bin/bwrap` and working unprivileged user namespaces.
+CachyOS is the distribution the live tests actually exercise; `ubuntu-latest` is the CI baseline, where the live suite runs automated on the distribution Bubblewrap. A host close to CachyOS is the one worth trusting when isolation or process lifetime
 has changed:
 
 ```sh

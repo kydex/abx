@@ -228,7 +228,7 @@ func countOpenFDs(t *testing.T) int {
 func TestToolOpenCloseDoesNotLeakFDs(t *testing.T) {
 	before := countOpenFDs(t)
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
 fi`)
 	tool, err := open(context.Background(), path, false)
 	if err != nil {
@@ -295,7 +295,7 @@ func TestEnvironmentValuesStaySingleArgvElements(t *testing.T) {
 
 func TestExecuteRunsBinaryAtRetainedFD(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 printf 'SELF=%s\n' "$0"`)
@@ -324,7 +324,7 @@ printf 'SELF=%s\n' "$0"`)
 // A refused plan must be reported with its own reason: starting Bubblewrap
 // with no arguments replaces "invalid plan"/"bind source" with its help text.
 func TestExecuteReportsTranslationRefusal(t *testing.T) {
-	tool, err := open(context.Background(), writeScript(t, `printf 'bubblewrap 0.12.0\n'`), false)
+	tool, err := open(context.Background(), writeScript(t, `printf 'bubblewrap 0.11.1\n'`), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,12 +361,12 @@ func TestBadSourcesAndVersion(t *testing.T) {
 	if _, _, e := Translate(plan(t, sandbox.Shell), func(string) (*os.File, error) { return nil, errors.New("closed") }); e == nil {
 		t.Fatal("accepted bad source")
 	}
-	for _, v := range []string{"bubblewrap 0.12.0\n", "bubblewrap 0.13.1", "bubblewrap 1.0.0"} {
+	for _, v := range []string{"bubblewrap 0.11.1\n", "bubblewrap 0.12.0\n", "bubblewrap 0.13.1", "bubblewrap 1.0.0"} {
 		if !versionOK(v) {
 			t.Fatal(v)
 		}
 	}
-	for _, v := range []string{"bubblewrap 0.0.99", "bubblewrap 0.9.0", "noise 0.12.0", "bubblewrap 0.12", "bubblewrap 9999999999999999999999999.0.0"} {
+	for _, v := range []string{"bubblewrap 0.0.99", "bubblewrap 0.9.0", "bubblewrap 0.11.0", "noise 0.12.0", "bubblewrap 0.12", "bubblewrap 9999999999999999999999999.0.0"} {
 		if versionOK(v) {
 			t.Fatal(v)
 		}
@@ -395,8 +395,8 @@ func TestMinimumVersionStringMatchesNumeric(t *testing.T) {
 func TestOpenUsesFixedBubblewrapPath(t *testing.T) {
 	// Open uses the production path. A missing or unsafe binary must fail
 	// naming that path. A too-old binary is a different, valid host state:
-	// the version probe names the version instead, as CI's packaged
-	// Bubblewrap 0.11.1 does. Only lookup/validation errors carry the path.
+	// the version probe names the version instead. Only lookup/validation
+	// errors carry the path.
 	if _, err := Open(context.Background()); err != nil &&
 		strings.Contains(err.Error(), "Bubblewrap executable") &&
 		!strings.Contains(err.Error(), Path) {
@@ -698,7 +698,7 @@ func writeScript(t *testing.T, body string) string {
 
 func TestToolSystemRequiresRootOwnership(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 exit 23`)
@@ -722,7 +722,7 @@ func TestRevalidateAcceptsOwnerChange(t *testing.T) {
 		t.Skip("chown requires root")
 	}
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 exit 23`)
@@ -743,7 +743,7 @@ exit 23`)
 
 func TestToolRejectsSpecialModeBits(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 exit 23`)
@@ -776,7 +776,7 @@ func TestToolXOKAsInvokingUser(t *testing.T) {
 		t.Skip("requires non-root permission semantics")
 	}
 	path := filepath.Join(t.TempDir(), "bwrap")
-	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf 'bubblewrap 0.12.0\\n'\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf 'bubblewrap 0.11.1\\n'\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Chmod(path, 0o001); err != nil {
@@ -823,7 +823,7 @@ func TestForwardSignalFailures(t *testing.T) {
 
 func TestToolLifecycleDetectsMutationAndCloseFailure(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 exit 23`)
@@ -858,7 +858,7 @@ exit 23`)
 // failure itself, not a comparison against a missing object.
 func TestRevalidateReportsVanishedBinary(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 exit 23`)
@@ -877,7 +877,7 @@ exit 23`)
 
 func TestExecuteRevalidatesToolBeforeLendingSources(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 exit 23`)
@@ -904,7 +904,7 @@ exit 23`)
 
 func TestExecuteUsesRetainedToolObject(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
   exit 0
 fi
 exit 23`)
@@ -998,7 +998,7 @@ func TestTranslateSourceFailurePreservesBorrowedFiles(t *testing.T) {
 
 func TestVersionDiagnosticsDistinguishOldAndMalformed(t *testing.T) {
 	for _, tc := range []struct{ input, want string }{
-		{"bubblewrap 0.11.0\n", "too old; requires >= 0.12.0"},
+		{"bubblewrap 0.11.0\n", "too old; requires >= 0.11.1"},
 		{"", "could not parse Bubblewrap version"},
 		{"unexpected output\n", "could not parse Bubblewrap version"},
 		{"bubblewrap 9999999999999999999999999.0.0", "could not parse Bubblewrap version"},

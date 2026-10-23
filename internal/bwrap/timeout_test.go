@@ -43,7 +43,7 @@ func TestVersionProbeTimeoutIsDiagnosed(t *testing.T) {
 // Caller cancellation is not a probe timeout.
 func TestVersionProbeCallerCancellationIsDistinct(t *testing.T) {
 	path := writeScript(t, `if [ "$1" = "--version" ]; then
-  printf 'bubblewrap 0.12.0\n'
+  printf 'bubblewrap 0.11.1\n'
 fi`)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

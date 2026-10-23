@@ -5,7 +5,8 @@
 # a root caller skips that, since abx refuses to run as root.
 # usage: bash scripts/package-smoke.sh [dir]   (default: dist)
 set -euo pipefail
-root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+script=$(readlink -f -- "${BASH_SOURCE[0]}")
+root=$(cd -- "$(dirname -- "$script")/.." && pwd -P)
 cd -- "$root"
 dir=${1:-dist}
 version=$(<internal/app/VERSION)
@@ -64,6 +65,11 @@ test -f "$work/abx-$version-source/THIRD_PARTY_LICENSES"
 test -f "$work/abx-$version-source/.gitignore"
 test -f "$work/abx-$version-source/.golangci.yml"
 test "$(cat "$work/abx-$version-source/internal/app/VERSION")" = "$version"
+# The source-tree links-check cannot see the different root set of the binary
+# archive: a docs link to AGENTS.md resolves in the checkout but not after
+# packaging. Check both unpacked trees with the set of files each one ships.
+python3 scripts/check-links.py "$work/abx-$version-linux-amd64"
+python3 scripts/check-links.py "$work/abx-$version-source"
 # Each archive's member list must match its unpacked tree member for member,
 # and every member must stay inside the archive's own prefix: a duplicate
 # entry, a path escaping the prefix, or an added top-level path fails these
@@ -91,11 +97,12 @@ for name in "abx-$version-linux-amd64" "abx-$version-source"; do
         exit 1
     fi
 done
-# Packaging must keep scripts/*.sh executable (0755), the one executable mode
-# of the source archive.
-for script in "$work/abx-$version-source"/scripts/*.sh; do
-    test -x "$script" || {
-        printf 'error: %s must stay executable\n' "${script#"$work/abx-$version-source/"}" >&2
+# Packaging must keep every shell and Python tool executable (0755) in the
+# source archive.
+for tool in "$work/abx-$version-source"/scripts/*.sh "$work/abx-$version-source"/scripts/*.py; do
+    [ -e "$tool" ] || continue
+    test -x "$tool" || {
+        printf 'error: %s must stay executable\n' "${tool#"$work/abx-$version-source/"}" >&2
         exit 1
     }
 done

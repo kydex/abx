@@ -12,7 +12,9 @@ fence of the same character, not shorter than the opening one, and with
 nothing after it, a destination may carry one balanced pair of
 parentheses and an optional title, and a reference definition may put its
 target on the next line. Indented code blocks are not recognized, so a
-link-looking line inside one is scanned as text.
+link-looking line inside one is scanned as text. The subset stops there:
+nested brackets in link text, destinations split across lines, fences inside
+block quotes or list items, and code spans split across lines are not modelled.
 """
 import pathlib
 import re
@@ -21,12 +23,43 @@ import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LINK = re.compile(r"!?\[[^\]]*\]\(((?:[^()]|\([^()]*\))*)\)")
-REFERENCE = re.compile(r"^\s*\[[^\]]+\]:\s*(\S+)")
+REFERENCE = re.compile(r"^\s*\[[^\]]+\]:\s*(<[^>\n]*>|\S+)")
 REFERENCE_OPEN = re.compile(r"^\s*\[[^\]]+\]:\s*$")
-FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 CODE_SPAN = re.compile(r"(`+).*?\1")
 
 SKIP = ("#", "http://", "https://", "mailto:", "tel:")
+
+
+def link_target(raw):
+    """Return the destination part of a link or reference definition."""
+    raw = raw.strip()
+    if raw.startswith("<") and ">" in raw:
+        return raw[1:raw.index(">")]
+    return raw.split()[0] if raw.split() else ""
+
+
+def mask_escaped_brackets(line):
+    """Hide brackets escaped by an odd backslash run from the link scanner."""
+    out = []
+    i = 0
+    while i < len(line):
+        if line[i] != "\\":
+            out.append(line[i])
+            i += 1
+            continue
+        j = i
+        while j < len(line) and line[j] == "\\":
+            j += 1
+        count = j - i
+        if j < len(line) and line[j] in "[]":
+            out.append("\\" * (count // 2))
+            out.append(" " if count % 2 else line[j])
+            i = j + 1
+        else:
+            out.append("\\" * count)
+            i = j
+    return "".join(out)
 
 
 def targets(text):
@@ -45,12 +78,12 @@ def targets(text):
         if fence is not None:
             pending = False
             continue
-        line = CODE_SPAN.sub(" ", line).replace("\\[", "")
+        line = mask_escaped_brackets(CODE_SPAN.sub(" ", line))
         if pending:
             pending = False
             stripped = line.strip()
             if stripped:
-                yield number, stripped.split()[0]
+                yield number, link_target(stripped)
         for match in LINK.finditer(line):
             yield number, match.group(1)
         match = REFERENCE.match(line)
@@ -61,17 +94,17 @@ def targets(text):
 
 
 def main():
-    files = sorted([*ROOT.glob("*.md"), *ROOT.glob("docs/**/*.md")])
+    if len(sys.argv) > 2:
+        print("usage: check-links.py [root]", file=sys.stderr)
+        return 2
+    root = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) == 2 else ROOT
+    files = sorted([*root.glob("*.md"), *root.glob("docs/**/*.md")])
     checked = 0
     broken = []
     for path in files:
         text = path.read_text(encoding="utf-8")
         for number, raw in targets(text):
-            target = raw.strip()
-            if target.startswith("<") and ">" in target:
-                target = target[1:target.index(">")]
-            else:
-                target = target.split()[0]
+            target = link_target(raw)
             if not target or target.startswith(SKIP):
                 continue
             target = target.split("#", 1)[0]
@@ -80,7 +113,7 @@ def main():
             checked += 1
             resolved = (path.parent / urllib.parse.unquote(target)).resolve()
             if not resolved.exists():
-                broken.append(f"{path.relative_to(ROOT)}:{number}: {raw}")
+                broken.append(f"{path.relative_to(root)}:{number}: {raw}")
     if broken:
         print("broken relative links:", file=sys.stderr)
         for item in broken:

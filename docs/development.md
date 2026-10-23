@@ -153,12 +153,12 @@ here so nobody starts the same discussion from scratch.
   list measured the size of the gap, but its numbers are historical. The tenth
   full run measured 304 guards killed and 128 survived of 432, none not
   applicable; at that run `internal/app` tests caught 40 of the package's 77
-  guards. The current tree is not that run: at `3172040` the guard finder
-  counts 85 guards in `internal/app` and 452 across the swept files, so do not
+  guards. The current tree is not that run: at `f6b86b7` the guard finder
+  counts 86 guards in `internal/app` and 453 across the swept files, so do not
   read the tenth-run pass rates as current.
-- The aggregate coverage floor is 74.0% against an actual 92.4%, and `internal/app` is 311 of its
-  351 statements (88.6%). Halving that package's coverage still leaves the aggregate at 83.7%; even
-  zeroing it leaves 74.9%, still above the floor, so the gate does not fire on this package. The aggregate catches gross
+- The aggregate coverage floor is 74.0% against an actual 92.4%, and `internal/app` is 315 of its
+  355 statements (88.7%). Halving that package's coverage still leaves the aggregate at 83.6%; even
+  zeroing it leaves 74.8%, still above the floor, so the gate does not fire on this package. The aggregate catches gross
   regressions and nothing finer. A coverage drop with every test still green means tests were deleted
   or skipped, and the skip path is the one worth watching.
   `host.ResolveAccount` is a one-line wrapper over the tested seam; unit tests

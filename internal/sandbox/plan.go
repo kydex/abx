@@ -26,9 +26,9 @@ type Mount struct {
 	// Mode sets directory permissions via --perms; zero emits no --perms.
 	// System mounts with nonzero Mode are rejected.
 	Mode uint32
-	// Size caps a tmpfs mount in bytes. Every Tmpfs mount must set it:
-	// Validate rejects a zero-size private tmpfs. Other mount kinds leave
-	// it zero.
+	// Size caps a tmpfs mount in bytes. privateMounts always sets it, and
+	// Validate requires the exact private mount list, so a size that differs
+	// from that list is rejected. Other mount kinds leave it zero.
 	Size uint64
 }
 

@@ -322,15 +322,27 @@ def main() -> int:
             kwargs = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
             tar.extractall(repo, **kwargs)
 
-        if subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet"], check=False).returncode:
+        if (
+            subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "HEAD"], check=False).returncode
+            or subprocess.run(
+                ["git", "-C", str(ROOT), "ls-files", "--others", "--exclude-standard"],
+                capture_output=True,
+                text=True,
+                check=False,
+            ).stdout.strip()
+        ):
             print("note: uncommitted changes present; the sweep measures HEAD, not them.")
 
         by_pkg: dict[str, list[str]] = {}
         for rel in wanted:
+            pure = pathlib.PurePosixPath(rel)
+            if pure.is_absolute() or ".." in pure.parts:
+                print(f"error: {rel} must be a repository-relative path", file=sys.stderr)
+                return 1
             if not (repo / rel).is_file():
                 print(f"error: no such file in HEAD: {rel}", file=sys.stderr)
                 return 1
-            by_pkg.setdefault(pathlib.PurePosixPath(rel).parent.as_posix(), []).append(rel)
+            by_pkg.setdefault(pure.parent.as_posix(), []).append(rel)
         def count_guards(rel: str) -> int:
             text = (repo / rel).read_text(encoding="utf-8").splitlines(keepends=True)
             return len(find_guards(text))

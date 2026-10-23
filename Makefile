@@ -19,10 +19,11 @@ shellcheck:
 actionlint:
 	actionlint .github/workflows/*.yml
 
-# The Python tools below are not covered by any Go linter; parse both without
-# writing bytecode into the source tree.
+# The Python tools below are not covered by any Go linter; compile both without
+# writing bytecode into the source tree. compile() catches top-level returns
+# that ast.parse accepts.
 python-check:
-	python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filename=str(p)) for p in pathlib.Path("scripts").glob("*.py")]'
+	python3 -c 'import pathlib; [compile(p.read_text(encoding="utf-8"), str(p), "exec") for p in pathlib.Path("scripts").glob("*.py")]'
 
 # Language links must resolve in packaged artifacts, where the docs tree is
 # copied as-is. Only file targets are checked; heading anchors stay manual.
@@ -31,8 +32,9 @@ links-check:
 
 # Local helper: whitespace errors in uncommitted changes. Not part of make
 # check — on a fresh checkout the index matches HEAD and it can find nothing.
+# Comparing with HEAD includes both staged and unstaged changes.
 local-diff-check:
-	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then git diff --check; else printf 'warning: not a git work tree; skipping git diff --check\n' >&2; fi
+	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then git diff --check HEAD; else printf 'warning: not a git work tree; skipping git diff --check\n' >&2; fi
 
 security:
 	govulncheck ./...

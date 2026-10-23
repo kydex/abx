@@ -150,47 +150,56 @@ func canonicalProtectedTree(path string) (string, error) {
 // rules, and it is deliberately forgiving about a tree that does not resolve:
 // a dangling or cyclic link still says where it is headed, and that target is
 // what has to be compared against, because a path that does not exist today can
-// sit inside the project or the data base tomorrow. A path that cannot exist at
-// all -- missing, blocked by a non-directory in the middle, or caught in a
-// cycle above the final component -- is compared literally.
+// sit inside the project or the data base tomorrow. A relative link target is
+// resolved against the link's physical parent, and dangling chains are followed,
+// so a symlinked parent cannot make the future target look disjoint. A path
+// that cannot exist as named -- blocked by a non-directory in the middle, or
+// caught in a cycle above the final component -- is compared literally.
 //
 // The literal link would be safe too — nothing can exist underneath a link that
 // resolves nowhere, and both callers compare against an already resolved path —
 // but the target is the stronger statement and it costs nothing.
 func canonicalSensitiveTree(path string) (string, error) {
+	return canonicalSensitiveTreeSeen(path, nil)
+}
+
+// canonicalSensitiveTreeSeen carries the links already followed so a cycle
+// ends at the first repeated component. That link is compared by the target
+// its text names, matching the long-standing dangling-link policy.
+func canonicalSensitiveTreeSeen(path string, seen map[string]bool) (string, error) {
 	clean := filepath.Clean(path)
 	missing := []string{}
 	current := clean
 	for {
 		info, err := os.Lstat(current)
 		if err == nil {
-			if len(missing) == 0 && info.Mode()&os.ModeSymlink != 0 {
-				return resolveSensitiveLink(current)
+			if info.Mode()&os.ModeSymlink != 0 {
+				resolved, evalErr := filepath.EvalSymlinks(current)
+				if evalErr == nil {
+					return appendSensitiveMissing(resolved, missing), nil
+				}
+				if seen == nil {
+					seen = make(map[string]bool)
+				}
+				if seen[current] {
+					target, linkErr := resolveSensitiveLink(current)
+					if linkErr != nil {
+						return "", linkErr
+					}
+					return appendSensitiveMissing(target, missing), nil
+				}
+				seen[current] = true
+				target, linkErr := resolveSensitiveLink(current)
+				if linkErr != nil {
+					return "", linkErr
+				}
+				return canonicalSensitiveTreeSeen(appendSensitiveMissing(target, missing), seen)
 			}
 			resolved, evalErr := filepath.EvalSymlinks(current)
-			if evalErr == nil {
-				for i := len(missing) - 1; i >= 0; i-- {
-					resolved = filepath.Join(resolved, missing[i])
-				}
-				return filepath.Clean(resolved), nil
+			if evalErr != nil {
+				return "", fmt.Errorf("canonicalize protected tree %q: %w", current, evalErr)
 			}
-			if len(missing) > 0 && info.Mode()&os.ModeSymlink != 0 {
-				// The nearest existing ancestor is itself a dangling or
-				// cyclic link. Its text still names the future location;
-				// append the components that do not exist yet.
-				target, readErr := os.Readlink(current)
-				if readErr != nil {
-					return "", fmt.Errorf("canonicalize protected tree %q: %w", current, evalErr)
-				}
-				if !filepath.IsAbs(target) {
-					target = filepath.Join(filepath.Dir(current), target)
-				}
-				for i := len(missing) - 1; i >= 0; i-- {
-					target = filepath.Join(target, missing[i])
-				}
-				return filepath.Clean(target), nil
-			}
-			return "", fmt.Errorf("canonicalize protected tree %q: %w", current, evalErr)
+			return appendSensitiveMissing(resolved, missing), nil
 		}
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
@@ -210,21 +219,28 @@ func canonicalSensitiveTree(path string) (string, error) {
 	}
 }
 
-// resolveSensitiveLink applies the long-standing policy for a link that is
-// itself the sensitive path: a resolvable link names its target, while a
-// dangling or cyclic one is judged by its literal text. A resolvable parent
-// link is handled by canonicalSensitiveTree before this point.
-func resolveSensitiveLink(path string) (string, error) {
-	resolved, err := filepath.EvalSymlinks(path)
-	if err == nil {
-		return filepath.Clean(resolved), nil
+// appendSensitiveMissing rebuilds the part of the path that does not exist yet.
+func appendSensitiveMissing(path string, missing []string) string {
+	for i := len(missing) - 1; i >= 0; i-- {
+		path = filepath.Join(path, missing[i])
 	}
-	target, readErr := os.Readlink(path)
-	if readErr != nil {
+	return filepath.Clean(path)
+}
+
+// resolveSensitiveLink returns the target text of a link that the kernel could
+// not resolve. Relative text is taken from the link's physical parent, not its
+// lexical parent, so a symlinked parent cannot change the answer.
+func resolveSensitiveLink(path string) (string, error) {
+	target, err := os.Readlink(path)
+	if err != nil {
 		return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)
 	}
 	if !filepath.IsAbs(target) {
-		target = filepath.Join(filepath.Dir(path), target)
+		parent, err := filepath.EvalSymlinks(filepath.Dir(path))
+		if err != nil {
+			return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)
+		}
+		target = filepath.Join(parent, target)
 	}
 	return filepath.Clean(target), nil
 }

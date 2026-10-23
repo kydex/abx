@@ -224,6 +224,94 @@ func TestCanonicalSensitiveTreeAppendsAcrossDanglingParentLink(t *testing.T) {
 	}
 }
 
+func TestResolveRejectsRelativeSensitiveLinkUnderSymlinkedParent(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	project := filepath.Join(root, "project")
+	data := filepath.Join(home, ".local", "share", "abx")
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(project, "gem"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(project, "gem"), filepath.Join(home, ".gem")); err != nil {
+		t.Fatal(err)
+	}
+	// The final link is relative to its physical parent, not to ~/.gem's
+	// lexical path in the home directory.
+	if err := os.Symlink("../credentials", filepath.Join(project, "gem", "credentials")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := canonicalSensitiveTree(filepath.Join(home, ".gem", "credentials"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(project, "credentials"); got != want {
+		t.Fatalf("canonical sensitive path = %q, want %q", got, want)
+	}
+	if _, err := ResolveProject(project, home, data); err == nil {
+		t.Fatal("accepted project that will receive the relative link target")
+	}
+}
+
+func TestResolveRejectsMissingSensitivePathUnderNestedSymlinkedParents(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	project := filepath.Join(root, "project")
+	data := filepath.Join(home, "data")
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(project, "local"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(project, "local"), filepath.Join(home, ".local")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../share", filepath.Join(project, "local", "share")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := canonicalSensitiveTree(filepath.Join(home, ".local", "share", "keyrings"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(project, "share", "keyrings"); got != want {
+		t.Fatalf("canonical sensitive path = %q, want %q", got, want)
+	}
+	if _, err := ResolveProject(project, home, data); err == nil {
+		t.Fatal("accepted project that will receive the missing keyrings path")
+	}
+}
+
+func TestCanonicalSensitiveTreeFollowsDanglingLinkChain(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	project := filepath.Join(root, "project")
+	store := filepath.Join(root, "store")
+	for _, dir := range []string{home, project, store} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(filepath.Join(store, "link"), filepath.Join(home, ".gem")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../project/gem", filepath.Join(store, "link")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := canonicalSensitiveTree(filepath.Join(home, ".gem", "credentials"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(project, "gem", "credentials"); got != want {
+		t.Fatalf("canonical sensitive path = %q, want %q", got, want)
+	}
+	if _, err := ResolveProject(project, home, filepath.Join(home, "data")); err == nil {
+		t.Fatal("accepted project at the end of a dangling sensitive-link chain")
+	}
+}
+
 func TestResolveRejectsDanglingSensitiveSymlinkTargetAncestors(t *testing.T) {
 	for _, relative := range []string{".config", ".ssh", ".gnupg", "dotfiles", ".aws", ".docker", ".kube", ".pki", ".cache", ".netrc", ".git-credentials", ".password-store", ".npmrc", ".gem/credentials", ".local/share/keyrings", ".mozilla", ".thunderbird"} {
 		for _, targetSuffix := range []string{"future", filepath.Join("missing", "future")} {

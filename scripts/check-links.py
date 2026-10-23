@@ -10,8 +10,9 @@ The scan follows the CommonMark shape rather than the raw text: code spans and
 backslash-escaped brackets are not links, a fenced block closes only with a
 fence of the same character, not shorter than the opening one, and with
 nothing after it, a destination may carry one balanced pair of
-parentheses and an optional title, and a reference definition may put its
-target on the next line. Indented code blocks are not recognized, so a
+parentheses and an optional title, backslash-escaped parentheses in a
+destination are unescaped, and a reference definition may put its target on
+the next line. Indented code blocks are not recognized, so a
 link-looking line inside one is scanned as text. The subset stops there:
 nested brackets in link text, destinations split across lines, fences inside
 block quotes or list items, and code spans split across lines are not modelled.
@@ -31,12 +32,17 @@ CODE_SPAN = re.compile(r"(`+).*?\1")
 SKIP = ("#", "http://", "https://", "mailto:", "tel:")
 
 
+def unescape_destination(value):
+    """Apply CommonMark backslash escapes to parentheses in a destination."""
+    return re.sub(r"\\([()])", r"\1", value)
+
+
 def link_target(raw):
     """Return the destination part of a link or reference definition."""
     raw = raw.strip()
     if raw.startswith("<") and ">" in raw:
-        return raw[1:raw.index(">")]
-    return raw.split()[0] if raw.split() else ""
+        return unescape_destination(raw[1:raw.index(">")])
+    return unescape_destination(raw.split()[0]) if raw.split() else ""
 
 
 def mask_escaped_brackets(line):

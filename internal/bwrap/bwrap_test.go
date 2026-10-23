@@ -393,9 +393,13 @@ func TestMinimumVersionStringMatchesNumeric(t *testing.T) {
 }
 
 func TestOpenUsesFixedBubblewrapPath(t *testing.T) {
-	// Open is open with the production path: on a host without a trusted
-	// bwrap it must fail naming that path, not something else.
-	if _, err := Open(context.Background()); err != nil && !strings.Contains(err.Error(), Path) {
+	// Open uses the production path. A missing or unsafe binary must fail
+	// naming that path. A too-old binary is a different, valid host state:
+	// the version probe names the version instead, as CI's packaged
+	// Bubblewrap 0.11.1 does. Only lookup/validation errors carry the path.
+	if _, err := Open(context.Background()); err != nil &&
+		strings.Contains(err.Error(), "Bubblewrap executable") &&
+		!strings.Contains(err.Error(), Path) {
 		t.Fatalf("Open error does not name %q: %v", Path, err)
 	}
 	// A dangling link must name the configured path too: the raw EvalSymlinks

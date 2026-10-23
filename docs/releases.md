@@ -32,7 +32,7 @@ Packaging runs after the tag exists (see *Publish a version*, step 5): the relea
 `make package` reads `internal/app/VERSION` and delegates to `scripts/package.sh`. The packaging script does not run tests and does not create a git tag. In a git work tree it requires:
 
 - the tag argument to match `internal/app/VERSION`;
-- a clean work tree with no untracked files, so the binary built from the working directory cannot differ from the source archive staged from the index;
+- a clean work tree with no untracked files and no ignored Go/build inputs, so the binary built from the working directory cannot differ from the source archive staged from tracked files;
 - `HEAD` to carry that exact tag, so the archive name cannot describe different contents;
 - every tracked top-level path to land in the source archive.
 

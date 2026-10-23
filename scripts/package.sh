@@ -80,6 +80,15 @@ if $in_git && [ "$mode" = release ]; then
         printf 'error: untracked files present; commit, stash, or remove them before packaging\n' >&2
         exit 2
     fi
+    # Ignored files are absent from the source archive but still present for
+    # `go build`, so an ignored Go file can make the binary and the source
+    # archive disagree. Refuse the shapes that can change the build.
+    ignored_build=$(git -C "$root" ls-files --others --ignored --exclude-standard -- \
+        '*.go' '*.s' '*.S' '*.c' '*.h' 'go.mod' 'go.sum' 'go.work')
+    if [ -n "$ignored_build" ]; then
+        printf 'error: ignored build inputs present; remove them before packaging:\n%s\n' "$ignored_build" >&2
+        exit 2
+    fi
 fi
 umask 022
 mkdir -p "$outdir"

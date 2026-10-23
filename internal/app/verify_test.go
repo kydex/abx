@@ -263,7 +263,7 @@ func TestVerificationCleanupAggregatesFailuresAndContinues(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = files.Close()
-	if err == nil || errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "replaced") || !strings.Contains(err.Error(), second) {
+	if err == nil || !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "replaced") || !strings.Contains(err.Error(), first) || !strings.Contains(err.Error(), second) {
 		t.Fatalf("lost cleanup failure: %v", err)
 	}
 	if _, err := os.Lstat(first); !errors.Is(err, os.ErrNotExist) {
@@ -393,7 +393,7 @@ func openStubTool(t *testing.T) func(context.Context) (*bwrap.Tool, error) {
 	return func(context.Context) (*bwrap.Tool, error) { return &bwrap.Tool{}, nil }
 }
 
-func TestVerificationCleanupOfAlreadyRemovedFileIsClean(t *testing.T) {
+func TestVerificationCleanupOfAlreadyRemovedFileFails(t *testing.T) {
 	home := t.TempDir()
 	files := &probeFiles{}
 	sentinel, err := files.create(home)
@@ -403,10 +403,34 @@ func TestVerificationCleanupOfAlreadyRemovedFileIsClean(t *testing.T) {
 	if err := os.Remove(sentinel); err != nil {
 		t.Fatal(err)
 	}
-	if err := files.Close(); err != nil {
-		t.Fatalf("a probe file that is already gone failed cleanup: %v", err)
+	err = files.Close()
+	if err == nil || !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), sentinel) {
+		t.Fatalf("a probe file that was already gone passed cleanup: %v", err)
 	}
 	if _, err := os.Lstat(sentinel); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("cleanup recreated or reported %s: %v", sentinel, err)
+	}
+}
+
+// A sentinel that disappears before cleanup makes the probe's hidden-file
+// check vacuous: the sandbox sees the path absent whether the host file was
+// hidden or removed. Cleanup must fail closed instead of reporting success.
+func TestVerificationFailsWhenSentinelDisappearsBeforeCleanup(t *testing.T) {
+	in := inputs(t, host.Run)
+	home := t.TempDir()
+	status, err := runVerify(context.Background(), in, home, nil,
+		bwrap.Stdio{Out: io.Discard, Err: io.Discard}, openStubTool(t),
+		func(_ context.Context, _ *bwrap.Tool, plan sandbox.Plan, _ func(string) (*os.File, error), _ bwrap.Stdio) (int, error) {
+			var expected probe.Expected
+			if err := json.Unmarshal([]byte(plan.Command()[2]), &expected); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Remove(expected.Sentinel); err != nil {
+				t.Fatal(err)
+			}
+			return 0, nil
+		})
+	if status != 1 || err == nil || !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "cleanup") {
+		t.Fatalf("missing sentinel = status %d, %v", status, err)
 	}
 }

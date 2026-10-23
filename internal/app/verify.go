@@ -185,11 +185,6 @@ func (p *probeFiles) Close() error {
 	for i := len(p.files) - 1; i >= 0; i-- {
 		f := p.files[i]
 		info, err := os.Lstat(f.path)
-		if errors.Is(err, os.ErrNotExist) {
-			// Already gone: the probe file needs no removal, and that is a
-			// clean outcome rather than a failed cleanup.
-			continue
-		}
 		if err == nil && f.info != nil && !os.SameFile(info, f.info) {
 			err = errors.New("temporary probe object was replaced")
 		}

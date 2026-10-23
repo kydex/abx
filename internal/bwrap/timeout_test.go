@@ -51,7 +51,7 @@ fi`)
 	if err == nil {
 		t.Fatal("expected cancellation error")
 	}
-	if strings.Contains(err.Error(), "timed out after") {
+	if !strings.Contains(err.Error(), "cancelled") || strings.Contains(err.Error(), "timed out after") {
 		t.Fatalf("cancellation reported as probe timeout: %q", err.Error())
 	}
 }

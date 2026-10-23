@@ -131,6 +131,32 @@ func TestDiscoverSystemSkipsDanglingCandidate(t *testing.T) {
 	}
 }
 
+func TestDiscoverSystemSkipsNotDirectoryCandidate(t *testing.T) {
+	root := t.TempDir()
+	for _, p := range []string{"usr", "etc"} {
+		if err := os.MkdirAll(filepath.Join(root, p), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	blocker := filepath.Join(root, "blocker")
+	if err := os.WriteFile(blocker, []byte("not a directory\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	notDirectory := filepath.Join(root, "etc", "resolv.conf")
+	if err := os.Symlink(filepath.Join(blocker, "child"), notDirectory); err != nil {
+		t.Fatal(err)
+	}
+	in := fixture(t)
+	if err := in.discoverSystem(root); err != nil {
+		t.Fatalf("non-directory candidate aborted discovery: %v", err)
+	}
+	for _, s := range in.System() {
+		if s.Path == notDirectory || s.Target == "/etc/resolv.conf" {
+			t.Fatalf("non-directory candidate was mounted: %+v", s)
+		}
+	}
+}
+
 func TestDiscoverSystemSkipsCyclicCandidate(t *testing.T) {
 	root := t.TempDir()
 	for _, p := range []string{"usr", "etc"} {

@@ -200,8 +200,12 @@ func TestSessionBoundsHostValueLength(t *testing.T) {
 		t.Fatalf("non-allowlisted oversized value refused: %v", err)
 	}
 	// Map iteration order must not decide which oversized name is reported.
-	_, err = Session("tester", "/usr/bin/bash", "/workspace", []string{"LC_CTYPE=" + over, "LANG=" + over})
-	if err == nil || !strings.Contains(err.Error(), `"LANG"`) {
-		t.Fatalf("oversized names reported non-deterministically: %v", err)
+	// One call would let a map-iteration regression pass about half the time;
+	// repeat so the check is not itself a coin toss.
+	for attempt := 0; attempt < 50; attempt++ {
+		_, err = Session("tester", "/usr/bin/bash", "/workspace", []string{"LC_CTYPE=" + over, "LANG=" + over})
+		if err == nil || !strings.Contains(err.Error(), `"LANG"`) {
+			t.Fatalf("attempt %d reported oversized names non-deterministically: %v", attempt, err)
+		}
 	}
 }

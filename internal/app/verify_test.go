@@ -216,6 +216,28 @@ func TestVerifyExpiredDeadlineReportsCancellation(t *testing.T) {
 	}
 }
 
+// The deadline also covers opening the tool. A deadline that expires there
+// must use the same wording as the post-revalidation timeout check.
+func TestVerifyToolOpenDeadlineReportsCancellation(t *testing.T) {
+	in := inputs(t, host.Run)
+	home := t.TempDir()
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	mustNotExecute := func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+		t.Error("execute ran after the deadline expired while opening the tool")
+		return 0, nil
+	}
+	status, err := runVerify(ctx, in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+		func(ctx context.Context) (*bwrap.Tool, error) { return nil, ctx.Err() }, mustNotExecute)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled") || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("tool-open deadline = status %d, %v", status, err)
+	}
+	entries, readErr := os.ReadDir(home)
+	if readErr != nil || len(entries) != 0 {
+		t.Fatalf("probe residue after tool-open timeout: %v, %v", entries, readErr)
+	}
+}
+
 func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
 	in := inputs(t, host.Run)
 	home := t.TempDir()

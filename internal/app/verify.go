@@ -35,6 +35,11 @@ func runVerify(
 	defer cancel()
 	tool, err := openTool(ctx)
 	if err != nil {
+		// The deadline covers opening the tool as well as the sandbox run.
+		// Report its expiry here, before the post-revalidation check below.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return 1, fmt.Errorf("execution cancelled: %w", ctxErr)
+		}
 		return 1, err
 	}
 	defer finishClose(&status, &result, tool.Close)
@@ -190,6 +195,9 @@ func (p *probeFiles) Close() error {
 		}
 		if err == nil {
 			err = os.Remove(f.path)
+			// Lstat saw the file, so ENOENT here means it disappeared between
+			// the two syscalls. That is the one cleanup race accepted as clean;
+			// a missing sentinel before Lstat still fails above.
 			if errors.Is(err, os.ErrNotExist) {
 				err = nil
 			}

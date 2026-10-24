@@ -117,14 +117,16 @@ func TestRejectSystemPolicyEscape(t *testing.T) {
 }
 
 func TestBuildRejectsUnknownMode(t *testing.T) {
-	_, err := Build(Input{
-		Home:    "/profile",
-		Project: "/project",
-		Mode:    Mode(99),
-		Command: []string{"/bin/true"},
-	})
-	if err == nil || err.Error() != "invalid session mode" {
-		t.Fatalf("unknown mode = %v", err)
+	for _, project := range []string{"", "/project"} {
+		_, err := Build(Input{
+			Home:    "/profile",
+			Project: project,
+			Mode:    Mode(99),
+			Command: []string{"/bin/true"},
+		})
+		if err == nil || err.Error() != "invalid session mode" {
+			t.Fatalf("unknown mode with project %q = %v", project, err)
+		}
 	}
 }
 

@@ -175,12 +175,6 @@ func build(in Input) (Plan, error) {
 	if !CleanPath(in.Home) || len(in.Command) == 0 || !CleanPath(in.Command[0]) {
 		return Plan{}, errors.New("invalid session inputs")
 	}
-	if (in.Mode == Shell && in.Project != "") || (in.Mode != Shell && !CleanPath(in.Project)) {
-		return Plan{}, errors.New("project does not match session mode")
-	}
-	if in.Skills != "" && !CleanPath(in.Skills) {
-		return Plan{}, errors.New("invalid skills source")
-	}
 	var kind planKind
 	switch in.Mode {
 	case Run:
@@ -191,6 +185,12 @@ func build(in Input) (Plan, error) {
 		kind = planWork
 	default:
 		return Plan{}, errors.New("invalid session mode")
+	}
+	if (in.Mode == Shell && in.Project != "") || (in.Mode != Shell && !CleanPath(in.Project)) {
+		return Plan{}, errors.New("project does not match session mode")
+	}
+	if in.Skills != "" && !CleanPath(in.Skills) {
+		return Plan{}, errors.New("invalid skills source")
 	}
 	p := Plan{
 		cwd:         "/home/agent",

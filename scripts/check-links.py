@@ -125,6 +125,9 @@ def main():
         for item in broken:
             print("  " + item, file=sys.stderr)
         return 1
+    if checked == 0:
+        print("error: no relative links found; the scanner or input tree is wrong", file=sys.stderr)
+        return 1
     print(f"links ok: {checked} relative targets in {len(files)} files")
     return 0
 

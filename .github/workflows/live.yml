@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   live:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

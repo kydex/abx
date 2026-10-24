@@ -399,11 +399,13 @@ func TestFinishProfileCreationKeepsOutcomesDistinct(t *testing.T) {
 		t.Fatalf("plain failure rewritten: %v", got)
 	}
 	if got := finishProfileCreation(base, true, false, nil); !errors.Is(got, base) ||
-		!strings.Contains(got.Error(), "profile creation incomplete") {
+		!strings.Contains(got.Error(), "profile creation incomplete") ||
+		strings.Contains(got.Error(), "profile was created") {
 		t.Fatalf("incomplete creation not named: %v", got)
 	}
 	if got := finishProfileCreation(nil, true, true, closeErr); !errors.Is(got, closeErr) ||
-		!strings.Contains(got.Error(), "profile was created, but") {
+		!strings.Contains(got.Error(), "profile was created, but") ||
+		strings.Contains(got.Error(), "incomplete") {
 		t.Fatalf("created profile reported as failed creation: %v", got)
 	}
 	if got := finishProfileCreation(base, false, false, closeErr); !errors.Is(got, base) ||

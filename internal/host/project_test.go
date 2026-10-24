@@ -255,6 +255,39 @@ func TestResolveRejectsRelativeSensitiveLinkUnderSymlinkedParent(t *testing.T) {
 	}
 }
 
+func TestResolveRejectsSensitiveSymlinkTargetBlockedByFileOrCycle(t *testing.T) {
+	for _, target := range []string{"file", "cycle"} {
+		t.Run(target, func(t *testing.T) {
+			root := t.TempDir()
+			home := filepath.Join(root, "home")
+			project := filepath.Join(root, "project")
+			data := filepath.Join(home, ".local", "share", "abx")
+			if err := os.MkdirAll(home, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Mkdir(project, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			gem := filepath.Join(project, "gem")
+			if target == "file" {
+				if err := os.WriteFile(gem, nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if err := os.Symlink("gem", gem); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.Symlink(gem, filepath.Join(home, ".gem")); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ResolveProject(project, home, data); err == nil {
+				t.Fatalf("accepted project holding the %s target of ~/.gem", target)
+			}
+		})
+	}
+}
+
 func TestResolveRejectsMissingSensitivePathUnderNestedSymlinkedParents(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")

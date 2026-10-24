@@ -210,9 +210,19 @@ func canonicalSensitiveTreeSeen(path string, seen map[string]bool) (string, erro
 			missing = append(missing, filepath.Base(current))
 			current = parent
 		case errors.Is(err, syscall.ELOOP), errors.Is(err, syscall.ENOTDIR):
-			// The path cannot exist as named; only its literal text is
-			// stable, and that is what the fail-closed rules compare against.
-			return clean, nil
+			// The path cannot exist as named, but its parent may still
+			// resolve through a symlink to a real target. Resolve that
+			// target so a sensitive tree that points into a project is
+			// still compared against the project, not its literal home
+			// path. If the parent itself has no resolvable target, this
+			// returns the literal path through the same cycle/dangling
+			// handling.
+			parent, parentErr := canonicalSensitiveTreeSeen(filepath.Dir(current), seen)
+			if parentErr != nil {
+				return "", parentErr
+			}
+			return appendSensitiveMissing(
+				filepath.Join(parent, filepath.Base(current)), missing), nil
 		default:
 			return "", fmt.Errorf("inspect protected tree %q: %w", current, err)
 		}

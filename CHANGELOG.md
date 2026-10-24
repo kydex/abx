@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: a sensitive home symlink whose target is a file or a link cycle is resolved before the project overlap check, so a writable project can no longer hide the future target of `~/.gem/credentials` or `~/.local/share/keyrings`.
 - The minimum supported Bubblewrap version is now 0.11.1, and the live CI suite uses the distribution package instead of building 0.12.0 from source.
 - Fixed: a sensitive home tree whose parent is a symlink (for example `~/.gem -> /store/gem`) is canonicalized before the overlap check, including relative and chained dangling links, so a project that will receive `~/.gem/credentials` is refused instead of being mounted writable.
 - Fixed: an absolute compatibility-link text is refused during discovery, matching the sandbox rule, instead of being reported as usable and failing at run; release packaging preserves root symlinks with `cp -P` rather than following them.

@@ -288,6 +288,32 @@ func TestResolveRejectsSensitiveSymlinkTargetBlockedByFileOrCycle(t *testing.T) 
 	}
 }
 
+func TestResolveRejectsSensitiveCycleThroughProject(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	project := filepath.Join(root, "project")
+	outside := filepath.Join(root, "outside")
+	for _, dir := range []string{home, project, outside} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	projectLink := filepath.Join(project, "link")
+	outsideLink := filepath.Join(outside, "b")
+	if err := os.Symlink(outsideLink, projectLink); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(projectLink, outsideLink); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(projectLink, filepath.Join(home, ".gem")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolveProject(project, home, filepath.Join(home, ".local", "share", "abx")); err == nil {
+		t.Fatal("accepted project reached by a sensitive-tree cycle")
+	}
+}
+
 func TestResolveRejectsMissingSensitivePathUnderNestedSymlinkedParents(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")

@@ -103,12 +103,14 @@ func ResolvePaths(account Account, xdgDataHome string) (Paths, error) {
 		return Paths{}, fmt.Errorf("data base %q is the filesystem root", canonicalBase)
 	}
 	for _, relative := range sensitiveHomeTrees {
-		sensitive, err := canonicalSensitiveTree(filepath.Join(filepath.Clean(account.Home), relative))
+		sensitive, err := canonicalSensitiveTreePaths(filepath.Join(filepath.Clean(account.Home), relative))
 		if err != nil {
 			return Paths{}, err
 		}
-		if within(canonicalBase, sensitive) {
-			return Paths{}, fmt.Errorf("data base %q overlaps sensitive home tree %q", canonicalBase, sensitive)
+		for _, path := range sensitive {
+			if within(canonicalBase, path) {
+				return Paths{}, fmt.Errorf("data base %q overlaps sensitive home tree %q", canonicalBase, path)
+			}
 		}
 	}
 	if err := checkDataBaseOwner(canonicalBase, account.UID); err != nil {

@@ -101,12 +101,14 @@ func resolveProject(cwd, realHome, dataRoot string, protectedRoots []string) (st
 		return "", fmt.Errorf("project %q is outside the real home %q", project, realHome)
 	}
 	for _, relative := range sensitiveHomeTrees {
-		sensitive, err := canonicalSensitiveTree(filepath.Join(realHome, relative))
+		sensitive, err := canonicalSensitiveTreePaths(filepath.Join(realHome, relative))
 		if err != nil {
 			return "", err
 		}
-		if overlaps(project, sensitive) {
-			return "", fmt.Errorf("project %q overlaps sensitive home tree %q", project, sensitive)
+		for _, path := range sensitive {
+			if overlaps(project, path) {
+				return "", fmt.Errorf("project %q overlaps sensitive home tree %q", project, path)
+			}
 		}
 	}
 	if overlaps(project, filepath.Clean(dataRoot)) {
@@ -160,13 +162,32 @@ func canonicalProtectedTree(path string) (string, error) {
 // resolves nowhere, and both callers compare against an already resolved path —
 // but the target is the stronger statement and it costs nothing.
 func canonicalSensitiveTree(path string) (string, error) {
-	return canonicalSensitiveTreeSeen(path, nil)
+	return canonicalSensitiveTreeSeen(path, nil, nil)
+}
+
+// canonicalSensitiveTreePaths returns every resolved target met while
+// resolving a sensitive home tree, not only the final one. A cycle can run
+// through a project in an earlier link, so comparing the final target alone
+// would let that project pass the overlap check.
+func canonicalSensitiveTreePaths(path string) ([]string, error) {
+	var targets []string
+	if _, err := canonicalSensitiveTreeSeen(path, nil, &targets); err != nil {
+		return nil, err
+	}
+	return targets, nil
 }
 
 // canonicalSensitiveTreeSeen carries the links already followed so a cycle
 // ends at the first repeated component. That link is compared by the target
-// its text names, matching the long-standing dangling-link policy.
-func canonicalSensitiveTreeSeen(path string, seen map[string]bool) (string, error) {
+// its text names, matching the long-standing dangling-link policy. When
+// targets is non-nil, every resolved target is appended to it.
+func canonicalSensitiveTreeSeen(path string, seen map[string]bool, targets *[]string) (string, error) {
+	record := func(target string) string {
+		if targets != nil {
+			*targets = append(*targets, target)
+		}
+		return target
+	}
 	clean := filepath.Clean(path)
 	missing := []string{}
 	current := clean
@@ -176,7 +197,7 @@ func canonicalSensitiveTreeSeen(path string, seen map[string]bool) (string, erro
 			if info.Mode()&os.ModeSymlink != 0 {
 				resolved, evalErr := filepath.EvalSymlinks(current)
 				if evalErr == nil {
-					return appendSensitiveMissing(resolved, missing), nil
+					return record(appendSensitiveMissing(resolved, missing)), nil
 				}
 				if seen == nil {
 					seen = make(map[string]bool)
@@ -186,20 +207,20 @@ func canonicalSensitiveTreeSeen(path string, seen map[string]bool) (string, erro
 					if linkErr != nil {
 						return "", linkErr
 					}
-					return appendSensitiveMissing(target, missing), nil
+					return record(appendSensitiveMissing(target, missing)), nil
 				}
 				seen[current] = true
 				target, linkErr := resolveSensitiveLink(current)
 				if linkErr != nil {
 					return "", linkErr
 				}
-				return canonicalSensitiveTreeSeen(appendSensitiveMissing(target, missing), seen)
+				return canonicalSensitiveTreeSeen(record(appendSensitiveMissing(target, missing)), seen, targets)
 			}
 			resolved, evalErr := filepath.EvalSymlinks(current)
 			if evalErr != nil {
 				return "", fmt.Errorf("canonicalize protected tree %q: %w", current, evalErr)
 			}
-			return appendSensitiveMissing(resolved, missing), nil
+			return record(appendSensitiveMissing(resolved, missing)), nil
 		}
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
@@ -217,12 +238,12 @@ func canonicalSensitiveTreeSeen(path string, seen map[string]bool) (string, erro
 			// path. If the parent itself has no resolvable target, this
 			// returns the literal path through the same cycle/dangling
 			// handling.
-			parent, parentErr := canonicalSensitiveTreeSeen(filepath.Dir(current), seen)
+			parent, parentErr := canonicalSensitiveTreeSeen(filepath.Dir(current), seen, targets)
 			if parentErr != nil {
 				return "", parentErr
 			}
-			return appendSensitiveMissing(
-				filepath.Join(parent, filepath.Base(current)), missing), nil
+			return record(appendSensitiveMissing(
+				filepath.Join(parent, filepath.Base(current)), missing)), nil
 		default:
 			return "", fmt.Errorf("inspect protected tree %q: %w", current, err)
 		}

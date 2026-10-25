@@ -10,7 +10,7 @@
 - Fixed: the relative-link checker no longer treats a scan that finds zero links as success; an empty language-link scan used to pass.
 - Fixed: a rejected over-long profile name no longer echoes the whole value to stderr; the length error carries a bounded prefix and the real byte count.
 - Fixed: a `verify` process that ends with an ordinary exit status no longer carries the `128 + signal` note; the note is printed only for statuses at or above 128.
-- Fixed: a `verify` deadline that expires after the pre-execution check but before the child starts is reported as `execution cancelled` instead of the raw context error.
+- Fixed: a `verify` deadline that expires after the pre-execution check, including while the inherited descriptors are walked before the child starts, is reported as `execution cancelled` instead of the raw context error.
 - Fixed: `SIGHUP` or `SIGINT` already ignored when ABX started (for example `SIGHUP` under `nohup`) is left ignored instead of being caught and forwarded, so `nohup abx run ... &` survives the terminal hangup rather than exiting with status 129; a normal launch still ends the session on `SIGHUP`. `SIGTERM` and `SIGQUIT` are always forwarded: the Go runtime handles them before ABX can see an inherited ignore.
 - Fixed: a sensitive home symlink whose target is a file or a link cycle is resolved before the project overlap check, so a writable project can no longer hide the future target of `~/.gem/credentials` or `~/.local/share/keyrings`.
 - The minimum supported Bubblewrap version is now 0.11.1, and the live CI suite uses the distribution package instead of building 0.12.0 from source.

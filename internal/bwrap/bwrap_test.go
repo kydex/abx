@@ -357,6 +357,19 @@ func TestExecuteDoesNotStartCancelledCommand(t *testing.T) {
 	}
 }
 
+func TestStartCommandDoesNotStartCancelled(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "started")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := startCommand(ctx, exec.Command(writeScript(t, "touch "+marker)))
+	if !errors.Is(err, context.Canceled) || !strings.Contains(err.Error(), "execution cancelled") {
+		t.Fatalf("start cancellation = %v", err)
+	}
+	if _, err := os.Stat(marker); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("command ran despite the cancelled context")
+	}
+}
+
 // versionOK is a test-only shorthand for the production version check.
 func versionOK(s string) bool { return validateVersion(s) == nil }
 

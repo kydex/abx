@@ -358,6 +358,19 @@ func Execute(ctx context.Context, t *Tool, plan sandbox.Plan, source func(string
 	return execute(ctx, cmd, stdio)
 }
 
+// startCommand closes the deadline window left by the descriptor walk. The
+// command context does not reject a Start that was already running; checking
+// here keeps a verify timeout on the promised cancellation text.
+func startCommand(ctx context.Context, cmd *exec.Cmd) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("execution cancelled: %w", err)
+	}
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start Bubblewrap: %w", err)
+	}
+	return nil
+}
+
 func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	// verify checks the deadline before Execute, but revalidation and
 	// translation run in between; name the expiry here as the guide promises
@@ -398,8 +411,8 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 		return 1, err
 	}
 	defer restoreFDs()
-	if err := cmd.Start(); err != nil {
-		return 1, fmt.Errorf("start Bubblewrap: %w", err)
+	if err := startCommand(ctx, cmd); err != nil {
+		return 1, err
 	}
 	done := make(chan struct{})
 	forwarded := make(chan error, 1)

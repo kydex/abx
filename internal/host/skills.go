@@ -42,6 +42,9 @@ func openBeneath(dirfd int, relative string) (int, error) {
 }
 
 func (in *Inputs) checkTargets() error {
+	// These paths are sandbox.SkillsPath with the /home/agent prefix. host
+	// does not import sandbox (the plan depends on host's shape, not the
+	// reverse), so the pair stays relative and sandbox owns the full path.
 	for _, relative := range []string{".agents", ".agents/skills"} {
 		fd, err := openBeneath(int(in.objects[in.home].file.Fd()), relative)
 		if errors.Is(err, unix.ENOENT) {

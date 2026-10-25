@@ -155,7 +155,7 @@ func observeHost(home string, input sandbox.Input) (probe.Expected, error) {
 		}
 	}
 	if e.Skills {
-		e.ReadOnly = append(e.ReadOnly, "/home/agent/.agents/skills")
+		e.ReadOnly = append(e.ReadOnly, sandbox.SkillsPath)
 	}
 	e.ReadOnly = append(e.ReadOnly, sandbox.ProbePath)
 	return e, nil

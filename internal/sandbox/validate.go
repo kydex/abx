@@ -125,12 +125,12 @@ func (p Plan) Validate() error {
 	index++
 
 	if p.expected.skillsSource != "" {
-		wantSkills := Mount{Kind: ReadOnly, Source: p.expected.skillsSource, Target: "/home/agent/.agents/skills"}
+		wantSkills := Mount{Kind: ReadOnly, Source: p.expected.skillsSource, Target: SkillsPath}
 		if index >= len(p.mounts) || p.mounts[index] != wantSkills {
 			return errors.New("invalid plan skills mount")
 		}
 		index++
-	} else if index < len(p.mounts) && p.mounts[index].Target == "/home/agent/.agents/skills" {
+	} else if index < len(p.mounts) && p.mounts[index].Target == SkillsPath {
 		return errors.New("unexpected plan skills mount")
 	}
 

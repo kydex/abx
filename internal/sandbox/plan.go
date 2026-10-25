@@ -234,7 +234,7 @@ func build(in Input) (Plan, error) {
 	p.mounts = append(p.mounts, privateMounts()...)
 	p.mounts = append(p.mounts, Mount{Kind: Writable, Source: in.Home, Target: "/home/agent"})
 	if in.Skills != "" {
-		p.mounts = append(p.mounts, Mount{Kind: ReadOnly, Source: in.Skills, Target: "/home/agent/.agents/skills"})
+		p.mounts = append(p.mounts, Mount{Kind: ReadOnly, Source: in.Skills, Target: SkillsPath})
 	}
 	if in.Mode != Shell {
 		p.cwd = "/workspace"
@@ -244,6 +244,11 @@ func build(in Input) (Plan, error) {
 }
 
 const ProbePath = "/abx-probe"
+
+// SkillsPath is the fixed mountpoint of the optional shared skills tree.
+// host/skills.go names the same object relative to the profile home because
+// host does not import sandbox.
+const SkillsPath = "/home/agent/.agents/skills"
 
 // BuildVerification adds exactly one fixed read-only executable to the run plan.
 func BuildVerification(in Input) (Plan, error) {

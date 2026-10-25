@@ -27,7 +27,7 @@ make live
 
 The [optional manual checks](manual-checks.md) are available for diagnosis or targeted investigation. They are not a requirement before every release and add no release gate.
 
-Packaging runs after the tag exists (see *Publish a version*, step 5): the release run requires the tag on `HEAD`. The same archives can be built and smoke-checked without a tag with `make package-check`, which builds into a temporary directory and runs the same checks; `make check` runs it, so a packaging regression fails on a branch or pull request instead of only at the tag. To check archives you already have, run `make package-smoke`.
+Packaging runs after the tag exists (see *Publish a version*, step 5): the release run requires the tag on `HEAD`. The same archives can be built and smoke-checked without a tag with `make package-check`, which builds into a temporary directory and runs the same archive and smoke checks; it skips the release-only tag, clean-tree, and CHANGELOG-heading gates. `make check` runs it, so a packaging regression fails on a branch or pull request instead of only at the tag. To check archives you already have, run `make package-smoke`.
 
 `make package` reads `internal/app/VERSION` and delegates to `scripts/package.sh`. The packaging script does not run tests and does not create a git tag. In a git work tree it requires:
 

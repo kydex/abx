@@ -359,8 +359,11 @@ func Execute(ctx context.Context, t *Tool, plan sandbox.Plan, source func(string
 }
 
 func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
+	// verify checks the deadline before Execute, but revalidation and
+	// translation run in between; name the expiry here as the guide promises
+	// instead of returning the raw context error.
 	if err := ctx.Err(); err != nil {
-		return 1, err
+		return 1, fmt.Errorf("execution cancelled: %w", err)
 	}
 	cmd.Env = []string{}
 	cmd.Dir = "/"

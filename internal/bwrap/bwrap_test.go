@@ -347,7 +347,7 @@ func TestExecuteDoesNotStartCancelledCommand(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	status, err := execute(ctx, exec.Command(writeScript(t, "touch "+marker)), Stdio{Out: io.Discard, Err: io.Discard})
-	if status != 1 || !errors.Is(err, context.Canceled) {
+	if status != 1 || !errors.Is(err, context.Canceled) || !strings.Contains(err.Error(), "execution cancelled") {
 		t.Fatalf("cancelled start = status %d, err %v", status, err)
 	}
 	if _, err := os.Stat(marker); !errors.Is(err, os.ErrNotExist) {

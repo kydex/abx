@@ -342,7 +342,7 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | Host tool missing inside `abx shell` | It may exist only in the host home; install it in the profile or system-wide |
 | `verify` reports `FAIL` or `UNAVAILABLE` | Read the failing observation; the sandbox did not complete verification successfully |
 | `must not run as root` / `must not run with effective privileges` / `must not run with effective group privileges` | Run as a regular user. ABX refuses an effective UID or GID that differs from the real one, which covers `sudo` and setuid/setgid binaries. `sg` and `newgrp` change the real and effective GID together and are not refused by this check. |
-| `login shell ... is outside read-only system mounts` or `... resolves outside ...` | The passwd shell and its resolved target must both live under `/usr`, `/bin`, `/sbin`, `/lib`, `/lib64`, or `/etc/alternatives`; `/snap`, Nix and `~/.local` shells are not visible inside the sandbox |
+| `login shell ... is outside read-only system mounts` or `... resolves outside ...` | The passwd shell and its resolved target must both live under `/usr`, `/bin`, `/sbin`, `/lib`, `/lib64`, `/etc/alternatives`, `/etc/ssl`, `/etc/ca-certificates`, `/etc/pki`, or `/etc/ld.so.conf.d`; `/snap`, Nix and `~/.local` shells are not visible inside the sandbox |
 | `data base ancestor ... is not owned by the invoking user` | The nearest existing ancestor of the ABX data base, default or `XDG_DATA_HOME`, must be yours; pick another base |
 
 ## Exit codes and signals

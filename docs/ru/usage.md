@@ -337,7 +337,7 @@ systemd-run --user --scope -p MemoryMax=8G -p CPUQuota=400% -- abx run opencode
 | Программа с хоста не видна внутри `abx shell` | Возможно, она установлена только в home хоста; установите её в профиль или системно |
 | `verify` показывает `FAIL` или `UNAVAILABLE` | Прочитайте ошибку конкретной проверки; полная проверка песочницы не завершилась успешно |
 | `must not run as root` / `must not run with effective privileges` / `must not run with effective group privileges` | Запускайте обычным пользователем. ABX отвергает эффективный UID или GID, отличающийся от реального; это покрывает `sudo` и setuid/setgid-бинарники. `sg` и `newgrp` меняют реальный и эффективный GID вместе, и эта проверка их не отвергает. |
-| `login shell ... is outside read-only system mounts` или `... resolves outside ...` | Оболочка из passwd и её разрешённая цель должны обе лежать в `/usr`, `/bin`, `/sbin`, `/lib`, `/lib64` или `/etc/alternatives`; оболочки в `/snap`, Nix и `~/.local` внутри песочницы не видны |
+| `login shell ... is outside read-only system mounts` или `... resolves outside ...` | Оболочка из passwd и её разрешённая цель должны обе лежать в `/usr`, `/bin`, `/sbin`, `/lib`, `/lib64`, `/etc/alternatives`, `/etc/ssl`, `/etc/ca-certificates`, `/etc/pki` или `/etc/ld.so.conf.d`; оболочки в `/snap`, Nix и `~/.local` внутри песочницы не видны |
 | `data base ancestor ... is not owned by the invoking user` | Ближайший существующий предок базы ABX — по умолчанию или выбранной через `XDG_DATA_HOME` — должен принадлежать вам; выберите другую базу |
 
 ## Коды завершения и сигналы

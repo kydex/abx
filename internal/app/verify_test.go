@@ -408,6 +408,28 @@ func TestVerifyRunCycle(t *testing.T) {
 			t.Fatalf("resolver run = status %d, %v", status, err)
 		}
 	})
+	t.Run("host source resolver lends the retained file", func(t *testing.T) {
+		in := inputs(t, host.Run)
+		home := t.TempDir()
+		status, err := runVerify(context.Background(), in, home, nil,
+			bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+			openStubTool(t),
+			func(_ context.Context, _ *bwrap.Tool, _ sandbox.Plan, source func(string) (*os.File, error), _ bwrap.Stdio) (int, error) {
+				f, err := source(in.Home())
+				if err != nil {
+					return 0, err
+				}
+				got, statErr := f.Stat()
+				want, wantErr := os.Stat(in.Home())
+				if statErr != nil || wantErr != nil || !os.SameFile(got, want) {
+					t.Errorf("host source resolver returned a different file: %v, %v", statErr, wantErr)
+				}
+				return 0, nil
+			})
+		if err != nil || status != 0 {
+			t.Fatalf("host source resolver run = status %d, %v", status, err)
+		}
+	})
 	t.Run("tool failure never reaches execute", func(t *testing.T) {
 		in := inputs(t, host.Run)
 		home := t.TempDir()

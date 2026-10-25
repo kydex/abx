@@ -59,11 +59,13 @@ licenses-check:
 	fi; \
 	echo "THIRD_PARTY_LICENSES matches the build's module list"
 
+# Instrument every package in every test binary: a per-package profile reports
+# code exercised by another package's tests as a blind spot.
 coverage-check:
 	@set -eu; \
 	profile=$$(mktemp); \
 	trap 'rm -f "$$profile"' EXIT HUP INT TERM; \
-	go test -race -count=1 ./... -coverprofile="$$profile"; \
+	go test -race -count=1 ./... -coverpkg=./... -coverprofile="$$profile"; \
 	total=$$(go tool cover -func="$$profile" | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v got="$$total" -v min="$(COVERAGE_MIN)" 'BEGIN { if (got + 0 < min + 0) { printf "coverage %.1f%% is below minimum %.1f%%\n", got, min; exit 1 } printf "coverage %.1f%% (minimum %.1f%%)\n", got, min }'
 

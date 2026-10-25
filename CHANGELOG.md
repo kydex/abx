@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `make coverage-check` now instruments every package in every test binary (`-coverpkg=./...`), so cross-package coverage counts; the aggregate reads 92.5% and the 74.0% floor is unchanged.
 - The guides now match the code on the mutation sweep's compile check and `TEST_FAILED` pattern, the kernel's per-argument limit after `run --`, the full set of forwarded environment values bounded to 64 KiB, the tenth function past 60 lines, the rechecked Bubblewrap mode bits, and the real-directory compatibility branch; the Russian security sentence about a compromised passwd database is grammatical again. (English and Russian.)
 - Fixed: the relative-link checker no longer treats a scan that finds zero links as success; an empty language-link scan used to pass.
 - Fixed: a rejected over-long profile name no longer echoes the whole value to stderr; the length error carries a bounded prefix and the real byte count.

@@ -189,6 +189,15 @@ func TestVisibleRootsCoverDiscoverableLayout(t *testing.T) {
 			t.Errorf("mountable system root %q is not visible to login shells", root)
 		}
 	}
+	for _, name := range hostSystemLayout.etc {
+		info, err := os.Stat("/etc/" + name)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		if !visibleInSandbox("/etc/" + name) {
+			t.Errorf("mountable /etc directory %q is not visible to login shells", name)
+		}
+	}
 }
 
 func TestSkillsRejectIntermediateSymlinks(t *testing.T) {

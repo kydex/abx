@@ -381,10 +381,12 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	// while a previous one is still being forwarded can drop a duplicate,
 	// since os/signal discards into a full buffer instead of blocking.
 	//
-	// A signal the process already ignores stays ignored: Notify would
-	// replace the inherited SIG_IGN, so `nohup abx run ... &` (or a shell's
-	// `trap '' HUP`) would die from the hangup it asked to ignore. The
-	// disposition survives exec, so the child keeps ignoring it too.
+	// SIGHUP and SIGINT are the signals for which Go preserves an inherited
+	// SIG_IGN. Notify would replace that disposition, so `nohup abx run ... &`
+	// (or a shell's `trap '' HUP`) would die from the hangup it asked to
+	// ignore. For SIGTERM and SIGQUIT the Go runtime installs its own handler
+	// before main, so an inherited SIG_IGN is no longer visible here; those
+	// two are always subscribed and forwarded.
 	for _, s := range []os.Signal{os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT} {
 		if !signal.Ignored(s) {
 			signal.Notify(signals, s)

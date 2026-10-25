@@ -37,7 +37,7 @@ func runVerify(
 	if err != nil {
 		// The deadline covers opening the tool as well as the sandbox run.
 		// Report its expiry here, before the post-revalidation check below.
-		if ctxErr := ctx.Err(); ctxErr != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil && errors.Is(err, ctxErr) {
 			return 1, fmt.Errorf("execution cancelled: %w", ctxErr)
 		}
 		return 1, err

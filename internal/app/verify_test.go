@@ -238,6 +238,23 @@ func TestVerifyToolOpenDeadlineReportsCancellation(t *testing.T) {
 	}
 }
 
+func TestVerifyToolOpenFailureKeepsRealErrorAtDeadline(t *testing.T) {
+	in := inputs(t, host.Run)
+	home := t.TempDir()
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	want := errors.New("tool binary is unsafe")
+	mustNotExecute := func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+		t.Error("execute ran after the tool-open failure")
+		return 0, nil
+	}
+	status, err := runVerify(ctx, in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+		func(context.Context) (*bwrap.Tool, error) { return nil, want }, mustNotExecute)
+	if status != 1 || !errors.Is(err, want) || strings.Contains(err.Error(), "execution cancelled") {
+		t.Fatalf("tool-open failure = status %d, %v", status, err)
+	}
+}
+
 func TestVerifyToolFailureDoesNotCreateProbeFiles(t *testing.T) {
 	in := inputs(t, host.Run)
 	home := t.TempDir()

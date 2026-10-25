@@ -49,8 +49,14 @@ func TestValidateNameMessages(t *testing.T) {
 	}
 	long := strings.Repeat("a", 65)
 	err := ValidateName(long)
-	if err == nil || !strings.Contains(err.Error(), long) || !strings.Contains(err.Error(), "1-64") {
-		t.Fatalf("length error does not name the value and the rule: %v", err)
+	if err == nil || !strings.Contains(err.Error(), long) || !strings.Contains(err.Error(), "65 bytes") || !strings.Contains(err.Error(), "1-64") {
+		t.Fatalf("length error does not name the value, its length and the rule: %v", err)
+	}
+	huge := strings.Repeat("a", 100_000)
+	err = ValidateName(huge)
+	if err == nil || len(err.Error()) > 400 || !strings.Contains(err.Error(), "100000 bytes") ||
+		!strings.Contains(err.Error(), "1-64") || !strings.Contains(err.Error(), strings.Repeat("a", maxEchoNameBytes)+"...") {
+		t.Fatalf("length error is not bounded or misses the length: %v", err)
 	}
 }
 

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: a rejected over-long profile name no longer echoes the whole value to stderr; the length error carries a bounded prefix and the real byte count.
 - Fixed: a `verify` process that ends with an ordinary exit status no longer carries the `128 + signal` note; the note is printed only for statuses at or above 128.
 - Fixed: a `verify` deadline that expires after the pre-execution check but before the child starts is reported as `execution cancelled` instead of the raw context error.
 - Fixed: a signal already ignored when ABX started (for example `SIGHUP` under `nohup`) is left ignored instead of being caught and forwarded, so `nohup abx run ... &` survives the terminal hangup rather than exiting with status 129; a normal launch still ends the session on `SIGHUP`.

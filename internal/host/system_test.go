@@ -189,6 +189,14 @@ func TestVisibleRootsCoverDiscoverableLayout(t *testing.T) {
 			t.Errorf("mountable system root %q is not visible to login shells", root)
 		}
 	}
+	// These optional /etc directories may be absent on the test host. Their
+	// entries in the static allowlist must be checked even when the real
+	// directory is missing, so /etc/pki on a minimal CI image is still pinned.
+	for _, name := range []string{"ssl", "ca-certificates", "pki", "ld.so.conf.d"} {
+		if !visibleInSandbox("/etc/" + name) {
+			t.Errorf("optional /etc root %q is not visible to login shells", name)
+		}
+	}
 	for _, name := range hostSystemLayout.etc {
 		info, err := os.Stat("/etc/" + name)
 		if err != nil || !info.IsDir() {

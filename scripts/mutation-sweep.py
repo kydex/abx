@@ -80,6 +80,9 @@ import threading
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
+# cmd/abx/main.go is not swept: it only wires stdio and delegates to app.Run,
+# so it has no guard to neutralise; the app and cli suites cover the delegated
+# behaviour.
 FILES = [
     "internal/host/project.go",
     "internal/host/inputs.go",

@@ -342,7 +342,7 @@ func TestVerifyRunCycle(t *testing.T) {
 			t.Errorf("sentinel left behind: %d entries, %v", len(entries), readErr)
 		}
 	})
-	t.Run("non-zero exit status is a failure", func(t *testing.T) {
+	t.Run("non-zero exit status is a failure without a signal note", func(t *testing.T) {
 		in := inputs(t, host.Run)
 		home := t.TempDir()
 		status, err := runVerify(context.Background(), in, home, nil,
@@ -351,8 +351,21 @@ func TestVerifyRunCycle(t *testing.T) {
 			func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
 				return 3, nil
 			})
-		if err == nil || status != 1 || !strings.Contains(err.Error(), "status 3") {
+		if err == nil || status != 1 || !strings.Contains(err.Error(), "status 3") || strings.Contains(err.Error(), "128 plus") {
 			t.Fatalf("non-zero payload status = %d, %v", status, err)
+		}
+	})
+	t.Run("signal status carries the signal note", func(t *testing.T) {
+		in := inputs(t, host.Run)
+		home := t.TempDir()
+		status, err := runVerify(context.Background(), in, home, nil,
+			bwrap.Stdio{Out: io.Discard, Err: io.Discard},
+			openStubTool(t),
+			func(context.Context, *bwrap.Tool, sandbox.Plan, func(string) (*os.File, error), bwrap.Stdio) (int, error) {
+				return 137, nil
+			})
+		if err == nil || status != 1 || !strings.Contains(err.Error(), "status 137") || !strings.Contains(err.Error(), "128 plus") {
+			t.Fatalf("signal payload status = %d, %v", status, err)
 		}
 	})
 	t.Run("execute error is a failure and leaves nothing behind", func(t *testing.T) {

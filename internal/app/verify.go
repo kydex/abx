@@ -92,9 +92,13 @@ func runVerify(
 	}
 	if status != 0 {
 		// Execute reports a child killed by a signal as 128 plus the signal
-		// number, not as an exit code. Saying "exited with status" would send
-		// a reader looking for exit code 137, which never existed.
-		return 1, fmt.Errorf("verification process ended with status %d, where a kill by signal counts as 128 plus its signal number", status)
+		// number, not as an exit code. The note only applies to those
+		// statuses; an ordinary exit 1 is the common FAIL result and must not
+		// send the reader looking for a signal.
+		if status >= 128 {
+			return 1, fmt.Errorf("verification process ended with status %d, where a kill by signal counts as 128 plus its signal number", status)
+		}
+		return 1, fmt.Errorf("verification process ended with status %d", status)
 	}
 	// Final success is printed only after outer resource and temporary-file cleanup.
 	return 0, nil

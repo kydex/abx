@@ -154,10 +154,13 @@ func canonicalizeExisting(path string) (string, error) {
 	}
 }
 
-// checkHomeTrust pins both preconditions for the account home: no local user
-// may write it, and it must belong to the invoking user. The home is named by
-// the passwd database and is the default storage base and the location of the
-// verify sentinel; the sandbox home is always the selected profile. A home
+// checkHomeTrust pins both preconditions for the account home: it must belong
+// to the invoking user and must not be world-writable. Group-writable homes are
+// accepted under the same team policy as the data-base ancestors; "no local
+// user may write it" would promise more than this check enforces. The home is
+// named by the passwd database and is the default storage base and the
+// location of the verify sentinel; the sandbox home is always the selected
+// profile. A home
 // owned by somebody else is one somebody else can replace. Containers that
 // hand the process a root-owned home are no longer supported: ABX is for real
 // hosts, where the home belongs to the invoking user.

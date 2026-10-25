@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the relative-link checker follows CommonMark's backtick-fence info rule, resolves root-relative targets against the scanned tree rather than the host, and requires at least one link in each scanned language group.
 - Fixed: a login shell under `/etc/ssl`, `/etc/ca-certificates`, `/etc/pki`, or `/etc/ld.so.conf.d` is now recognized as visible in the sandbox; the troubleshooting table lists the same roots.
 - Fixed: a sensitive home tree reached through a symlink cycle that passes through a project is now rejected; checking only the final target missed the project and could redirect the tree after the check.
 - `make coverage-check` now instruments every package in every test binary (`-coverpkg=./...`), so cross-package coverage counts; the aggregate reads 92.5% and the 74.0% floor is unchanged.

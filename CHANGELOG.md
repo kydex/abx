@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the relative-link checker no longer treats a scan that finds zero links as success; an empty language-link scan used to pass.
 - Fixed: a rejected over-long profile name no longer echoes the whole value to stderr; the length error carries a bounded prefix and the real byte count.
 - Fixed: a `verify` process that ends with an ordinary exit status no longer carries the `128 + signal` note; the note is printed only for statuses at or above 128.
 - Fixed: a `verify` deadline that expires after the pre-execution check but before the child starts is reported as `execution cancelled` instead of the raw context error.

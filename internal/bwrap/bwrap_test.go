@@ -690,51 +690,84 @@ while :; do sleep 1; done`)
 	}
 }
 
-// A signal ignored by the launcher's parent (nohup's SIGHUP) must stay
-// ignored: Notify would install a handler, forward the signal to the monitor,
-// and turn a detached session into an exit with 128+signal. The script runs in
-// the same process group; sending SIGHUP to ourselves must not reach it.
-func TestIgnoredSignalStaysIgnored(t *testing.T) {
-	signal.Ignore(syscall.SIGHUP)
-	defer signal.Reset(syscall.SIGHUP)
+// SIGHUP and SIGINT are the signals Go preserves an inherited SIG_IGN for.
+// The helper process ignores one before execute, so the parent test process
+// never changes its own signal disposition; otherwise a later TestForwardsSignals
+// run inherits SIG_IGN and fails under -count=2 or -shuffle.
+func TestInheritedIgnoredSignalsStayIgnored(t *testing.T) {
+	if os.Getenv("ABX_IGNORED_SIGNAL_HELPER") == "1" {
+		var sig syscall.Signal
+		switch os.Getenv("ABX_IGNORED_SIGNAL") {
+		case "HUP":
+			sig = syscall.SIGHUP
+		case "INT":
+			sig = syscall.SIGINT
+		default:
+			t.Fatalf("unknown ignored signal %q", os.Getenv("ABX_IGNORED_SIGNAL"))
+		}
+		signal.Ignore(sig)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		status, err := execute(ctx, exec.CommandContext(ctx, os.Getenv("ABX_SIGNAL_SCRIPT"), os.Getenv("ABX_SIGNAL_READY"), os.Getenv("ABX_SIGNAL_RESULT")), Stdio{})
+		if err != nil || status != 0 {
+			t.Fatalf("ignored signal helper = %d, %v", status, err)
+		}
+		return
+	}
 
-	dir := t.TempDir()
-	result := filepath.Join(dir, "result")
-	ready := filepath.Join(dir, "ready")
-	script := writeScript(t, `printf ready > "$1"
+	for _, tt := range []struct {
+		name string
+		env  string
+		sig  syscall.Signal
+	}{
+		{"hangup", "HUP", syscall.SIGHUP},
+		{"interrupt", "INT", syscall.SIGINT},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			result := filepath.Join(dir, "result")
+			ready := filepath.Join(dir, "ready")
+			script := writeScript(t, `printf ready > "$1"
 sleep 0.5
 printf alive > "$2"`)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	done := make(chan struct{})
-	var status int
-	var err error
-	go func() {
-		status, err = execute(ctx, exec.CommandContext(ctx, script, ready, result), Stdio{})
-		close(done)
-	}()
-	deadline := time.Now().Add(3 * time.Second)
-	for {
-		if _, statErr := os.Stat(ready); statErr == nil {
-			break
-		} else if !os.IsNotExist(statErr) {
-			t.Fatal(statErr)
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("script did not become ready")
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if err := syscall.Kill(os.Getpid(), syscall.SIGHUP); err != nil {
-		t.Fatal(err)
-	}
-	<-done
-	if err != nil || status != 0 {
-		t.Fatalf("execute = %d, %v", status, err)
-	}
-	data, readErr := os.ReadFile(result)
-	if readErr != nil || string(data) != "alive" {
-		t.Fatalf("ignored signal result = %q, %v", data, readErr)
+			helper := exec.Command(os.Args[0], "-test.run=^TestInheritedIgnoredSignalsStayIgnored$")
+			helper.Env = append(os.Environ(),
+				"ABX_IGNORED_SIGNAL_HELPER=1",
+				"ABX_IGNORED_SIGNAL="+tt.env,
+				"ABX_SIGNAL_SCRIPT="+script,
+				"ABX_SIGNAL_READY="+ready,
+				"ABX_SIGNAL_RESULT="+result,
+			)
+			if err := helper.Start(); err != nil {
+				t.Fatal(err)
+			}
+			deadline := time.Now().Add(3 * time.Second)
+			for {
+				if _, err := os.Stat(ready); err == nil {
+					break
+				} else if !os.IsNotExist(err) {
+					t.Fatal(err)
+				}
+				if time.Now().After(deadline) {
+					_ = helper.Process.Kill()
+					_ = helper.Wait()
+					t.Fatal("ignored-signal helper did not become ready")
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			if err := helper.Process.Signal(tt.sig); err != nil {
+				_ = helper.Process.Kill()
+				_ = helper.Wait()
+				t.Fatal(err)
+			}
+			if err := helper.Wait(); err != nil {
+				t.Fatalf("ignored-signal helper: %v", err)
+			}
+			data, readErr := os.ReadFile(result)
+			if readErr != nil || string(data) != "alive" {
+				t.Fatalf("ignored signal result = %q, %v", data, readErr)
+			}
+		})
 	}
 }
 

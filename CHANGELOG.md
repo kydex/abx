@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.29
 
 - Fixed: the relative-link checker follows CommonMark's backtick-fence info rule, resolves root-relative targets against the scanned tree rather than the host, and requires at least one link in each scanned language group.
 - Fixed: a login shell under `/etc/ssl`, `/etc/ca-certificates`, `/etc/pki`, or `/etc/ld.so.conf.d` is now recognized as visible in the sandbox; the troubleshooting table lists the same roots.

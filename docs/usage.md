@@ -181,7 +181,7 @@ abx run opencode -- --version
 abx run opencode -- "argument with spaces"
 ```
 
-ABX does not pass them through an additional shell.
+ABX does not pass them through an additional shell. The kernel bounds a single argument to 32 pages -- typically 128 KiB on a 4 KiB-page host. A longer value fails at exec with `argument list too long`; ABX does not pre-check the run arguments.
 
 ## Project shell: work
 

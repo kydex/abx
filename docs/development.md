@@ -76,7 +76,7 @@ scripts/mutation-sweep.py internal/host/account.go
 
 Read the skip report it prints before trusting the numbers. A skipped test does not fail, so a guard whose only test skips looks exactly like an uncovered guard. That is not hypothetical: until the root-ownership requirement on `/etc/passwd` was removed on 12 October, the resolve tests skipped on every container, and the guards below them were reported as uncovered although CI and an ordinary host ran them. The script prints the count and names so a survival list is never mistaken for a property of the code rather than of the machine.
 
-Two distinctions the output depends on. A build or vet failure is *not applicable*, not a kill: the guard cannot be neutered that way. And the classification reads the output text, not the exit code, because `go test` exits non-zero both for a build failure and for a failing test. A word in a test message can change the measurement — `unreachable` matches the build-failure pattern.
+Two distinctions the output depends on. A build or vet failure is *not applicable*, not a kill: the guard cannot be neutered that way, and the script decides this by compiling the package on its own, never by searching the output for error words. And a failing test is recognized by the `TEST_FAILED` pattern, not by the exit code, because `go test` exits non-zero for both a build failure and a failing test. A test message that itself matches the pattern can still change the measurement.
 
 Two limits of the number. Each guard is one whole `if` condition: operands of `&&` and `||` are not measured separately, and a `switch` statement or a conditional `for` loop is not a guard by itself — only the `if` statements inside it are measured. And `survived` covers three different situations — a guard no test exercises, a guard whose removal a neighbouring check makes invisible, and a guard whose only test skipped on this machine. Read the survivor list line by line before treating it as debt.
 
@@ -128,10 +128,11 @@ here so nobody starts the same discussion from scratch.
 
 - `Plan.Validate()` stays one long function. It sits between a built plan and the
   Bubblewrap arguments; splitting it risks that barrier to buy readability.
-  Nine more production functions run past 60 lines -- `cli.Parse`,
+  Ten more production functions run past 60 lines -- `cli.Parse`,
   `Inputs.discoverLayout`, `bwrap.open`, `sandbox.build`, `app.runVerify`,
-  `probe.check`, `app.runProfiles`, `host.resolveAgent`, and
-  `host.resolveProject` -- but each is a linear sequence (one switch, loops,
+  `probe.check`, `app.runProfiles`, `host.resolveAgent`,
+  `host.resolveProject`, and `host.canonicalSensitiveTreeSeen` -- but each is
+  a linear sequence (one switch, loops,
   or ordered checks), and splitting would move state between the parts for no
   gain.
 - Sixteen identifiers are exported although production code outside their own package does not use them:
@@ -149,7 +150,10 @@ here so nobody starts the same discussion from scratch.
   correct where it was checked. Part of the gap is reachable through existing
   seams -- the `stdio` parameter and `brokenWriter` already pin a failed
   inspection write -- while the rest needs a real Bubblewrap launch or test
-  seams that the project's own rules discourage. The mutation sweep behind this
+  seams that the project's own rules discourage. The two explicit app-level
+  `Revalidate` calls, in `executeSession` and `runVerify`, are in that gap:
+  removing them, or ignoring their error, leaves the suite green because
+  `Prepare` starts with its own revalidation. The mutation sweep behind this
   list measured the size of the gap, but its numbers are historical. The tenth
   full run measured 304 guards killed and 128 survived of 432, none not
   applicable; at that run `internal/app` tests caught 40 of the package's 77

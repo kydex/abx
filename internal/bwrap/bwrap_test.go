@@ -131,15 +131,17 @@ func TestOptionLikeCommandStaysAfterDoubleDash(t *testing.T) {
 
 // Compatibility links reach Bubblewrap as symlink creation, not as borrowed
 // descriptors: the pair must keep the link text and target, must not consume a
-// child FD, and must be created before the bind it resolves through.
+// child FD, and must survive in the production order, where the /usr bind
+// comes first. Bubblewrap resolves the link text on access, not when it
+// creates the symlink, so neither order is an invariant.
 func TestTranslateLendsCompatibilityLinksAsSymlinkArguments(t *testing.T) {
 	p, err := sandbox.Build(sandbox.Input{
 		Home:    "/profile",
 		Project: "/project",
 		Mode:    sandbox.Run,
 		System: []sandbox.Mount{
-			{Kind: sandbox.Symlink, Source: "usr/bin", Target: "/bin"},
 			{Kind: sandbox.ReadOnly, Source: "/usr", Target: "/usr"},
+			{Kind: sandbox.Symlink, Source: "usr/bin", Target: "/bin"},
 		},
 		Environment: []sandbox.Entry{{Name: "PWD", Value: "/workspace"}},
 		Command:     []string{"/home/agent/bin/agent"},
@@ -167,8 +169,8 @@ func TestTranslateLendsCompatibilityLinksAsSymlinkArguments(t *testing.T) {
 	if link < 0 || link+2 >= len(args) || args[link+1] != "usr/bin" || args[link+2] != "/bin" {
 		t.Fatalf("symlink arguments = %q", args)
 	}
-	if bind := slices.Index(args, "--ro-bind-fd"); bind < link {
-		t.Fatalf("symlink must precede the bind it resolves through: %q", args)
+	if bind := slices.Index(args, "--ro-bind-fd"); bind < 0 {
+		t.Fatalf("bind arguments = %q", args)
 	}
 }
 

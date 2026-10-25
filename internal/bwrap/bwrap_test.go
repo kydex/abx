@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -684,6 +685,54 @@ while :; do sleep 1; done`)
 				t.Fatalf("forwarding result = %q, %v", data, err)
 			}
 		})
+	}
+}
+
+// A signal ignored by the launcher's parent (nohup's SIGHUP) must stay
+// ignored: Notify would install a handler, forward the signal to the monitor,
+// and turn a detached session into an exit with 128+signal. The script runs in
+// the same process group; sending SIGHUP to ourselves must not reach it.
+func TestIgnoredSignalStaysIgnored(t *testing.T) {
+	signal.Ignore(syscall.SIGHUP)
+	defer signal.Reset(syscall.SIGHUP)
+
+	dir := t.TempDir()
+	result := filepath.Join(dir, "result")
+	ready := filepath.Join(dir, "ready")
+	script := writeScript(t, `printf ready > "$1"
+sleep 0.5
+printf alive > "$2"`)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	done := make(chan struct{})
+	var status int
+	var err error
+	go func() {
+		status, err = execute(ctx, exec.CommandContext(ctx, script, ready, result), Stdio{})
+		close(done)
+	}()
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		if _, statErr := os.Stat(ready); statErr == nil {
+			break
+		} else if !os.IsNotExist(statErr) {
+			t.Fatal(statErr)
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("script did not become ready")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err := syscall.Kill(os.Getpid(), syscall.SIGHUP); err != nil {
+		t.Fatal(err)
+	}
+	<-done
+	if err != nil || status != 0 {
+		t.Fatalf("execute = %d, %v", status, err)
+	}
+	data, readErr := os.ReadFile(result)
+	if readErr != nil || string(data) != "alive" {
+		t.Fatalf("ignored signal result = %q, %v", data, readErr)
 	}
 }
 

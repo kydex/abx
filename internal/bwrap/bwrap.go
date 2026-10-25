@@ -377,7 +377,16 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	// Buffer of 4 holds one of each subscribed signal; a burst of repeats
 	// while a previous one is still being forwarded can drop a duplicate,
 	// since os/signal discards into a full buffer instead of blocking.
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
+	//
+	// A signal the process already ignores stays ignored: Notify would
+	// replace the inherited SIG_IGN, so `nohup abx run ... &` (or a shell's
+	// `trap '' HUP`) would die from the hangup it asked to ignore. The
+	// disposition survives exec, so the child keeps ignoring it too.
+	for _, s := range []os.Signal{os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT} {
+		if !signal.Ignored(s) {
+			signal.Notify(signals, s)
+		}
+	}
 	defer signal.Stop(signals)
 	restoreFDs, err := markInheritedFDsCloseOnExec()
 	if err != nil {

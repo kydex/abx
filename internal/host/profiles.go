@@ -157,7 +157,11 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 	profileCreated := false
 	parentPath := "/"
 	defer func() {
-		result = finishProfileCreation(result, created, profileCreated, parent.Close())
+		closeErr := parent.Close()
+		if closeErr != nil {
+			closeErr = fmt.Errorf("close profile directory %q: %w", parentPath, closeErr)
+		}
+		result = finishProfileCreation(result, created, profileCreated, closeErr)
 	}()
 	components := strings.Split(strings.TrimPrefix(paths.Root, "/"), "/")
 	components = append(components, "profiles", name)
@@ -181,10 +185,10 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 		}
 		closeErr := parent.Close()
 		parent = next
-		if closeErr != nil {
-			return "", fmt.Errorf("close profile directory %q: %w", parentPath, closeErr)
-		}
 		parentPath = current
+		if closeErr != nil {
+			return "", fmt.Errorf("close profile directory %q: %w", filepath.Dir(current), closeErr)
+		}
 	}
 	return filepath.Join(paths.Profiles, name), nil
 }

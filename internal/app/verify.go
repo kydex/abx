@@ -123,7 +123,7 @@ func verifyInput(expected probe.Expected) ([]byte, error) {
 
 func observeHost(home string, input sandbox.Input) (probe.Expected, error) {
 	e := probe.Expected{Home: home, Objects: map[string]probe.Identity{}, Skills: input.Skills != ""}
-	for _, p := range []string{home, "/tmp", "/var/tmp", "/run", "/dev"} {
+	for _, p := range []string{home, "/tmp", "/var/tmp", "/run", "/dev", "/proc", "/dev/shm"} {
 		id, err := probe.Identify(p)
 		if err != nil {
 			return e, err

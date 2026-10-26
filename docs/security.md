@@ -71,7 +71,7 @@ The shared path is optional. ABX checks the relevant directories and rejects uns
 
 ## Verification
 
-`abx verify <profile>` launches the same sandbox backend used for normal execution, with one additional fixed read-only probe executable. It checks observed namespaces, cwd, hostname, environment, private mounts/views, read-only resources, writable profile/project access, and selected access boundaries.
+`abx verify <profile>` launches the same sandbox backend used for normal execution, with one additional fixed read-only probe executable. It checks observed namespaces, cwd, hostname, environment, private mounts/views, read-only resources, writable profile/project access, and selected access boundaries. The private-object checks include `/proc` and `/dev/shm`; `/run/user` must also not be a separate mountpoint.
 
 The `__probe` entry point is private: it runs only inside the sandbox, where `/abx-probe` is a read-only mount of the ABX binary, and host-side invocations are rejected.
 

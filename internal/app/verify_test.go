@@ -97,7 +97,7 @@ func TestObserveHostCollectsSandboxPayload(t *testing.T) {
 	if got.Home != home {
 		t.Fatalf("home = %q", got.Home)
 	}
-	for _, p := range []string{home, "/tmp", "/var/tmp", "/run", "/dev"} {
+	for _, p := range []string{home, "/tmp", "/var/tmp", "/run", "/dev", "/proc", "/dev/shm"} {
 		if _, ok := got.Objects[p]; !ok {
 			t.Fatalf("missing identity %q", p)
 		}

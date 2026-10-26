@@ -127,6 +127,13 @@ func checkGate(self, mounted Identity, mountinfo string) error {
 // MaxInputBytes bounds the JSON payload the launcher hands to the probe.
 const MaxInputBytes = 65536
 
+// privateIdentityPaths are the private filesystem objects whose identity must
+// differ from the host. The runtime directory is checked separately: it must
+// also not be a separate mountpoint.
+var privateIdentityPaths = []string{"/tmp", "/var/tmp", "/run", "/dev", "/proc", "/dev/shm"}
+
+const runtimeDirectory = "/run/user"
+
 func decode(raw string) (Expected, error) {
 	var e Expected
 	if len(raw) > MaxInputBytes {
@@ -148,7 +155,8 @@ func decode(raw string) (Expected, error) {
 			return e, fmt.Errorf("missing namespace %q", name)
 		}
 	}
-	for _, p := range []string{e.Home, "/tmp", "/var/tmp", "/run", "/dev"} {
+	required := append([]string{e.Home}, privateIdentityPaths...)
+	for _, p := range required {
 		if _, ok := e.Objects[p]; !ok {
 			return e, fmt.Errorf("missing identity %q", p)
 		}
@@ -249,7 +257,7 @@ func check(e Expected, obs observer) []Check {
 		add("host home hidden", id != e.Objects[e.Home], err, "expected host home to be hidden; observed the host home filesystem object")
 	}
 	checks = append(checks, checkNamespaces(e.Namespaces, obs.readlink)...)
-	for _, p := range []string{"/tmp", "/var/tmp", "/run", "/dev"} {
+	for _, p := range privateIdentityPaths {
 		id, err := obs.identify(p)
 		add("private "+p, id != e.Objects[p], err, "expected a private filesystem object; observed the host object")
 	}
@@ -258,22 +266,24 @@ func check(e Expected, obs observer) []Check {
 		err := obs.statfs(p, &fs)
 		add("tmpfs "+p, fs.Type == unix.TMPFS_MAGIC, err, fmt.Sprintf("expected tmpfs type=%#x; observed type=%#x", unix.TMPFS_MAGIC, fs.Type))
 	}
-	info, err := obs.stat("/run/user")
+	info, err := obs.stat(runtimeDirectory)
 	ok := err == nil && info.IsDir() && info.Mode().Perm() == 0o700 && info.Mode()&(os.ModeSticky|os.ModeSetuid|os.ModeSetgid) == 0
 	detail := ""
 	if err == nil {
 		detail = fmt.Sprintf("expected directory with mode 0700 and no special bits; observed %s (permissions %04o)", info.Mode(), info.Mode().Perm())
 	}
 	add("runtime directory mode", ok, err, detail)
+	raw, mountErr := obs.mountinfo()
+	detail = separateMountDetail(string(raw), runtimeDirectory)
+	add("runtime directory mount", detail == "", mountErr, detail)
 	var st unix.Stat_t
 	err = obs.statDevice("/dev/null", &st)
 	fileType, major, minor := st.Mode&unix.S_IFMT, unix.Major(st.Rdev), unix.Minor(st.Rdev)
 	detail = fmt.Sprintf("expected character device 1:3; observed file type=%#o device=%d:%d", fileType, major, minor)
 	add("null device", fileType == unix.S_IFCHR && major == 1 && minor == 3, err, detail)
-	raw, err := obs.mountinfo()
 	for _, target := range e.ReadOnly {
 		detail := readOnlyDetail(string(raw), target)
-		add("read-only "+target, detail == "", err, detail)
+		add("read-only "+target, detail == "", mountErr, detail)
 	}
 	if !e.Skills {
 		checks = append(checks, Check{Name: "shared skills", State: stateNA, Detail: "not configured", Optional: true})
@@ -299,6 +309,16 @@ func readOnlyDetail(raw, target string) string {
 	}
 	if !found {
 		return "expected read-only mountpoint; no matching mountinfo entry"
+	}
+	return ""
+}
+
+func separateMountDetail(raw, target string) string {
+	for _, line := range strings.Split(raw, "\n") {
+		f := strings.Fields(line)
+		if len(f) >= 10 && f[4] == target {
+			return fmt.Sprintf("expected no separate mountpoint; observed flags %q", f[5])
+		}
 	}
 	return ""
 }

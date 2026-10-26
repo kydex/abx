@@ -145,7 +145,7 @@ func TestRunComposesGateDecodeAndReport(t *testing.T) {
 		},
 		writeProbe: func(string) error { return nil },
 	}
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{},"/proc":{},"/dev/shm":{}}}`
 	var out bytes.Buffer
 	if err := run(func() error { return nil }, valid, &out, obs); err != nil {
 		t.Fatalf("glue = %v", err)
@@ -176,7 +176,7 @@ func TestPrivateProbeRejectsHostExecution(t *testing.T) {
 	// Well-formed input that passes decode must still not run on the host:
 	// /abx-probe is a read-only mount of this binary only inside the sandbox.
 	// The positive path (inside the sandbox) is covered by live verify tests.
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{},"/proc":{},"/dev/shm":{}}}`
 	var out bytes.Buffer
 	err := Run(valid, &out)
 	if err == nil || !strings.Contains(err.Error(), "only available inside the sandbox") || out.Len() != 0 {
@@ -185,7 +185,7 @@ func TestPrivateProbeRejectsHostExecution(t *testing.T) {
 }
 
 func TestDecodeRejectsEachEmptyListSeparately(t *testing.T) {
-	base := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	base := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{},"/proc":{},"/dev/shm":{}}}`
 	for _, raw := range []string{
 		strings.Replace(base, `"Environment":["HOME=/home/agent"]`, `"Environment":[]`, 1),
 		strings.Replace(base, `"ReadOnly":["/usr"]`, `"ReadOnly":[]`, 1),
@@ -193,6 +193,21 @@ func TestDecodeRejectsEachEmptyListSeparately(t *testing.T) {
 		if _, err := decode(raw); err == nil || !strings.Contains(err.Error(), "incomplete probe inputs") {
 			t.Fatalf("decode with one empty list = %v", err)
 		}
+	}
+}
+
+func TestPrivatePathsCoverSandboxMounts(t *testing.T) {
+	known := map[string]bool{runtimeDirectory: true}
+	for _, p := range privateIdentityPaths {
+		known[p] = true
+	}
+	for _, target := range sandbox.PrivateMountTargets() {
+		if !known[target] {
+			t.Fatalf("private mount target %q has no probe observation", target)
+		}
+	}
+	if !slices.Contains(privateIdentityPaths, "/dev/shm") {
+		t.Fatal("probe does not observe /dev/shm")
 	}
 }
 
@@ -392,7 +407,7 @@ func TestReadOnlyDiagnosticsDistinguishMissingAndWritableMount(t *testing.T) {
 }
 
 func TestDecodeRequiresEveryNamespaceAndHostIdentity(t *testing.T) {
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{},"/proc":{},"/dev/shm":{}}}`
 	if _, err := decode(valid); err != nil {
 		t.Fatalf("valid fixture rejected: %v", err)
 	}
@@ -436,7 +451,7 @@ func TestDecodeRequiresEveryNamespaceAndHostIdentity(t *testing.T) {
 }
 
 func TestDecodeRejectsNonCanonicalProbePaths(t *testing.T) {
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{},"/proc":{},"/dev/shm":{}}}`
 	for _, tc := range []struct{ field, value string }{
 		{"Home", "/host-home\x00"},
 		{"Home", "/host-home/"},
@@ -464,7 +479,7 @@ func TestDecodeRejectsNonCanonicalProbePaths(t *testing.T) {
 }
 
 func TestDecodeRejectsNonCleanReadOnlyTargets(t *testing.T) {
-	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{}}}`
+	valid := `{"Home":"/host-home","Sentinel":"/host-home/probe","Environment":["HOME=/home/agent"],"ReadOnly":["/usr"],"Namespaces":{"user":"u","mnt":"m","pid":"p","ipc":"i","uts":"t"},"Objects":{"/host-home":{},"/tmp":{},"/var/tmp":{},"/run":{},"/dev":{},"/proc":{},"/dev/shm":{}}}`
 	for _, targets := range [][]string{{"relative"}, {"/usr/"}, {"/usr\x00"}, {""}, {"/usr", "relative"}} {
 		t.Run(strings.Join(targets, ","), func(t *testing.T) {
 			var input map[string]json.RawMessage

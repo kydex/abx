@@ -80,7 +80,7 @@ Shared path необязателен. ABX проверяет нужные кат
 
 ## Проверка через verify
 
-`abx verify <profile>` запускает тот же sandbox backend, что обычные сессии, с одним дополнительным фиксированным read-only probe executable. Команда проверяет наблюдаемые namespaces, cwd, hostname, окружение, private mounts/views, read-only ресурсы, возможность записи в профиль и проект и выбранные границы доступа.
+`abx verify <profile>` запускает тот же sandbox backend, что обычные сессии, с одним дополнительным фиксированным read-only probe executable. Команда проверяет наблюдаемые namespaces, cwd, hostname, окружение, private mounts/views, read-only ресурсы, возможность записи в профиль и проект и выбранные границы доступа. Проверки private-объектов включают `/proc` и `/dev/shm`; `/run/user` не должен быть отдельной точкой монтирования.
 
 Точка входа `__probe` приватна: она работает только внутри песочницы, где `/abx-probe` — read-only mount бинарника ABX, а вызовы на хосте отклоняются.
 

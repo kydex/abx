@@ -115,6 +115,18 @@ func privateMounts() []Mount {
 	}
 }
 
+// PrivateMountTargets returns the fixed private mount targets. It exists so a
+// cross-package test can require the probe's observations to cover every one;
+// production code keeps the mount kinds in privateMounts.
+func PrivateMountTargets() []string {
+	mounts := privateMounts()
+	targets := make([]string, 0, len(mounts))
+	for _, m := range mounts {
+		targets = append(targets, m.Target)
+	}
+	return targets
+}
+
 func allowedSystemTarget(target string) bool {
 	switch target {
 	case "/usr", "/bin", "/sbin", "/lib", "/lib64",

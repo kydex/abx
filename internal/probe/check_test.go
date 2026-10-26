@@ -41,8 +41,9 @@ func TestCheckProducesEveryObservation(t *testing.T) {
 		"selected /home/agent", "selected /workspace", "host home hidden",
 		"user namespace", "mnt namespace", "pid namespace", "ipc namespace", "uts namespace",
 		"private /tmp", "private /var/tmp", "private /run", "private /dev",
+		"private /proc", "private /dev/shm",
 		"tmpfs /tmp", "tmpfs /var/tmp", "tmpfs /run",
-		"runtime directory mode", "null device", "read-only /usr",
+		"runtime directory mode", "runtime directory mount", "null device", "read-only /usr",
 		"shared skills",
 		"write and cleanup /home/agent", "write and cleanup /workspace",
 	}

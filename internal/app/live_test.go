@@ -54,7 +54,7 @@ func TestLiveShellRunAndWork(t *testing.T) {
 		t.Fatal(e)
 	}
 	objects := map[string][2]uint64{}
-	for _, p := range []string{account.Home, "/tmp", "/var/tmp", "/run", "/dev"} {
+	for _, p := range []string{account.Home, "/tmp", "/var/tmp", "/run", "/dev", "/proc", "/dev/shm"} {
 		info, e := os.Stat(p)
 		if e != nil {
 			t.Fatal(e)

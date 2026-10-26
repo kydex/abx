@@ -40,7 +40,8 @@ func sandboxExpected() Expected {
 		Objects: map[string]Identity{
 			"/home/hostuser": {Device: 8, Inode: 1}, "/tmp": {Device: 8, Inode: 2},
 			"/var/tmp": {Device: 8, Inode: 3}, "/run": {Device: 8, Inode: 4},
-			"/dev": {Device: 8, Inode: 5},
+			"/dev": {Device: 8, Inode: 5}, "/proc": {Device: 8, Inode: 6},
+			"/dev/shm": {Device: 8, Inode: 7},
 		},
 		Environment: []string{"HOME=/home/agent", "PATH=/home/agent/.local/bin:/usr/bin:/bin"},
 		ReadOnly:    []string{"/usr", "/etc/passwd"},
@@ -136,11 +137,14 @@ func TestCheckPassesWithConsistentObservations(t *testing.T) {
 // used to leave the whole suite green.
 func TestCheckFailsEachPredicateWhenItsObservationIsWrong(t *testing.T) {
 	const (
-		profileID   = "selected /home/agent"
-		projectID   = "selected /workspace"
-		privateTmp  = "private /tmp"
-		writeHome   = "write and cleanup /home/agent"
-		runtimeMode = "runtime directory mode"
+		profileID    = "selected /home/agent"
+		projectID    = "selected /workspace"
+		privateTmp   = "private /tmp"
+		privateProc  = "private /proc"
+		privateShm   = "private /dev/shm"
+		writeHome    = "write and cleanup /home/agent"
+		runtimeMode  = "runtime directory mode"
+		runtimeMount = "runtime directory mount"
 	)
 	for _, tc := range []struct {
 		observation      string
@@ -200,6 +204,24 @@ func TestCheckFailsEachPredicateWhenItsObservationIsWrong(t *testing.T) {
 			}
 			return o
 		}},
+		{privateProc, func(o observer) observer {
+			o.identify = func(p string) (Identity, error) {
+				if p == "/proc" {
+					return Identity{Device: 8, Inode: 6}, nil
+				}
+				return goodObserver(sandboxExpected()).identify(p)
+			}
+			return o
+		}},
+		{privateShm, func(o observer) observer {
+			o.identify = func(p string) (Identity, error) {
+				if p == "/dev/shm" {
+					return Identity{Device: 8, Inode: 7}, nil
+				}
+				return goodObserver(sandboxExpected()).identify(p)
+			}
+			return o
+		}},
 		{"tmpfs /tmp", func(o observer) observer {
 			o.statfs = func(p string, fs *unix.Statfs_t) error {
 				fs.Type = unix.TMPFS_MAGIC
@@ -234,6 +256,12 @@ func TestCheckFailsEachPredicateWhenItsObservationIsWrong(t *testing.T) {
 					return fakeInfo{mode: os.ModeDir | os.ModeSticky | os.ModeSetuid | os.ModeSetgid | 0o700, dir: true}, nil
 				}
 				return goodObserver(sandboxExpected()).stat(p)
+			}
+			return o
+		}},
+		{runtimeMount, func(o observer) observer {
+			o.mountinfo = func() ([]byte, error) {
+				return []byte("25 30 0:24 / /run/user rw,relatime shared:1 - tmpfs tmpfs rw\n"), nil
 			}
 			return o
 		}},

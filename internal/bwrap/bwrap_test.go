@@ -409,6 +409,9 @@ func TestMinimumVersionStringMatchesNumeric(t *testing.T) {
 }
 
 func TestOpenUsesFixedBubblewrapPath(t *testing.T) {
+	if Path != "/usr/bin/bwrap" {
+		t.Fatalf("Bubblewrap path = %q, want /usr/bin/bwrap", Path)
+	}
 	// Open uses the production path. A missing or unsafe binary must fail
 	// naming that path. A too-old binary is a different, valid host state:
 	// the version probe names the version instead. Only lookup/validation
@@ -657,6 +660,9 @@ func TestForwardsSignals(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if signal.Ignored(tt.signal) {
+				t.Skipf("%s is ignored in this process; execute correctly leaves it alone", tt.name)
+			}
 			dir := t.TempDir()
 			result := filepath.Join(dir, "result")
 			ready := filepath.Join(dir, "ready")
@@ -700,6 +706,53 @@ while :; do sleep 1; done`)
 				t.Fatalf("forwarding result = %q, %v", data, err)
 			}
 		})
+	}
+}
+
+func TestForwardedSignalKillsChild(t *testing.T) {
+	if os.Getenv("ABX_KILL_HELPER") == "1" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		status, err := execute(ctx, exec.CommandContext(ctx, os.Getenv("ABX_KILL_SCRIPT"), os.Getenv("ABX_KILL_READY")), Stdio{})
+		if err != nil || status != 128+int(syscall.SIGTERM) {
+			t.Fatalf("forwarded signal result = %d, %v", status, err)
+		}
+		return
+	}
+	dir := t.TempDir()
+	ready := filepath.Join(dir, "ready")
+	script := writeScript(t, `printf ready > "$1"
+exec sleep 10`)
+	helper := exec.Command(os.Args[0], "-test.run=^TestForwardedSignalKillsChild$")
+	helper.Env = append(os.Environ(),
+		"ABX_KILL_HELPER=1",
+		"ABX_KILL_SCRIPT="+script,
+		"ABX_KILL_READY="+ready,
+	)
+	if err := helper.Start(); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		if _, err := os.Stat(ready); err == nil {
+			break
+		} else if !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		if time.Now().After(deadline) {
+			_ = helper.Process.Kill()
+			_ = helper.Wait()
+			t.Fatal("kill helper did not become ready")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err := helper.Process.Signal(syscall.SIGTERM); err != nil {
+		_ = helper.Process.Kill()
+		_ = helper.Wait()
+		t.Fatal(err)
+	}
+	if err := helper.Wait(); err != nil {
+		t.Fatalf("forwarded signal helper: %v", err)
 	}
 }
 

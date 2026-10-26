@@ -88,6 +88,7 @@ func TestObserveHostCollectsSandboxPayload(t *testing.T) {
 		Mode:        sandbox.Run,
 		System:      []sandbox.Mount{{Kind: sandbox.ReadOnly, Source: "/sys", Target: "/usr"}},
 		Environment: []sandbox.Entry{{Name: "A", Value: "1"}},
+		Skills:      "/shared/skills",
 		Command:     []string{sandbox.ProbePath, "__probe", "{}"},
 	}
 	got, err := observeHost(home, input)
@@ -110,7 +111,7 @@ func TestObserveHostCollectsSandboxPayload(t *testing.T) {
 	if len(got.Environment) != 1 || got.Environment[0] != "A=1" {
 		t.Fatalf("environment = %q", got.Environment)
 	}
-	for _, want := range []string{"/usr", sandbox.ProbePath} {
+	for _, want := range []string{"/usr", sandbox.SkillsPath, sandbox.ProbePath} {
 		found := false
 		for _, target := range got.ReadOnly {
 			found = found || target == want
@@ -119,8 +120,8 @@ func TestObserveHostCollectsSandboxPayload(t *testing.T) {
 			t.Fatalf("read-only lacks %q: %q", want, got.ReadOnly)
 		}
 	}
-	if got.Skills {
-		t.Fatal("skills reported without a shared source")
+	if !got.Skills {
+		t.Fatal("configured skills source not reported")
 	}
 }
 

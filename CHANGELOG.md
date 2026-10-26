@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: a sensitive home path is now resolved component by component, so a project reached by an intermediate symlink is rejected even when the final target lies outside it; comparing only the final `EvalSymlinks` result missed `~/.gem -> project/gem -> outside/credentials`.
+
 ## 0.8.29
 
 - Fixed: the relative-link checker follows CommonMark's backtick-fence info rule, resolves root-relative targets against the scanned tree rather than the host, and requires at least one link in each scanned language group.

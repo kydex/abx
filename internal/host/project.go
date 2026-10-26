@@ -162,116 +162,93 @@ func canonicalProtectedTree(path string) (string, error) {
 // resolves nowhere, and both callers compare against an already resolved path —
 // but the target is the stronger statement and it costs nothing.
 func canonicalSensitiveTree(path string) (string, error) {
-	return canonicalSensitiveTreeSeen(path, nil, nil)
+	targets, err := canonicalSensitiveTreePaths(path)
+	if err != nil {
+		return "", err
+	}
+	return targets[len(targets)-1], nil
 }
 
 // canonicalSensitiveTreePaths returns every resolved target met while
-// resolving a sensitive home tree, not only the final one. A cycle can run
-// through a project in an earlier link, so comparing the final target alone
-// would let that project pass the overlap check.
+// resolving a sensitive home tree, not only the final one. A cycle or an
+// intermediate link can run through a project, so comparing the final target
+// alone would let that project pass the overlap check.
 func canonicalSensitiveTreePaths(path string) ([]string, error) {
+	clean := filepath.Clean(path)
+	if !filepath.IsAbs(clean) {
+		return nil, fmt.Errorf("canonicalize sensitive tree %q: path is not absolute", path)
+	}
 	var targets []string
-	if _, err := canonicalSensitiveTreeSeen(path, nil, &targets); err != nil {
+	resolved, err := resolveSensitiveComponents(clean, make(map[string]bool), &targets)
+	if err != nil {
 		return nil, err
+	}
+	if len(targets) == 0 || targets[len(targets)-1] != resolved {
+		targets = append(targets, resolved)
 	}
 	return targets, nil
 }
 
-// canonicalSensitiveTreeSeen carries the links already followed so a cycle
-// ends at the first repeated component. That link is compared by the target
-// its text names, matching the long-standing dangling-link policy. When
-// targets is non-nil, every resolved target is appended to it.
-func canonicalSensitiveTreeSeen(path string, seen map[string]bool, targets *[]string) (string, error) {
-	record := func(target string) string {
-		if targets != nil {
-			*targets = append(*targets, target)
-		}
-		return target
-	}
+// resolveSensitiveComponents walks one component at a time. Following a link
+// restarts the walk at its target, so every link in the chain is recorded, not
+// just the final target of the whole path. A missing component, a non-directory
+// in the middle, or a cycle ends the walk with the literal path that cannot
+// exist yet; that is the path the overlap checks must still compare.
+func resolveSensitiveComponents(path string, seen map[string]bool, targets *[]string) (string, error) {
 	clean := filepath.Clean(path)
-	missing := []string{}
-	current := clean
-	for {
-		info, err := os.Lstat(current)
-		if err == nil {
-			if info.Mode()&os.ModeSymlink != 0 {
-				resolved, evalErr := filepath.EvalSymlinks(current)
-				if evalErr == nil {
-					return record(appendSensitiveMissing(resolved, missing)), nil
-				}
-				if seen == nil {
-					seen = make(map[string]bool)
-				}
-				if seen[current] {
-					target, linkErr := resolveSensitiveLink(current)
-					if linkErr != nil {
-						return "", linkErr
-					}
-					return record(appendSensitiveMissing(target, missing)), nil
-				}
-				seen[current] = true
-				target, linkErr := resolveSensitiveLink(current)
-				if linkErr != nil {
-					return "", linkErr
-				}
-				return canonicalSensitiveTreeSeen(record(appendSensitiveMissing(target, missing)), seen, targets)
-			}
-			resolved, evalErr := filepath.EvalSymlinks(current)
-			if evalErr != nil {
-				return "", fmt.Errorf("canonicalize protected tree %q: %w", current, evalErr)
-			}
-			return record(appendSensitiveMissing(resolved, missing)), nil
+	if clean == string(filepath.Separator) {
+		*targets = append(*targets, clean)
+		return clean, nil
+	}
+	relative := strings.TrimPrefix(clean, string(filepath.Separator))
+	parts := strings.Split(relative, string(filepath.Separator))
+	prefix := string(filepath.Separator)
+	for i, part := range parts {
+		if part == "" {
+			continue
 		}
-		switch {
-		case errors.Is(err, fs.ErrNotExist):
-			parent := filepath.Dir(current)
-			if parent == current {
-				return clean, nil
-			}
-			missing = append(missing, filepath.Base(current))
-			current = parent
-		case errors.Is(err, syscall.ELOOP), errors.Is(err, syscall.ENOTDIR):
-			// The path cannot exist as named, but its parent may still
-			// resolve through a symlink to a real target. Resolve that
-			// target so a sensitive tree that points into a project is
-			// still compared against the project, not its literal home
-			// path. If the parent itself has no resolvable target, this
-			// returns the literal path through the same cycle/dangling
-			// handling.
-			parent, parentErr := canonicalSensitiveTreeSeen(filepath.Dir(current), seen, targets)
-			if parentErr != nil {
-				return "", parentErr
-			}
-			return record(appendSensitiveMissing(
-				filepath.Join(parent, filepath.Base(current)), missing)), nil
-		default:
-			return "", fmt.Errorf("inspect protected tree %q: %w", current, err)
-		}
-	}
-}
-
-// appendSensitiveMissing rebuilds the part of the path that does not exist yet.
-func appendSensitiveMissing(path string, missing []string) string {
-	for i := len(missing) - 1; i >= 0; i-- {
-		path = filepath.Join(path, missing[i])
-	}
-	return filepath.Clean(path)
-}
-
-// resolveSensitiveLink returns the target text of a link that the kernel could
-// not resolve. Relative text is taken from the link's physical parent, not its
-// lexical parent, so a symlinked parent cannot change the answer.
-func resolveSensitiveLink(path string) (string, error) {
-	target, err := os.Readlink(path)
-	if err != nil {
-		return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)
-	}
-	if !filepath.IsAbs(target) {
-		parent, err := filepath.EvalSymlinks(filepath.Dir(path))
+		candidate := filepath.Join(prefix, part)
+		info, err := os.Lstat(candidate)
 		if err != nil {
-			return "", fmt.Errorf("canonicalize protected tree %q: %w", path, err)
+			switch {
+			case errors.Is(err, fs.ErrNotExist), errors.Is(err, syscall.ELOOP), errors.Is(err, syscall.ENOTDIR):
+				final := joinSensitiveRemaining(candidate, parts[i+1:])
+				*targets = append(*targets, final)
+				return final, nil
+			default:
+				return "", fmt.Errorf("inspect sensitive tree %q: %w", candidate, err)
+			}
 		}
-		target = filepath.Join(parent, target)
+		if info.Mode()&os.ModeSymlink != 0 {
+			target, err := os.Readlink(candidate)
+			if err != nil {
+				return "", fmt.Errorf("read sensitive tree link %q: %w", candidate, err)
+			}
+			if !filepath.IsAbs(target) {
+				target = filepath.Join(filepath.Dir(candidate), target)
+			}
+			next := joinSensitiveRemaining(filepath.Clean(target), parts[i+1:])
+			*targets = append(*targets, next)
+			if seen[candidate] {
+				return next, nil
+			}
+			seen[candidate] = true
+			return resolveSensitiveComponents(next, seen, targets)
+		}
+		if !info.IsDir() && i < len(parts)-1 {
+			final := joinSensitiveRemaining(candidate, parts[i+1:])
+			*targets = append(*targets, final)
+			return final, nil
+		}
+		prefix = candidate
 	}
-	return filepath.Clean(target), nil
+	*targets = append(*targets, prefix)
+	return prefix, nil
+}
+
+// joinSensitiveRemaining rebuilds the part of the path that does not exist yet
+// or cannot be reached because a component is not a directory.
+func joinSensitiveRemaining(path string, remaining []string) string {
+	parts := append([]string{path}, remaining...)
+	return filepath.Clean(filepath.Join(parts...))
 }

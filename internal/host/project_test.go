@@ -288,6 +288,33 @@ func TestResolveRejectsSensitiveSymlinkTargetBlockedByFileOrCycle(t *testing.T) 
 	}
 }
 
+func TestResolveRejectsProjectThroughIntermediateSensitiveLink(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	project := filepath.Join(root, "project")
+	outside := filepath.Join(root, "outside")
+	for _, dir := range []string{home, filepath.Join(project, "gem"), outside} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(outside, "credentials"), []byte("secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(outside, "credentials"), filepath.Join(project, "gem", "credentials")); err != nil {
+		t.Fatal(err)
+	}
+	// ~/.gem points into the project, and the project's final link points
+	// outside it. The project is an intermediate target of the sensitive
+	// path even though the final EvalSymlinks result is outside the project.
+	if err := os.Symlink(filepath.Join(project, "gem"), filepath.Join(home, ".gem")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolveProject(project, home, filepath.Join(home, ".local", "share", "abx")); err == nil {
+		t.Fatal("accepted project that is an intermediate sensitive-link target")
+	}
+}
+
 func TestResolveRejectsSensitiveCycleThroughProject(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")

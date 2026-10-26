@@ -415,7 +415,7 @@ Expected: `exit=131`, and **no goroutine dump** above the prompt. A dump means A
 abx shell smoke
 ```
 
-At the sandbox prompt, press **Ctrl+C once**. The shell prints a fresh prompt and the session stays alive: the login shell owns the terminal, so this signal does not reach ABX. Then enter:
+Run this from a terminal with both stdin and stderr attached: for bash, redirecting stderr (for example `abx shell smoke 2>log`) disables the interactive job-control path this check is about. At the sandbox prompt, press **Ctrl+C once**. The shell prints a fresh prompt and the session stays alive: the login shell owns the terminal, so this signal does not reach ABX. Then enter:
 
 **Terminal A · sandbox · ONE COMMAND — run separately**
 

@@ -72,7 +72,7 @@ func Parse(args []string) (Command, error) {
 		if strings.HasPrefix(args[1], "-") {
 			if args[1] == "-" || args[1] == "--" {
 				return Command{}, fmt.Errorf(
-					"profile requires create, show or list; %q is not one", args[1])
+					"profile requires create, show or list; %s is not one", quoteToken(args[1]))
 			}
 			return Command{}, namePositionError(args[1], k)
 		}
@@ -95,7 +95,7 @@ func Parse(args []string) (Command, error) {
 			}
 			return Command{Kind: k, Profile: args[2]}, nil
 		default:
-			return Command{}, fmt.Errorf("unknown profile command %q", args[1])
+			return Command{}, fmt.Errorf("unknown profile command %s", quoteToken(args[1]))
 		}
 	case Help, Version:
 		if len(args) != 1 {
@@ -127,8 +127,20 @@ func Parse(args []string) (Command, error) {
 		}
 		return c, nil
 	default:
-		return Command{}, fmt.Errorf("unknown command %q", args[0])
+		return Command{}, fmt.Errorf("unknown command %s", quoteToken(args[0]))
 	}
+}
+
+const maxQuotedTokenBytes = 128
+
+// quoteToken bounds a user-supplied argument in a diagnostic. A full profile
+// name already has its own 128-byte limit; command and option tokens did not,
+// so a 100 KiB argument reached stderr almost unchanged.
+func quoteToken(arg string) string {
+	if len(arg) <= maxQuotedTokenBytes {
+		return fmt.Sprintf("%q", arg)
+	}
+	return fmt.Sprintf("%q (%d bytes)", arg[:maxQuotedTokenBytes], len(arg))
 }
 
 // namePositionError explains a token in a name position that cannot be a
@@ -137,7 +149,7 @@ func Parse(args []string) (Command, error) {
 // the name rules.
 func namePositionError(arg string, k Kind) error {
 	if arg == "-" || arg == "--" {
-		return fmt.Errorf("%s requires a profile name; %q is not one", k, arg)
+		return fmt.Errorf("%s requires a profile name; %s is not one", k, quoteToken(arg))
 	}
-	return fmt.Errorf("unknown option %q for %s; run \"abx --help\"", arg, k)
+	return fmt.Errorf("unknown option %s for %s; run \"abx --help\"", quoteToken(arg), k)
 }

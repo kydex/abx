@@ -2,6 +2,7 @@ package cli
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/kydex/abx/internal/profile"
@@ -145,6 +146,22 @@ func TestRunArgumentsRequireSeparator(t *testing.T) {
 	_, err := Parse([]string{"run", "demo", "argument"})
 	if err == nil || err.Error() != "run arguments must follow --: abx run <profile> -- <argument> [additional arguments]" {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestLongCLITokenIsBounded(t *testing.T) {
+	long := strings.Repeat("x", 100000)
+	for _, argv := range [][]string{{long}, {"profile", long}, {"run", "-" + long}} {
+		_, err := Parse(argv)
+		if err == nil {
+			t.Fatalf("accepted long token %q", argv)
+		}
+		if len(err.Error()) > 300 {
+			t.Fatalf("long token error is %d bytes: %q", len(err.Error()), err.Error())
+		}
+		if !strings.Contains(err.Error(), "bytes") {
+			t.Fatalf("long token error does not name its size: %q", err.Error())
+		}
 	}
 }
 

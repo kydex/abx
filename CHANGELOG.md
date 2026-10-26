@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed: a sensitive home path is now resolved component by component, so a project reached by an intermediate symlink is rejected even when the final target lies outside it; comparing only the final `EvalSymlinks` result missed `~/.gem -> project/gem -> outside/credentials`.
+- The documented minimum kernel is now Linux 6.6, matching `fchmodat2` used by `profile create` and shared-skill preparation; the previous 6.5 claim was wrong. (English and Russian.)
 
 ## 0.8.29
 

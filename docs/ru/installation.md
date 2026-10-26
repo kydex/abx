@@ -8,7 +8,7 @@
 
 ABX требует:
 
-- Linux с ядром **6.5 или новее**; shared skills дополнительно используют `openat2`, доступный с Linux 5.6;
+- Linux с ядром **6.6 или новее**; shared skills дополнительно используют `openat2`, доступный с Linux 5.6;
 - Bubblewrap **0.11.1 или новее** по пути `/usr/bin/bwrap`;
 - бинарник Bubblewrap должен быть обычным исполняемым файлом без setuid/setgid/sticky-битов, недоступным для записи group/other, и принадлежать root;
 - разрешённые хостом непривилегированные user namespaces;

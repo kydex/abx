@@ -8,7 +8,7 @@ When you run an agent, the current project is mounted writable at `/workspace`. 
 
 ## Requirements
 
-- Linux with kernel **6.5 or newer**. Shared skills also use `openat2`, available since Linux 5.6. The published prebuilt binary is for x86-64 (`amd64`).
+- Linux with kernel **6.6 or newer**. Shared skills also use `openat2`, available since Linux 5.6. The published prebuilt binary is for x86-64 (`amd64`).
 - Run ABX as a regular user, without `sudo`.
 - Bubblewrap **0.11.1 or newer**, installed at `/usr/bin/bwrap` and owned by root. The
   binary must be a regular file, not group- or world-writable, and without

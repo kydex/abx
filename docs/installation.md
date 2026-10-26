@@ -8,7 +8,7 @@ Run all commands in the host terminal as a regular user. Do not install or run A
 
 ABX requires:
 
-- Linux with kernel **6.5 or newer**; shared skills also use `openat2`, available since Linux 5.6;
+- Linux with kernel **6.6 or newer**; shared skills also use `openat2`, available since Linux 5.6;
 - Bubblewrap **0.11.1 or newer** at `/usr/bin/bwrap`;
 - the Bubblewrap binary must be a regular executable file without setuid/setgid/sticky bits, not writable by group/other, and owned by root;
 - unprivileged user namespaces allowed by the host;

@@ -21,6 +21,7 @@
 - The release guide now describes the packaging clean-tree gate accurately: ignored files are rejected only for the listed build-input extensions, and an ignored `//go:embed` or generated input outside that list is a documented residual risk. (English and Russian.)
 - The usage guide no longer contradicts itself about `--`: only `run` accepts it, and a bare `--` after `run` behaves like no separator. (English and Russian.)
 - Fixed: the relative-link checker rejects a target that resolves outside the scanned tree, including through `..` or a symlink, and treats URL schemes case-insensitively (`HTTPS://` is skipped).
+- Fixed: `package-smoke` skips execution of the amd64 archive on a non-x86_64 host instead of failing with `Exec format error`; release packaging rejects a nonempty `Unreleased` section, a version section without a bullet, and a lightweight tag. (English and Russian.)
 
 ## 0.8.29
 

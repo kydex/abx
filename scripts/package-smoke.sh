@@ -31,11 +31,13 @@ if [ "$got" != "$want" ]; then
 fi
 tar -xzf "$dir/abx-$version-linux-amd64.tar.gz" -C "$work"
 test -x "$work/abx-$version-linux-amd64/abx"
-if [ "$(id -u)" -ne 0 ]; then
+if [ "$(id -u)" -eq 0 ]; then
+    echo "note: built as root, so the archive was not executed: abx refuses to run as root, which is the correct behaviour, not a broken archive"
+elif [ "$(uname -m)" = "x86_64" ]; then
     "$work/abx-$version-linux-amd64/abx" version > "$work/version.out"
     printf 'abx %s\n' "$version" | cmp -s - "$work/version.out"
 else
-    echo "note: built as root, so the archive was not executed: abx refuses to run as root, which is the correct behaviour, not a broken archive"
+    echo "note: archive is linux-amd64 and host is $(uname -m); execution skipped, structure checks still ran"
 fi
 test -f "$work/abx-$version-linux-amd64/LICENSE"
 test -f "$work/abx-$version-linux-amd64/THIRD_PARTY_LICENSES"

@@ -36,6 +36,8 @@ Packaging runs after the tag exists (see *Publish a version*, step 5): the relea
 - `HEAD` to carry that exact tag, so the archive name cannot describe different contents;
 - every tracked top-level path to land in the source archive.
 
+Release mode also rejects a nonempty `## Unreleased` section, requires at least one bullet under the `## X.Y.Z` heading, and requires the tag to be an annotated tag object, not a lightweight tag.
+
 Plain builds (`go build`, `make build-check`, `go test`) are not gated: only archive creation requires the tag. Outside a git work tree the script warns and packages the directory as-is.
 
 It creates:

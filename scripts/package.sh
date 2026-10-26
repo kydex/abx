@@ -40,8 +40,22 @@ if [ "$mode" = release ]; then
     # Step 1 of the release procedure moves the Unreleased entries into a
     # version section; nothing else checks that it happened, and the archive
     # ships CHANGELOG.md as-is.
-    if ! grep -qxF "## $version" CHANGELOG.md; then
-        printf 'error: CHANGELOG.md has no "## %s" section; move the Unreleased entries before packaging\n' "$version" >&2
+    if ! awk '
+        /^## Unreleased[[:space:]]*$/ { inside = 1; next }
+        inside && /^## / { exit }
+        inside && NF { found = 1 }
+        END { exit(found ? 1 : 0) }
+    ' CHANGELOG.md; then
+        printf 'error: CHANGELOG.md still has entries under "## Unreleased"; move them before packaging\n' >&2
+        exit 2
+    fi
+    if ! awk -v heading="## $version" '
+        $0 == heading { inside = 1; next }
+        inside && /^## / { exit }
+        inside && /^[-*] / { found = 1 }
+        END { exit(found ? 0 : 1) }
+    ' CHANGELOG.md; then
+        printf 'error: CHANGELOG.md has no bullet under "## %s"; add the release entries before packaging\n' "$version" >&2
         exit 2
     fi
 fi
@@ -66,6 +80,10 @@ if $in_git && [ "$mode" = release ]; then
         found=${head_tags:-none}
         found=$(printf '%s' "$found" | tr '\n' ' ')
         printf 'error: HEAD is not tagged %s (tags on HEAD: %s); tag the release commit before packaging\n' "$tag" "$found" >&2
+        exit 2
+    fi
+    if [ "$(git -C "$root" cat-file -t "$tag" 2>/dev/null || true)" != tag ]; then
+        printf 'error: %s is not an annotated tag; release tags must carry a tag object\n' "$tag" >&2
         exit 2
     fi
     if ! git -C "$root" diff --quiet || ! git -C "$root" diff --cached --quiet; then

@@ -422,6 +422,8 @@ func TestDecodeRequiresEveryNamespaceAndHostIdentity(t *testing.T) {
 		{"Objects", "/var/tmp", "missing identity"},
 		{"Objects", "/run", "missing identity"},
 		{"Objects", "/dev", "missing identity"},
+		{"Objects", "/proc", "missing identity"},
+		{"Objects", "/dev/shm", "missing identity"},
 	} {
 		t.Run(tc.field+"/"+tc.key, func(t *testing.T) {
 			var input map[string]json.RawMessage

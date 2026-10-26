@@ -19,6 +19,7 @@
 - Fixed: CLI diagnostics for an unknown command, unknown profile subcommand, or option-like token now show at most a 128-byte prefix and the real byte count instead of echoing the whole argument.
 - The architecture guide now says exactly which process flags `verify` reflects: the `--unshare-*` flags and hostname, not `--disable-userns`, `--die-with-parent`, or `--clearenv`. (English and Russian.)
 - The release guide now describes the packaging clean-tree gate accurately: ignored files are rejected only for the listed build-input extensions, and an ignored `//go:embed` or generated input outside that list is a documented residual risk. (English and Russian.)
+- The usage guide no longer contradicts itself about `--`: only `run` accepts it, and a bare `--` after `run` behaves like no separator. (English and Russian.)
 
 ## 0.8.29
 

@@ -12,7 +12,7 @@ Run `abx` commands from the host terminal as a regular user. Use `abx shell` whe
 | Start the profile executable directly in the current project | `abx run <profile>` |
 | Open a shell with access to the current project | `abx work <profile>` |
 
-Every command that takes a profile takes exactly one name; only `run` accepts more, and only after `--`. `shell`, `work`, `inspect`, `verify`, and the `profile` subcommands reject any extra argument outright. A `--` is an argument, not a separator you may leave dangling — only `run` accepts one, and only to introduce arguments for the agent (`abx run <profile> -- <argument> [additional arguments]`). `abx shell <profile> --` is an error. A bare `--` with nothing after it is accepted and behaves exactly like no separator at all.
+Every command that takes a profile takes exactly one name; only `run` accepts more. `shell`, `work`, `inspect`, `verify`, and the `profile` subcommands reject any extra argument outright. `--` is accepted only by `run`, and only to introduce arguments for the agent (`abx run <profile> -- <argument> [additional arguments]`). After `run`, a bare `--` with nothing after it is allowed and behaves exactly like no separator; for every other command, `--` is an extra argument and an error (`abx shell <profile> --` fails).
 
 `abx` with no arguments prints the same help as `abx help`. `-h`/`--help` and `-v`/`--version` are commands in the first position only: `abx --help` and `abx -v` work, but `abx profile create demo --version` is an argument error, not a version query.
 

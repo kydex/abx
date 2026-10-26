@@ -33,54 +33,55 @@ func runVerify(
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	phase := "opening the tool"
 	tool, err := openTool(ctx)
 	if err != nil {
-		// The deadline covers opening the tool as well as the sandbox run.
-		// Report its expiry here, before the post-revalidation check below.
-		if ctxErr := ctx.Err(); ctxErr != nil && errors.Is(err, ctxErr) {
-			return 1, fmt.Errorf("execution cancelled: %w", ctxErr)
-		}
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
 	defer finishClose(&status, &result, tool.Close)
+	phase = "host observation"
 	// /proc/self/exe denotes this running binary, even after its installed path is replaced.
 	self, err := os.Open("/proc/self/exe")
 	if err != nil {
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
 	defer finishClose(&status, &result, self.Close)
 	expected, err := observeHost(home, input)
 	if err != nil {
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
+	phase = "probe preparation"
 	files := &probeFiles{}
 	defer finishClose(&status, &result, files.Close)
 	expected.Sentinel, err = files.create(home)
 	if err != nil {
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
 	raw, err := verifyInput(expected)
 	if err != nil {
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
+	phase = "sandbox preparation"
 	input.Command[2] = string(raw)
 	plan, err := sandbox.BuildVerification(input)
 	if err != nil {
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
 	if err = in.Prepare(); err != nil {
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
 	if err = in.Revalidate(); err != nil {
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
 	// The host-side phases above are not interruptible, so the deadline may
 	// already have expired when execute is about to start; its own context
 	// check would return the raw context error. Report the timeout here with
 	// the same text the guide names.
+	phase = "starting the sandbox"
 	if err := ctx.Err(); err != nil {
-		return 1, fmt.Errorf("execution cancelled: %w", err)
+		return 1, fmt.Errorf("execution cancelled during %s: %w", phase, err)
 	}
+	phase = "running the sandbox"
 	status, err = execute(ctx, tool, plan, func(path string) (*os.File, error) {
 		if path == "/proc/self/exe" {
 			return self, nil
@@ -88,7 +89,7 @@ func runVerify(
 		return in.SourceFile(path)
 	}, stdio)
 	if err != nil {
-		return 1, err
+		return 1, cancellationError(ctx, phase, err)
 	}
 	if status != 0 {
 		// Execute reports a child killed by a signal as 128 plus the signal
@@ -102,6 +103,13 @@ func runVerify(
 	}
 	// Final success is printed only after outer resource and temporary-file cleanup.
 	return 0, nil
+}
+
+func cancellationError(ctx context.Context, phase string, err error) error {
+	if ctxErr := ctx.Err(); ctxErr != nil && errors.Is(err, ctxErr) {
+		return fmt.Errorf("execution cancelled during %s: %w", phase, ctxErr)
+	}
+	return err
 }
 
 // verifyInput serializes the host observations and refuses a payload the probe

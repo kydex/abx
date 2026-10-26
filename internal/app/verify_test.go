@@ -211,7 +211,7 @@ func TestVerifyExpiredDeadlineReportsCancellation(t *testing.T) {
 		return 0, nil
 	}
 	status, err := runVerify(ctx, in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard}, openStubTool(t), mustNotExecute)
-	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled") || !errors.Is(err, context.DeadlineExceeded) {
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled during starting the sandbox") || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expired deadline = status %d, %v", status, err)
 	}
 }
@@ -229,7 +229,7 @@ func TestVerifyToolOpenDeadlineReportsCancellation(t *testing.T) {
 	}
 	status, err := runVerify(ctx, in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard},
 		func(ctx context.Context) (*bwrap.Tool, error) { return nil, ctx.Err() }, mustNotExecute)
-	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled") || !errors.Is(err, context.DeadlineExceeded) {
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled during opening the tool") || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("tool-open deadline = status %d, %v", status, err)
 	}
 	entries, readErr := os.ReadDir(home)

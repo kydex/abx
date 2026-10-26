@@ -240,7 +240,7 @@ Successful verification ends with:
 Verification passed; temporary probe files removed.
 ```
 
-Verification runs under a 30-second deadline: it bounds opening the tool and the sandbox run, while the host-side observation and cleanup are not interrupted. The first plan build validates the shape before the deadline starts. On timeout ABX reports `execution cancelled` and returns exit `1`. Check lines are printed as soon as all observations are collected, not as the probe runs, so a
+Verification runs under a 30-second deadline: it bounds opening the tool, host-side observation and probe preparation, and the sandbox run, while cleanup is not interrupted. The first plan build validates the shape before the deadline starts. On timeout ABX reports `execution cancelled during <phase>` and returns exit `1`. Check lines are printed as soon as all observations are collected, not as the probe runs, so a
 probe killed during observation prints nothing. Like `work`, `verify` accepts only the profile name, with no arguments after `--`.
 
 Individual checks use `PASS`, `FAIL`, `UNAVAILABLE`, and `N/A`. `N/A` is expected when shared skills are not configured. A failed or incomplete mandatory check makes `verify` fail. Failure details describe the expected and observed state where available. Environment mismatches list only differing variable names, without their values.

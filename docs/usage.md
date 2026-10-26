@@ -245,7 +245,7 @@ probe killed during observation prints nothing. Like `work`, `verify` accepts on
 
 Individual checks use `PASS`, `FAIL`, `UNAVAILABLE`, and `N/A`. `N/A` is expected when shared skills are not configured. A failed or incomplete mandatory check makes `verify` fail. Failure details describe the expected and observed state where available. Environment mismatches list only differing variable names, without their values.
 
-The input the launcher hands the probe is limited to 64 KiB, environment included; ABX refuses a larger input before the sandbox starts, naming its size, rather than truncating it silently or letting `execve` fail with a raw error.
+The input the launcher hands the probe is limited to 64 KiB, environment included; ABX refuses a larger input before the sandbox starts, naming its size, rather than truncating it silently or letting `execve` fail with a raw error. A single forwarded environment value may itself be close to 64 KiB, but the probe also carries fixed observation data and JSON escaping, so a value near that per-value limit can make `verify` refuse an input that `run`, `shell`, or `work` still pass.
 
 The read-only checks inspect mount flags at the selected mountpoints; they do not independently check every nested mount. Read-only enforcement is delegated to Bubblewrap. See the [verification scope](security.md#verification).
 

@@ -20,6 +20,7 @@
 - The architecture guide now says exactly which process flags `verify` reflects: the `--unshare-*` flags and hostname, not `--disable-userns`, `--die-with-parent`, or `--clearenv`. (English and Russian.)
 - The release guide now describes the packaging clean-tree gate accurately: ignored files are rejected only for the listed build-input extensions, and an ignored `//go:embed` or generated input outside that list is a documented residual risk. (English and Russian.)
 - The usage guide no longer contradicts itself about `--`: only `run` accepts it, and a bare `--` after `run` behaves like no separator. (English and Russian.)
+- Fixed: the relative-link checker rejects a target that resolves outside the scanned tree, including through `..` or a symlink, and treats URL schemes case-insensitively (`HTTPS://` is skipped).
 
 ## 0.8.29
 

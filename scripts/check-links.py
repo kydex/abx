@@ -107,12 +107,22 @@ def targets(text):
             pending = True
 
 
+class LinkEscape(ValueError):
+    """A link resolves outside the scanned tree."""
+
+
 def resolve_target(root, path, target):
     """Resolve a link target against the scanned tree, not the host."""
     target = urllib.parse.unquote(target)
     if target.startswith("/"):
-        return (root / target.lstrip("/")).resolve()
-    return (path.parent / target).resolve()
+        resolved = (root / target.lstrip("/")).resolve()
+    else:
+        resolved = (path.parent / target).resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise LinkEscape(target) from exc
+    return resolved
 
 
 def file_group(path, root):
@@ -141,14 +151,21 @@ def main():
         text = path.read_text(encoding="utf-8")
         for number, raw in targets(text):
             target = link_target(raw)
-            if not target or target.startswith(SKIP):
+            if not target or target.lower().startswith(SKIP):
                 continue
             target = target.split("#", 1)[0]
             if not target:
                 continue
             checked += 1
             links_by_group[group] = links_by_group.get(group, 0) + 1
-            if not resolve_target(root, path, target).exists():
+            try:
+                resolved = resolve_target(root, path, target)
+            except LinkEscape:
+                broken.append(
+                    f"{path.relative_to(root)}:{number}: {raw} (target escapes the scanned root)"
+                )
+                continue
+            if not resolved.exists():
                 broken.append(f"{path.relative_to(root)}:{number}: {raw}")
     if broken:
         print("broken relative links:", file=sys.stderr)

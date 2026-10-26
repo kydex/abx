@@ -18,7 +18,7 @@ type systemLayout struct {
 	// userspace to run anything in.
 	usr string
 	// compat are the compatibility directories. Each may be absent or a
-	// symlink to its real location.
+	// usrmerge-style relative symlink whose target resolves inside /usr.
 	compat []string
 	// etc are optional file and directory names under /etc.
 	etc []string

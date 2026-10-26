@@ -194,11 +194,11 @@ func executeSession(
 
 func finishClose(status *int, result *error, cleanup func() error) {
 	if err := cleanup(); err != nil {
-		// Only the child's own exit arrives as a nonzero status with no error:
-		// every launcher-side failure returns an error together with its
-		// status, and such a failure must not be named as a child exit.
+		// A nonzero status with no error can be the payload's own exit or a
+		// Bubblewrap setup failure that returned the same status. The neutral
+		// wording does not claim which process ended.
 		if *status != 0 && *result == nil {
-			err = errors.Join(fmt.Errorf("child ended with status %d", *status), err)
+			err = errors.Join(fmt.Errorf("session process ended with status %d", *status), err)
 		}
 		*result = errors.Join(*result, err)
 		if *status == 0 {

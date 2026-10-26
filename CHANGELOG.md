@@ -9,6 +9,7 @@
 - `verify` now observes `/proc` and `/dev/shm` identities and rejects a separate mountpoint at `/run/user`; a cross-package test keeps the probe's fixed path list aligned with the sandbox's private mounts. (English and Russian.)
 - A missing, inaccessible, or looping passwd home is now reported as a requirement for an existing directory owned by the invoking UID, with a pointer to the installation guide, instead of a raw `canonicalize ... lstat` error.
 - Fixed: `profile list` names the profiles directory rather than a profile home when that retained directory changes; `profile create` records the final directory as created even when its mode or owner check fails, and names the full directory in close errors without repeating the created-profile phrase.
+- A cleanup failure after a nonzero session status now says `session process ended with status N` instead of claiming the payload exited on its own; the status can also come from a Bubblewrap setup failure.
 
 ## 0.8.29
 

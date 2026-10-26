@@ -391,6 +391,29 @@ func TestShowProfileAcceptsAgentInstalledUnderSystemPath(t *testing.T) {
 	}
 }
 
+func TestRoleNamesProfilesDirectoryForListing(t *testing.T) {
+	paths := Paths{
+		Root:     "/tmp/abx-test/abx",
+		Profiles: "/tmp/abx-test/abx/profiles",
+	}
+	in := profileInputs(Account{}, paths, "")
+	if got := in.role(paths.Profiles); got != "profiles directory" {
+		t.Fatalf("role(profiles) = %q, want profiles directory", got)
+	}
+}
+
+func TestCreateDirectoryAtReportsCreatedBeforePrivateInfoFailure(t *testing.T) {
+	parent, err := openDirectoryAt(unix.AT_FDCWD, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer parent.Close()
+	_, created, err := createDirectoryAt(parent, "demo", os.Getuid()+1, true, true)
+	if err == nil || !created {
+		t.Fatalf("createDirectoryAt created=%v err=%v, want created directory and ownership error", created, err)
+	}
+}
+
 func TestFinishProfileCreationKeepsOutcomesDistinct(t *testing.T) {
 	base := errors.New("creation failed")
 	closeErr := errors.New("close failed")
@@ -407,6 +430,11 @@ func TestFinishProfileCreationKeepsOutcomesDistinct(t *testing.T) {
 		!strings.Contains(got.Error(), "profile was created, but") ||
 		strings.Contains(got.Error(), "incomplete") {
 		t.Fatalf("created profile reported as failed creation: %v", got)
+	}
+	if got := finishProfileCreation(base, true, true, nil); !errors.Is(got, base) ||
+		!strings.Contains(got.Error(), "profile was created, but setup failed") ||
+		strings.Contains(got.Error(), "incomplete") {
+		t.Fatalf("created profile with a later failure misreported: %v", got)
 	}
 	if got := finishProfileCreation(base, false, false, closeErr); !errors.Is(got, base) ||
 		!errors.Is(got, closeErr) || strings.Contains(got.Error(), "incomplete") {

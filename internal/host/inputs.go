@@ -319,12 +319,12 @@ func resolveAgent(home, name string) (string, error) {
 // several kinds of source, and the message must say which one changed.
 func (in *Inputs) role(path string) string {
 	switch {
+	case path == in.paths.Profiles:
+		return "profiles directory"
 	case path == in.home:
 		return "profile home"
 	case path == in.paths.Root:
 		return "data root"
-	case path == in.paths.Profiles:
-		return "profiles directory"
 	case path == in.paths.Shared:
 		return "shared directory"
 	case path == in.project:

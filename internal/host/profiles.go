@@ -155,6 +155,7 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 	}
 	created := false
 	profileCreated := false
+	parentPath := "/"
 	defer func() {
 		result = finishProfileCreation(result, created, profileCreated, parent.Close())
 	}()
@@ -170,22 +171,20 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 		exclusive := i == len(components)-1
 		next, made, err := createDirectoryAt(parent, part, account.UID, private, exclusive)
 		created = created || made
+		// The profile exists as soon as its own directory was created, even if
+		// a later mode or identity check fails on that same call.
+		if exclusive && made {
+			profileCreated = true
+		}
 		if err != nil {
 			return "", fmt.Errorf("prepare profile directory %q: %w", current, err)
-		}
-		if exclusive {
-			// The profile exists as soon as its own directory was created.
-			// Closing the parent is cleanup from here on, not creation.
-			profileCreated = true
 		}
 		closeErr := parent.Close()
 		parent = next
 		if closeErr != nil {
-			if profileCreated {
-				return "", fmt.Errorf("profile was created, but its directory descriptor could not be closed: %w", closeErr)
-			}
-			return "", closeErr
+			return "", fmt.Errorf("close profile directory %q: %w", parentPath, closeErr)
 		}
+		parentPath = current
 	}
 	return filepath.Join(paths.Profiles, name), nil
 }
@@ -201,6 +200,9 @@ func finishProfileCreation(result error, created, profileCreated bool, closeErr 
 		} else {
 			result = errors.Join(result, closeErr)
 		}
+	}
+	if profileCreated && result != nil && !strings.Contains(result.Error(), "profile was created") {
+		result = fmt.Errorf("profile was created, but setup failed; remove the profile directory before retrying: %w", result)
 	}
 	if created && !profileCreated && result != nil {
 		result = fmt.Errorf("profile creation incomplete; created directories may remain: %w", result)

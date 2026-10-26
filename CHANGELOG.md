@@ -14,6 +14,7 @@
 - `verify` now refuses a non-UTF-8 home, sentinel, object key, or read-only path before starting the sandbox, instead of letting JSON replace bytes and check a different path.
 - `verify` now opens `/proc/self/exe` with `O_PATH`, so it works when the ABX binary is executable but not readable, like the other retained sources.
 - The usage and signal guides now state that bash treats `shell`/`work` as interactive only when stdin and stderr are terminals; redirecting stderr leaves job control off and `Ctrl+C` ends the session with `130`. The manual check says to keep stderr attached. (English and Russian.)
+- The development guide now records the last full mutation sweep on `408ef13` (323 killed, 138 survived of 461, six skips) and spells out that the sweep does not measure assignments, constants, calls, non-`if` branches, or package initialisation. (English and Russian.)
 
 ## 0.8.29
 

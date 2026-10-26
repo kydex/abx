@@ -80,6 +80,15 @@ Two distinctions the output depends on. A build or vet failure is *not applicabl
 
 Two limits of the number. Each guard is one whole `if` condition: operands of `&&` and `||` are not measured separately, and a `switch` statement or a conditional `for` loop is not a guard by itself — only the `if` statements inside it are measured. And `survived` covers three different situations — a guard no test exercises, a guard whose removal a neighbouring check makes invisible, and a guard whose only test skipped on this machine. Read the survivor list line by line before treating it as debt.
 
+What the sweep does not see, and therefore does not excuse:
+
+- assignments and constants, such as the fixed Bubblewrap path or a mode selector, unless a test reads them directly;
+- calls and branches outside `if` conditions, including `switch` cases and the operands of `&&`/`||`;
+- package initialisation and compile-time choices;
+- behaviour reached only by the live suite when the unit suite never exercises it.
+
+A survivor list is therefore a lower bound on test debt, not a complete inventory.
+
 ## Live sandbox tests
 
 On a regular-user Linux host with Bubblewrap 0.11.1+ at `/usr/bin/bwrap` and working unprivileged user namespaces.
@@ -154,12 +163,10 @@ here so nobody starts the same discussion from scratch.
   `Revalidate` calls, in `executeSession` and `runVerify`, are in that gap:
   removing them, or ignoring their error, leaves the suite green because
   `Prepare` starts with its own revalidation. The mutation sweep behind this
-  list measured the size of the gap, but its numbers are historical. The tenth
-  full run measured 304 guards killed and 128 survived of 432, none not
-  applicable; at that run `internal/app` tests caught 40 of the package's 77
-  guards. The current tree is not that run: at `f6b86b7` the guard finder
-  counts 86 guards in `internal/app` and 453 across the swept files, so do not
-  read the tenth-run pass rates as current.
+  list measured the size of the gap, but its numbers are historical. The last
+  full run on `408ef13` (26 October 2026) measured 323 guards killed and 138
+  survived of 461, none not applicable, with six skipped tests. The tree has
+  changed since that revision, so do not read those pass rates as current.
 - The aggregate coverage floor is 74.0% against an actual 92.5%, and `internal/app` is 318 of its
   357 statements (89.1%). Halving that package's coverage still leaves the aggregate at 83.7%; even
   zeroing it leaves 74.8%, still above the floor, so the gate does not fire on this package. The aggregate catches gross

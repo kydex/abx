@@ -17,6 +17,7 @@
 - The development guide now records the last full mutation sweep on `408ef13` (323 killed, 138 survived of 461, six skips) and spells out that the sweep does not measure assignments, constants, calls, non-`if` branches, or package initialisation. (English and Russian.)
 - The usage and security guides now explain that the 64 KiB per-value environment bound and the 64 KiB whole probe payload are separate limits, so `verify` can refuse a value near the per-value bound that `run`, `shell`, and `work` accept. (English and Russian.)
 - Fixed: CLI diagnostics for an unknown command, unknown profile subcommand, or option-like token now show at most a 128-byte prefix and the real byte count instead of echoing the whole argument.
+- The architecture guide now says exactly which process flags `verify` reflects: the `--unshare-*` flags and hostname, not `--disable-userns`, `--die-with-parent`, or `--clearenv`. (English and Russian.)
 
 ## 0.8.29
 

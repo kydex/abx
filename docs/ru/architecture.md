@@ -25,7 +25,7 @@ Runtime ABX намеренно остаётся небольшим: host resourc
 host state -> host.Inputs -> sandbox.Plan -> bwrap translation/execution
 ```
 
-`host` решает, какие объекты хоста допустимы. `sandbox` решает, как допустимые объекты видны внутри песочницы. `bwrap` реализует этот план и не добавляет собственной политики уровня хоста. Исключение — флаги пространств имён и времени жизни самого процесса: они заданы литералом в точке перевода (`--unshare-user --disable-userns --unshare-pid --unshare-ipc --unshare-uts --hostname abx --die-with-parent --clearenv`), а не полем `Plan`. Поэтому они вне досягаемости `Plan.Validate` и записаны в трёх местах — в этом литерале, в сводке `inspect` и в списке пространств имён `verify`, — причём ни одно место не выводится из другого.
+`host` решает, какие объекты хоста допустимы. `sandbox` решает, как допустимые объекты видны внутри песочницы. `bwrap` реализует этот план и не добавляет собственной политики уровня хоста. Исключение — флаги пространств имён и времени жизни самого процесса: они заданы литералом в точке перевода (`--unshare-user --disable-userns --unshare-pid --unshare-ipc --unshare-uts --hostname abx --die-with-parent --clearenv`), а не полем `Plan`. Поэтому они вне досягаемости `Plan.Validate`. Флаги `--unshare-*` и hostname отражены в списке пространств имён `verify`; `--disable-userns`, `--die-with-parent` и `--clearenv` есть только в этом литерале и в сводке `inspect`. Ни одно из этих мест не выводится из другого.
 
 ## Обычный flow `run` / `shell` / `work`
 

@@ -11,6 +11,7 @@
 - Fixed: `profile list` names the profiles directory rather than a profile home when that retained directory changes; `profile create` records the final directory as created even when its mode or owner check fails, and names the full directory in close errors without repeating the created-profile phrase.
 - A cleanup failure after a nonzero session status now says `session process ended with status N` instead of claiming the payload exited on its own; the status can also come from a Bubblewrap setup failure.
 - A `verify` timeout now names the phase that consumed the 30-second budget (`opening the tool`, `host observation`, `probe preparation`, `sandbox preparation`, `starting the sandbox`, or `running the sandbox`); the usage guides list the covered phases. (English and Russian.)
+- `verify` now refuses a non-UTF-8 home, sentinel, object key, or read-only path before starting the sandbox, instead of letting JSON replace bytes and check a different path.
 
 ## 0.8.29
 

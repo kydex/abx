@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"time"
+	"unicode/utf8"
 
 	"github.com/kydex/abx/internal/bwrap"
 	"github.com/kydex/abx/internal/cli"
@@ -112,6 +113,22 @@ func cancellationError(ctx context.Context, phase string, err error) error {
 	return err
 }
 
+// validProbePaths keeps JSON encoding from replacing invalid UTF-8 bytes with
+// U+FFFD and making the probe inspect a different path than the host did.
+func validProbePaths(expected probe.Expected) error {
+	paths := []string{expected.Home, expected.Sentinel}
+	for p := range expected.Objects {
+		paths = append(paths, p)
+	}
+	paths = append(paths, expected.ReadOnly...)
+	for _, p := range paths {
+		if !utf8.ValidString(p) {
+			return fmt.Errorf("verification path is not valid UTF-8: %q", p)
+		}
+	}
+	return nil
+}
+
 // verifyInput serializes the host observations and refuses a payload the probe
 // cannot accept before the sandbox starts. The probe reads at most
 // probe.MaxInputBytes; a payload past that bound would either be refused by the
@@ -119,6 +136,9 @@ func cancellationError(ctx context.Context, phase string, err error) error {
 // a raw E2BIG. The per-value environment limit does not bound the sum, and
 // JSON escaping can expand values further.
 func verifyInput(expected probe.Expected) ([]byte, error) {
+	if err := validProbePaths(expected); err != nil {
+		return nil, err
+	}
 	raw, err := json.Marshal(expected)
 	if err != nil {
 		return nil, err

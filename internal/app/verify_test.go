@@ -177,6 +177,31 @@ func TestVerifyInputRefusesOversizedPayload(t *testing.T) {
 // The per-value bound does not bound the sum, so a valid environment whose
 // total payload crosses the probe limit has to be refused before execve
 // turns it into a raw E2BIG or a late probe refusal.
+func TestVerifyInputRejectsNonUTF8Paths(t *testing.T) {
+	invalid := string([]byte{'/', 't', 'm', 'p', '/', 0xff})
+	base := probe.Expected{
+		Home:     "/home/user",
+		Sentinel: "/home/user/.abx-verify-1",
+		Objects:  map[string]probe.Identity{"/tmp": {}},
+		ReadOnly: []string{"/usr"},
+	}
+	for name, mutate := range map[string]func(*probe.Expected){
+		"home":     func(e *probe.Expected) { e.Home = invalid },
+		"sentinel": func(e *probe.Expected) { e.Sentinel = invalid },
+		"object":   func(e *probe.Expected) { e.Objects[invalid] = probe.Identity{} },
+		"readonly": func(e *probe.Expected) { e.ReadOnly = []string{invalid} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := base
+			e.Objects = map[string]probe.Identity{"/tmp": {}}
+			mutate(&e)
+			if _, err := verifyInput(e); err == nil || !strings.Contains(err.Error(), "not valid UTF-8") {
+				t.Fatalf("verifyInput(%s) = %v", name, err)
+			}
+		})
+	}
+}
+
 func TestVerifyRefusesOversizedEnvironmentBeforeExecute(t *testing.T) {
 	in := inputs(t, host.Run)
 	home := t.TempDir()

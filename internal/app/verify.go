@@ -15,6 +15,7 @@ import (
 	"github.com/kydex/abx/internal/host"
 	"github.com/kydex/abx/internal/probe"
 	"github.com/kydex/abx/internal/sandbox"
+	"golang.org/x/sys/unix"
 )
 
 func runVerify(
@@ -42,9 +43,15 @@ func runVerify(
 	defer finishClose(&status, &result, tool.Close)
 	phase = "host observation"
 	// /proc/self/exe denotes this running binary, even after its installed path is replaced.
-	self, err := os.Open("/proc/self/exe")
+	// O_PATH keeps verify working when the binary is executable but not readable.
+	fd, err := unix.Open("/proc/self/exe", unix.O_PATH|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return 1, cancellationError(ctx, phase, err)
+	}
+	self := os.NewFile(uintptr(fd), "/proc/self/exe")
+	if self == nil {
+		_ = unix.Close(fd)
+		return 1, errors.New("open /proc/self/exe: invalid descriptor")
 	}
 	defer finishClose(&status, &result, self.Close)
 	expected, err := observeHost(home, input)

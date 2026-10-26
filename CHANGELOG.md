@@ -12,6 +12,7 @@
 - A cleanup failure after a nonzero session status now says `session process ended with status N` instead of claiming the payload exited on its own; the status can also come from a Bubblewrap setup failure.
 - A `verify` timeout now names the phase that consumed the 30-second budget (`opening the tool`, `host observation`, `probe preparation`, `sandbox preparation`, `starting the sandbox`, or `running the sandbox`); the usage guides list the covered phases. (English and Russian.)
 - `verify` now refuses a non-UTF-8 home, sentinel, object key, or read-only path before starting the sandbox, instead of letting JSON replace bytes and check a different path.
+- `verify` now opens `/proc/self/exe` with `O_PATH`, so it works when the ABX binary is executable but not readable, like the other retained sources.
 
 ## 0.8.29
 

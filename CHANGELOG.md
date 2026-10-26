@@ -7,6 +7,7 @@
 - The compatibility-link comment and security guide now say that only a usrmerge-style relative link resolving inside `/usr` is supported; a non-usrmerge layout whose `/lib` points at another compatibility directory is refused instead of being promised as usable. (English and Russian.)
 - The security guide now says that `Tool.Revalidate` rechecks the retained canonical Bubblewrap target, not the `/usr/bin/bwrap` name; retargeting that symlink does not change what is revalidated. (English and Russian.)
 - `verify` now observes `/proc` and `/dev/shm` identities and rejects a separate mountpoint at `/run/user`; a cross-package test keeps the probe's fixed path list aligned with the sandbox's private mounts. (English and Russian.)
+- A missing, inaccessible, or looping passwd home is now reported as a requirement for an existing directory owned by the invoking UID, with a pointer to the installation guide, instead of a raw `canonicalize ... lstat` error.
 
 ## 0.8.29
 

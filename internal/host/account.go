@@ -71,7 +71,16 @@ func accountFromPasswd(uid int, username, home string) (Account, error) {
 	}
 	canonical, err := filepath.EvalSymlinks(home)
 	if err != nil {
-		return Account{}, fmt.Errorf("canonicalize passwd home %q: %w", home, err)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			return Account{}, fmt.Errorf("passwd home %q does not exist; it must be an existing directory owned by uid %d (see docs/installation.md): %w", home, uid, err)
+		case errors.Is(err, fs.ErrPermission):
+			return Account{}, fmt.Errorf("passwd home %q is not accessible; it must be an existing directory owned by uid %d (see docs/installation.md): %w", home, uid, err)
+		case errors.Is(err, syscall.ELOOP):
+			return Account{}, fmt.Errorf("passwd home %q is a symlink loop; it must be an existing directory owned by uid %d (see docs/installation.md): %w", home, uid, err)
+		default:
+			return Account{}, fmt.Errorf("canonicalize passwd home %q: %w", home, err)
+		}
 	}
 	info, err := os.Stat(canonical)
 	if err != nil {

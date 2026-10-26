@@ -70,8 +70,15 @@ func TestAccountFromPasswd(t *testing.T) {
 	if err := os.Symlink(filepath.Join(filepath.Dir(home), "missing"), dangling); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := accountFromPasswd(1000, "tester", dangling); err == nil {
-		t.Error("accepted dangling symlink as home")
+	if _, err := accountFromPasswd(1000, "tester", dangling); err == nil ||
+		!strings.Contains(err.Error(), "does not exist") ||
+		!strings.Contains(err.Error(), "existing directory owned by uid 1000") {
+		t.Errorf("dangling symlink home error = %v", err)
+	}
+	missing := filepath.Join(filepath.Dir(home), "missing-home")
+	if _, err := accountFromPasswd(1000, "tester", missing); err == nil ||
+		!strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("missing home error = %v", err)
 	}
 	fileHome := filepath.Join(filepath.Dir(home), "file-home")
 	if err := os.WriteFile(fileHome, []byte("x"), 0o600); err != nil {
@@ -90,8 +97,9 @@ func TestAccountFromPasswd(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = os.Chmod(lockedParent, 0o700) })
-		if _, err := accountFromPasswd(1000, "tester", lockedHome); err == nil {
-			t.Error("accepted unreachable home")
+		if _, err := accountFromPasswd(1000, "tester", lockedHome); err == nil ||
+			!strings.Contains(err.Error(), "not accessible") {
+			t.Errorf("unreachable home error = %v", err)
 		}
 	}
 }

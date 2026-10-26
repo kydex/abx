@@ -5,6 +5,7 @@
 - Fixed: a sensitive home path is now resolved component by component, so a project reached by an intermediate symlink is rejected even when the final target lies outside it; comparing only the final `EvalSymlinks` result missed `~/.gem -> project/gem -> outside/credentials`.
 - The documented minimum kernel is now Linux 6.6, matching `fchmodat2` used by `profile create` and shared-skill preparation; the previous 6.5 claim was wrong. (English and Russian.)
 - The compatibility-link comment and security guide now say that only a usrmerge-style relative link resolving inside `/usr` is supported; a non-usrmerge layout whose `/lib` points at another compatibility directory is refused instead of being promised as usable. (English and Russian.)
+- The security guide now says that `Tool.Revalidate` rechecks the retained canonical Bubblewrap target, not the `/usr/bin/bwrap` name; retargeting that symlink does not change what is revalidated. (English and Russian.)
 
 ## 0.8.29
 

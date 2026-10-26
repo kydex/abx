@@ -46,7 +46,7 @@ ABX additionally validates the host objects it depends on: the two it executes, 
 
 | Object | Check |
 |---|---|
-| `/usr/bin/bwrap` | Regular file, executable, no setuid/setgid/sticky bits, not writable by group/other, owned by root; before execution it must still resolve to the same inode and pass the same mode check again |
+| `/usr/bin/bwrap` | Regular file, executable, no setuid/setgid/sticky bits, not writable by group/other, owned by root; before execution the retained canonical target must still be the same inode and pass the same mode check again. The `/usr/bin/bwrap` name is not re-resolved, so retargeting that symlink does not change the checked target |
 | Login shell from `/etc/passwd` | Resolved target is a regular file, executable by the invoking user, not writable by group/other, no setuid/setgid/sticky bits; both the passwd path and its resolved target must be visible in the sandbox |
 | Account home from `/etc/passwd` | A real directory, not world-writable, owned by the invoking UID |
 | ABX storage root, profiles directory, profile home, and the optional `shared` directory when skills are configured | Real directories, exact mode `0700` with no setuid/setgid/sticky bits, owned by the invoking UID |

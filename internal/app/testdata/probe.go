@@ -87,7 +87,7 @@ func main() {
 	if e != nil || ns == expected.Namespace {
 		die("PID namespace not isolated")
 	}
-	for _, p := range []string{"/tmp", "/var/tmp", "/run", "/dev"} {
+	for _, p := range []string{"/tmp", "/var/tmp", "/run", "/dev", "/proc", "/dev/shm"} {
 		if identity(p) == expected.Objects[p] {
 			die("host object exposed: " + p)
 		}

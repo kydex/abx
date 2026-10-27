@@ -258,6 +258,76 @@ func TestResolveRejectsRelativeSensitiveLinkUnderSymlinkedParent(t *testing.T) {
 	}
 }
 
+func TestResolveRejectsSensitiveTargetWithDotDotAfterSymlink(t *testing.T) {
+	for _, absolute := range []bool{false, true} {
+		name := "relative"
+		if absolute {
+			name = "absolute"
+		}
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			home := filepath.Join(root, "home")
+			store := filepath.Join(root, "store")
+			project := filepath.Join(root, "project")
+			data := filepath.Join(home, "data")
+			for _, dir := range []string{home, store, project} {
+				if err := os.MkdirAll(dir, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			target := "link/../project"
+			if absolute {
+				link := filepath.Join(root, "target-link")
+				if err := os.Symlink(store, link); err != nil {
+					t.Fatal(err)
+				}
+				target = link + "/../project"
+			} else if err := os.Symlink(store, filepath.Join(home, "link")); err != nil {
+				t.Fatal(err)
+			}
+			// The target contains ".." after a symlink component. The kernel
+			// resolves the link first, so the real target is project, not a
+			// lexically cleaned path under the link's parent.
+			if err := os.Symlink(target, filepath.Join(home, ".gem")); err != nil {
+				t.Fatal(err)
+			}
+			got, err := canonicalSensitiveTree(filepath.Join(home, ".gem", "credentials"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := filepath.Join(project, "credentials")
+			if got != want {
+				t.Fatalf("canonical sensitive path = %q, want %q", got, want)
+			}
+			if _, err := ResolveProject(project, home, data); err == nil {
+				t.Fatal("accepted project at the real sensitive target")
+			}
+			// The data base must not be placed at the real sensitive target
+			// either; this goes through ResolvePaths rather than ResolveProject.
+			if err := os.MkdirAll(want, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			account := Account{UID: os.Getuid(), Username: "tester", Home: home}
+			if _, err := ResolvePaths(account, want); err == nil {
+				t.Fatal("accepted data base at the real sensitive target")
+			}
+			// The lexical path under the home directory is not the target the
+			// kernel reaches. It must remain usable for an unrelated project
+			// and data base.
+			legit := filepath.Join(home, "project")
+			if err := os.MkdirAll(filepath.Join(legit, "credentials"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if got, err := ResolveProject(legit, home, data); err != nil || got != legit {
+				t.Fatalf("ResolveProject(%q) = %q, %v", legit, got, err)
+			}
+			if _, err := ResolvePaths(account, filepath.Join(legit, "credentials")); err != nil {
+				t.Fatalf("ResolvePaths rejected the lexical target: %v", err)
+			}
+		})
+	}
+}
+
 func TestResolveRejectsSensitiveSymlinkTargetBlockedByFileOrCycle(t *testing.T) {
 	for _, target := range []string{"file", "cycle"} {
 		t.Run(target, func(t *testing.T) {

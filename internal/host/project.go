@@ -174,12 +174,11 @@ func canonicalSensitiveTree(path string) (string, error) {
 // intermediate link can run through a project, so comparing the final target
 // alone would let that project pass the overlap check.
 func canonicalSensitiveTreePaths(path string) ([]string, error) {
-	clean := filepath.Clean(path)
-	if !filepath.IsAbs(clean) {
+	if !filepath.IsAbs(path) {
 		return nil, fmt.Errorf("canonicalize sensitive tree %q: path is not absolute", path)
 	}
 	var targets []string
-	resolved, err := resolveSensitiveComponents(clean, make(map[string]bool), &targets)
+	resolved, err := resolveSensitiveComponents(path, make(map[string]bool), &targets)
 	if err != nil {
 		return nil, err
 	}
@@ -194,17 +193,28 @@ func canonicalSensitiveTreePaths(path string) ([]string, error) {
 // just the final target of the whole path. A missing component, a non-directory
 // in the middle, or a cycle ends the walk with the literal path that cannot
 // exist yet; that is the path the overlap checks must still compare.
+//
+// The walk keeps a physical prefix: ".." moves to the parent of that prefix,
+// never to the lexical parent of a link target. This matters when a target
+// itself contains ".." after a symlink component; filepath.Clean would collapse
+// the two before the symlink is followed and could make a sensitive path look
+// unrelated to its real target.
 func resolveSensitiveComponents(path string, seen map[string]bool, targets *[]string) (string, error) {
-	clean := filepath.Clean(path)
-	if clean == string(filepath.Separator) {
-		*targets = append(*targets, clean)
-		return clean, nil
+	if path == string(filepath.Separator) {
+		*targets = append(*targets, path)
+		return path, nil
 	}
-	relative := strings.TrimPrefix(clean, string(filepath.Separator))
+	relative := strings.TrimPrefix(path, string(filepath.Separator))
 	parts := strings.Split(relative, string(filepath.Separator))
 	prefix := string(filepath.Separator)
 	for i, part := range parts {
-		if part == "" {
+		switch part {
+		case "", ".":
+			continue
+		case "..":
+			if prefix != string(filepath.Separator) {
+				prefix = filepath.Dir(prefix)
+			}
 			continue
 		}
 		candidate := filepath.Join(prefix, part)
@@ -224,15 +234,21 @@ func resolveSensitiveComponents(path string, seen map[string]bool, targets *[]st
 			if err != nil {
 				return "", fmt.Errorf("read sensitive tree link %q: %w", candidate, err)
 			}
-			if !filepath.IsAbs(target) {
-				target = filepath.Join(filepath.Dir(candidate), target)
-			}
-			next := joinSensitiveRemaining(filepath.Clean(target), parts[i+1:])
-			*targets = append(*targets, next)
+			targetPath := appendSensitiveTarget(candidate, target)
 			if seen[candidate] {
+				next := appendSensitivePath(targetPath, parts[i+1:])
+				*targets = append(*targets, next)
 				return next, nil
 			}
 			seen[candidate] = true
+			// Resolve the target by itself first, so the target path compared
+			// against a project is the path the kernel reaches, not a lexical
+			// string that still contains ".." after a symlink component.
+			resolvedTarget, err := resolveSensitiveComponents(targetPath, seen, targets)
+			if err != nil {
+				return "", err
+			}
+			next := appendSensitivePath(resolvedTarget, parts[i+1:])
 			return resolveSensitiveComponents(next, seen, targets)
 		}
 		if !info.IsDir() && i < len(parts)-1 {
@@ -244,6 +260,27 @@ func resolveSensitiveComponents(path string, seen map[string]bool, targets *[]st
 	}
 	*targets = append(*targets, prefix)
 	return prefix, nil
+}
+
+// appendSensitiveTarget builds the absolute path of a link target. It
+// deliberately does not call filepath.Join or filepath.Clean: a ".." after a
+// symlink component must be interpreted against that component's physical
+// parent, which the component walker can do only if the ".." survives here.
+func appendSensitiveTarget(link, target string) string {
+	next := target
+	if !filepath.IsAbs(next) {
+		next = filepath.Dir(link) + string(filepath.Separator) + next
+	}
+	return next
+}
+
+// appendSensitivePath joins components without lexical cleaning, so a ".."
+// after a symlink component is still resolved by the component walker.
+func appendSensitivePath(path string, remaining []string) string {
+	if len(remaining) == 0 {
+		return path
+	}
+	return path + string(filepath.Separator) + strings.Join(remaining, string(filepath.Separator))
 }
 
 // joinSensitiveRemaining rebuilds the part of the path that does not exist yet

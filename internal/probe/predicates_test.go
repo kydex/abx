@@ -3,6 +3,7 @@ package probe
 import (
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -110,13 +111,18 @@ func goodObserver(e Expected) observer {
 
 func state(t *testing.T, checks []Check, name string) string {
 	t.Helper()
+	return namedCheck(t, checks, name).State
+}
+
+func namedCheck(t *testing.T, checks []Check, name string) Check {
+	t.Helper()
 	for _, c := range checks {
 		if c.Name == name {
-			return c.State
+			return c
 		}
 	}
 	t.Fatalf("no observation named %q in %v", name, checks)
-	return ""
+	return Check{}
 }
 
 // With consistent observations every observation passes. Without this the
@@ -301,6 +307,14 @@ func TestCheckFailsEachPredicateWhenItsObservationIsWrong(t *testing.T) {
 			}
 			if got := state(t, checks, tc.observation); got != want {
 				t.Fatalf("%q = %s, want %s", tc.observation, got, want)
+			}
+			got := namedCheck(t, checks, tc.observation)
+			if got.Detail == "" {
+				t.Errorf("%q has an empty Detail", tc.observation)
+			}
+			if tc.observation == runtimeMode &&
+				(!strings.Contains(got.Detail, "expected") || !strings.Contains(got.Detail, "observed")) {
+				t.Errorf("runtime mode Detail lacks expected/observed: %q", got.Detail)
 			}
 			// An observation the case did not touch must still hold, otherwise
 			// one shared stub could be failing everything at once.

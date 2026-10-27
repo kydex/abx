@@ -587,9 +587,18 @@ func TestCheckDataBaseOwnerRequiresInvokingUser(t *testing.T) {
 		!strings.Contains(err.Error(), "not owned by the invoking user") {
 		t.Fatalf("foreign-owned data base ancestor accepted: %v", err)
 	}
-	if err := checkDataBaseOwner(base, uid+1); err == nil &&
-		strings.Contains(err.Error(), "world-writable") {
-		t.Fatal("owner rule reported a mode problem")
+	// Owner and mode are independent rules: this fixture passes the owner check
+	// and must still be refused for its mode.
+	wide := filepath.Join(base, "wide")
+	if err := os.Mkdir(wide, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(wide, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkDataBaseOwner(wide, uid); err == nil ||
+		!strings.Contains(err.Error(), "world-writable") {
+		t.Fatalf("world-writable data base ancestor accepted: %v", err)
 	}
 	// A regular file is not a valid ancestor either.
 	file := filepath.Join(base, "plain")
@@ -698,8 +707,9 @@ func TestAccountEntryMustNameARealNonRootUser(t *testing.T) {
 
 func TestResolvePathsRequiresAbsoluteHome(t *testing.T) {
 	for _, home := range []string{"relative/home", "", ".", "home/../.."} {
-		if _, err := ResolvePaths(Account{UID: os.Getuid(), Username: "tester", Home: home}, ""); err == nil {
-			t.Fatalf("accepted home %q", home)
+		_, err := ResolvePaths(Account{UID: os.Getuid(), Username: "tester", Home: home}, "")
+		if err == nil || !strings.Contains(err.Error(), "real home") || !strings.Contains(err.Error(), "is not absolute") {
+			t.Fatalf("home %q = %v, want the absolute-home refusal", home, err)
 		}
 	}
 }

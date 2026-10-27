@@ -152,8 +152,11 @@ func TestResolveAccountLookupPaths(t *testing.T) {
 	if err != nil || account.Home != home {
 		t.Fatalf("resolveAccount = %#v, %v", account, err)
 	}
-	if _, err := resolveAccount(uid, func(string) (*user.User, error) { return nil, errors.New("lookup failed") }); err == nil {
-		t.Fatal("accepted lookup failure")
+	lookupErr := errors.New("lookup failed")
+	if _, err := resolveAccount(uid, func(string) (*user.User, error) { return nil, lookupErr }); err == nil ||
+		!errors.Is(err, lookupErr) ||
+		!strings.Contains(err.Error(), "look up passwd entry for uid") {
+		t.Fatalf("lookup failure = %v, want its cause and context", err)
 	}
 	for _, tc := range []struct {
 		name string

@@ -18,7 +18,21 @@ const (
 	Tmpfs
 	Proc
 	Dev
+	// kindCount stays last. AllKinds enumerates the contiguous range, so a new
+	// kind added before it is automatically covered by cross-package tests.
+	kindCount
 )
+
+// AllKinds returns every mount kind in declaration order. It exists so a
+// cross-package test can require an inspect name for each kind; production code
+// keeps its own switch.
+func AllKinds() []Kind {
+	kinds := make([]Kind, 0, kindCount)
+	for k := Directory; k < kindCount; k++ {
+		kinds = append(kinds, k)
+	}
+	return kinds
+}
 
 type Mount struct {
 	Kind           Kind

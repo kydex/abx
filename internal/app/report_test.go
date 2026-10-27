@@ -11,22 +11,32 @@ import (
 // The table also pins what an unknown kind prints, because the switch has no
 // default branch of its own.
 func TestMountNameCoversEveryKind(t *testing.T) {
-	for _, tc := range []struct {
-		kind sandbox.Kind
-		want string
-	}{
-		{sandbox.Directory, "directory"},
-		{sandbox.ReadOnly, "read-only"},
-		{sandbox.Writable, "read-write"},
-		{sandbox.Symlink, "symlink"},
-		{sandbox.Tmpfs, "private-tmpfs"},
-		{sandbox.Proc, "private-proc"},
-		{sandbox.Dev, "private-dev"},
-		{sandbox.Kind(99), "unknown"},
-		{sandbox.Kind(200), "unknown"},
-	} {
-		if got := mountName(tc.kind); got != tc.want {
-			t.Errorf("mountName(%d) = %q, want %q", tc.kind, got, tc.want)
+	want := map[sandbox.Kind]string{
+		sandbox.Directory: "directory",
+		sandbox.ReadOnly:  "read-only",
+		sandbox.Writable:  "read-write",
+		sandbox.Symlink:   "symlink",
+		sandbox.Tmpfs:     "private-tmpfs",
+		sandbox.Proc:      "private-proc",
+		sandbox.Dev:       "private-dev",
+	}
+	kinds := sandbox.AllKinds()
+	if len(kinds) != int(sandbox.Dev)+1 {
+		t.Fatalf("AllKinds returned %d kinds, want %d", len(kinds), int(sandbox.Dev)+1)
+	}
+	for _, kind := range kinds {
+		name, ok := want[kind]
+		if !ok {
+			t.Errorf("mount kind %d has no expected name", kind)
+			continue
+		}
+		if got := mountName(kind); got != name {
+			t.Errorf("mountName(%d) = %q, want %q", kind, got, name)
+		}
+	}
+	for _, kind := range []sandbox.Kind{99, 200} {
+		if got := mountName(kind); got != "unknown" {
+			t.Errorf("mountName(%d) = %q, want unknown", kind, got)
 		}
 	}
 }
@@ -35,13 +45,9 @@ func TestMountNameCoversEveryKind(t *testing.T) {
 // checked against the kinds the plan builder can actually produce: a kind that
 // exists but prints "unknown" is as broken as a missing one.
 func TestEveryPlanKindHasAName(t *testing.T) {
-	kinds := []sandbox.Kind{
-		sandbox.Directory, sandbox.ReadOnly, sandbox.Writable,
-		sandbox.Symlink, sandbox.Tmpfs, sandbox.Proc, sandbox.Dev,
-	}
-	for _, k := range kinds {
-		if mountName(k) == "unknown" {
-			t.Errorf("plan kind %d has no name in inspect output", k)
+	for _, kind := range sandbox.AllKinds() {
+		if mountName(kind) == "unknown" {
+			t.Errorf("plan kind %d has no name in inspect output", kind)
 		}
 	}
 }

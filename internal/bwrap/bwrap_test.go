@@ -610,6 +610,50 @@ func TestExecuteDropsInheritedFileDescriptors(t *testing.T) {
 	if err != nil || status != 0 {
 		t.Fatalf("inherited descriptor reached child: status=%d error=%v", status, err)
 	}
+	flags, err := unix.FcntlInt(secret.Fd(), unix.F_GETFD, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if flags&unix.FD_CLOEXEC != 0 {
+		t.Fatal("execute did not restore the inherited descriptor flags")
+	}
+}
+
+// The version probe in open runs its own child before the retained tool is
+// returned, so it must apply the same sweep and restore. Without this test,
+// deleting either the sweep or the deferred restore there leaves the suite
+// green while unrelated host descriptors reach the probe.
+func TestOpenDropsInheritedFDsAndRestoresFlags(t *testing.T) {
+	secret, err := os.CreateTemp(t.TempDir(), "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer secret.Close()
+	fd := int(secret.Fd())
+	if _, err := unix.FcntlInt(secret.Fd(), unix.F_SETFD, 0); err != nil {
+		t.Fatal(err)
+	}
+	script := writeScript(t, `if [ -e /proc/self/fd/`+strconv.Itoa(fd)+` ]; then
+  echo leaked >&2
+  exit 1
+fi
+if [ "$1" = "--version" ]; then
+  printf 'bubblewrap 0.11.1\n'
+fi`)
+	tool, err := open(context.Background(), script, false)
+	if err != nil {
+		t.Fatalf("version probe saw the inherited descriptor: %v", err)
+	}
+	if err := tool.Close(); err != nil {
+		t.Fatal(err)
+	}
+	flags, err := unix.FcntlInt(secret.Fd(), unix.F_GETFD, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if flags&unix.FD_CLOEXEC != 0 {
+		t.Fatal("open did not restore the inherited descriptor flags")
+	}
 }
 
 func TestChildCancellationAndSignalExit(t *testing.T) {

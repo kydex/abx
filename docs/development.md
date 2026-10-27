@@ -143,11 +143,11 @@ here so nobody starts the same discussion from scratch.
   `host.resolveProject` -- but each is a linear sequence (one switch, loops,
   or ordered checks), and splitting would move state between the parts for no
   gain.
-- Seventeen identifiers are exported although production code outside their own package does not use them:
+- Eighteen identifiers are exported although production code outside their own package does not use them:
   `Escape`, `Version` (app), `MinimumVersion`, `Path`, `Translate` (bwrap),
   `ErrProfileNotFound`, `ErrProfileExists`, `ProfileStatus`, `ResolveProject`,
   `ResolveShell`, `Mode`, `Selection`, `Source` (host), `CleanPath`, `Entry`,
-  `PrivateMountTargets` (sandbox), and `Check` (probe). Unexporting them would make the compiler
+  `PrivateMountTargets`, `AllKinds` (sandbox), and `Check` (probe). Unexporting them would make the compiler
   stop catching misspelled names across package boundaries, for no gain here.
 - The fuzz harnesses in `internal/sandbox`, `internal/profile`, `internal/cli`,
   `internal/probe`, and `internal/host` are built and run with their seed

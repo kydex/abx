@@ -81,7 +81,7 @@ func TestResolveRejectsHomeItself(t *testing.T) {
 	}
 }
 
-func TestResolveRejectsForeignOwnedAndWorldWritableProject(t *testing.T) {
+func TestResolveAcceptsForeignOwnedAndWorldWritableProject(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")
 	data := filepath.Join(home, ".local", "share", "abx")
@@ -108,7 +108,10 @@ func TestResolveRejectsForeignOwnedAndWorldWritableProject(t *testing.T) {
 			t.Errorf("project with mode %v refused: %v", mode, err)
 		}
 	}
-	if os.Getuid() == 0 {
+	t.Run("foreign owner", func(t *testing.T) {
+		if os.Getuid() != 0 {
+			t.Skip("foreign-owned project fixture requires root")
+		}
 		foreign := filepath.Join(root, "foreign")
 		if err := os.Mkdir(foreign, 0o700); err != nil {
 			t.Fatal(err)
@@ -119,7 +122,7 @@ func TestResolveRejectsForeignOwnedAndWorldWritableProject(t *testing.T) {
 		if _, err := ResolveProject(foreign, home, data); err != nil {
 			t.Errorf("foreign-owned project refused: %v", err)
 		}
-	}
+	})
 	if _, err := ResolveProject(own, home, data); err != nil {
 		t.Errorf("owned project rejected: %v", err)
 	}

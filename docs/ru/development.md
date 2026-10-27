@@ -142,11 +142,11 @@ Live tests нужны после изменений mounts, namespaces, retained
   них линейная последовательность (один switch, циклы или
   упорядоченные проверки), и разбиение лишь переносило бы состояние между
   частями без выгоды.
-- Семнадцать идентификаторов экспортированы, хотя production-код других пакетов
+- Восемнадцать идентификаторов экспортированы, хотя production-код других пакетов
   их не использует: `Escape`, `Version` (app), `MinimumVersion`, `Path`, `Translate`
   (bwrap), `ErrProfileNotFound`, `ErrProfileExists`, `ProfileStatus`,
   `ResolveProject`, `ResolveShell`, `Mode`, `Selection`, `Source` (host),
-  `CleanPath`, `Entry`, `PrivateMountTargets` (sandbox) и `Check` (probe). Снятие экспорта заставит
+  `CleanPath`, `Entry`, `PrivateMountTargets`, `AllKinds` (sandbox) и `Check` (probe). Снятие экспорта заставит
   компилятор перестать ловить опечатки в именах между пакетами — без выгоды
   здесь.
 - Фаззеры в `internal/sandbox`, `internal/profile`, `internal/cli`,

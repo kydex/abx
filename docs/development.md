@@ -137,18 +137,17 @@ here so nobody starts the same discussion from scratch.
 
 - `Plan.Validate()` stays one long function. It sits between a built plan and the
   Bubblewrap arguments; splitting it risks that barrier to buy readability.
-  Eleven more production functions run past 60 lines -- `cli.Parse`,
+  Ten more production functions run past 60 lines -- `cli.Parse`,
   `Inputs.discoverLayout`, `bwrap.open`, `bwrap.execute`, `sandbox.build`,
-  `app.runVerify`, `probe.check`, `app.runProfiles`, `host.resolveAgent`,
-  `host.resolveProject`, and `host.canonicalSensitiveTreeSeen` -- but each is
-  a linear sequence (one switch, loops,
+  `app.runVerify`, `probe.check`, `app.runProfiles`, `host.resolveAgent`, and
+  `host.resolveProject` -- but each is a linear sequence (one switch, loops,
   or ordered checks), and splitting would move state between the parts for no
   gain.
-- Sixteen identifiers are exported although production code outside their own package does not use them:
+- Seventeen identifiers are exported although production code outside their own package does not use them:
   `Escape`, `Version` (app), `MinimumVersion`, `Path`, `Translate` (bwrap),
   `ErrProfileNotFound`, `ErrProfileExists`, `ProfileStatus`, `ResolveProject`,
-  `ResolveShell`, `Mode`, `Selection`, `Source` (host), `CleanPath`, `Entry`
-  (sandbox), and `Check` (probe). Unexporting them would make the compiler
+  `ResolveShell`, `Mode`, `Selection`, `Source` (host), `CleanPath`, `Entry`,
+  `PrivateMountTargets` (sandbox), and `Check` (probe). Unexporting them would make the compiler
   stop catching misspelled names across package boundaries, for no gain here.
 - The fuzz harnesses in `internal/sandbox`, `internal/profile`, `internal/cli`,
   `internal/probe`, and `internal/host` are built and run with their seed
@@ -167,11 +166,7 @@ here so nobody starts the same discussion from scratch.
   full run on `408ef13` (26 October 2026) measured 323 guards killed and 138
   survived of 461, none not applicable, with six skipped tests. The tree has
   changed since that revision, so do not read those pass rates as current.
-- The aggregate coverage floor is 74.0% against an actual 92.5%, and `internal/app` is 318 of its
-  357 statements (89.1%). Halving that package's coverage still leaves the aggregate at 83.7%; even
-  zeroing it leaves 74.8%, still above the floor, so the gate does not fire on this package. The aggregate catches gross
-  regressions and nothing finer. A coverage drop with every test still green means tests were deleted
-  or skipped, and the skip path is the one worth watching.
+- The aggregate coverage floor is 74.0%; on `ac6ec98` (27 October 2026) the measured aggregate is 92.1%, and `internal/app` is 326 of its 367 statements (88.8%). Halving that package's coverage leaves the aggregate at 82.8%; zeroing it leaves 73.5%, below the floor, so a complete loss of app tests is caught while a partial loss can still pass. The aggregate catches gross regressions and nothing finer. A coverage drop with every test still green means tests were deleted or skipped, and the skip path is the one worth watching.
   `host.ResolveAccount` is a one-line wrapper over the tested seam; unit tests
   reach it where the host provides a real account entry and skip loudly
   elsewhere, and the live suite covers it fully. The wrapper is left without a

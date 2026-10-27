@@ -22,6 +22,9 @@
 - The usage guide no longer contradicts itself about `--`: only `run` accepts it, and a bare `--` after `run` behaves like no separator. (English and Russian.)
 - Fixed: the relative-link checker rejects a target that resolves outside the scanned tree, including through `..` or a symlink, and treats URL schemes case-insensitively (`HTTPS://` is skipped).
 - Fixed: `package-smoke` skips execution of the amd64 archive on a non-x86_64 host instead of failing with `Exec format error`; release packaging rejects a nonempty `Unreleased` section, a version section without a bullet, and a lightweight tag. (English and Russian.)
+- The security guide now names the whole-tree `/etc/ssl` and `/etc/pki` mounts and preserved supplementary groups, the visibility of forwarded environment values in the monitor's argv, the retained-FD limit for intermediate project symlinks, the environment checks in `Plan.Validate`, the close-on-exec sweep's skipped descriptors, and unchecked file capabilities on `bwrap`. (English and Russian.)
+- The development guide now records the coverage measured on `ac6ec98` (92.1% aggregate; `internal/app` 326/367, 88.8%) and the corrected threshold conclusion; it drops the deleted `canonicalSensitiveTreeSeen`, says ten functions exceed 60 lines, and lists `PrivateMountTargets` among the seventeen accepted exports. (English and Russian.)
+- The architecture guide now says `--clearenv` is absent from `inspect`, and the usage guide says a signal exit reports the Bubblewrap monitor's status rather than the payload's; the manual `Ctrl+\` check and the `bwrap`/`quoteToken` comments now match the signal and name-limit behavior. (English and Russian.)
 
 ## 0.8.29
 

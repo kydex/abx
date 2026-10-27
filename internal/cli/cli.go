@@ -133,9 +133,9 @@ func Parse(args []string) (Command, error) {
 
 const maxQuotedTokenBytes = 128
 
-// quoteToken bounds a user-supplied argument in a diagnostic. A full profile
-// name already has its own 128-byte limit; command and option tokens did not,
-// so a 100 KiB argument reached stderr almost unchanged.
+// quoteToken bounds a user-supplied argument in a diagnostic. Profile names
+// are capped at 64 bytes by the name domain; command and option tokens did not
+// have a bound, so a 100 KiB argument reached stderr almost unchanged.
 func quoteToken(arg string) string {
 	if len(arg) <= maxQuotedTokenBytes {
 		return fmt.Sprintf("%q", arg)

@@ -13,6 +13,7 @@ ABX requires:
 - the Bubblewrap binary must be a regular executable file without setuid/setgid/sticky bits, not writable by group/other, and owned by root;
 - unprivileged user namespaces allowed by the host;
 - a mounted `/proc`: ABX inventories inherited file descriptors through `/proc/self/fd`, and without it the launch fails with `read inherited file descriptors`;
+- a mounted `/dev/shm`: `verify` records its identity on the host and checks that the sandbox sees a different object; without it, `verify` fails during host observation;
 - a local `/etc/passwd` entry for the invoking UID;
 - an absolute, existing home directory that is a directory, is not world-writable, and is owned by your UID; ABX is for real hosts, and a home owned by somebody else is one somebody else can replace;
 - a usable login shell from that passwd entry: a regular file executable by you, not writable by group or other, and without setuid/setgid/sticky bits;

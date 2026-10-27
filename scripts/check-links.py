@@ -111,9 +111,15 @@ class LinkEscape(ValueError):
     """A link resolves outside the scanned tree."""
 
 
+class LinkInvalid(ValueError):
+    """A link target cannot be represented as a filesystem path."""
+
+
 def resolve_target(root, path, target):
     """Resolve a link target against the scanned tree, not the host."""
     target = urllib.parse.unquote(target)
+    if "\0" in target:
+        raise LinkInvalid(target)
     if target.startswith("/"):
         resolved = (root / target.lstrip("/")).resolve()
     else:
@@ -163,6 +169,11 @@ def main():
             except LinkEscape:
                 broken.append(
                     f"{path.relative_to(root)}:{number}: {raw} (target escapes the scanned root)"
+                )
+                continue
+            except LinkInvalid:
+                broken.append(
+                    f"{path.relative_to(root)}:{number}: {raw} (target contains a NUL byte)"
                 )
                 continue
             if not resolved.exists():

@@ -4,6 +4,7 @@
 
 - Fixed: a sensitive home path is now resolved component by component, so a project reached by an intermediate symlink is rejected even when the final target lies outside it; comparing only the final `EvalSymlinks` result missed `~/.gem -> project/gem -> outside/credentials`.
 - Fixed: a sensitive home symlink whose target contains `..` after another symlink component is now resolved against the physical path; a project or data base at the real target was missed because lexical cleaning collapsed the two components first.
+- Fixed: `scripts/check-links.py` now reports a relative link whose decoded target contains a NUL byte as broken instead of raising `ValueError: embedded null character`.
 - The security and architecture guides now count all account-database accesses, check `/etc/passwd` mode at account and shell resolution, separate hostname observation from the namespace list, state which paths are exact-protected, and list host `/dev/shm` as a `verify` requirement. (English and Russian.)
 - The documented minimum kernel is now Linux 6.6, matching `fchmodat2` used by `profile create` and shared-skill preparation; the previous 6.5 claim was wrong. (English and Russian.)
 - The compatibility-link comment and security guide now say that only a usrmerge-style relative link resolving inside `/usr` is supported; a non-usrmerge layout whose `/lib` points at another compatibility directory is refused instead of being promised as usable. (English and Russian.)

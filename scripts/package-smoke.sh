@@ -1,15 +1,56 @@
 #!/usr/bin/env bash
-# Verifies the checksum manifest, unpacks both archives and checks structure
-# against the mandatory file list plus the embedded version.
-# A non-root caller also runs `abx version` from the unpacked binary archive;
-# a root caller skips that, since abx refuses to run as root.
-# usage: bash scripts/package-smoke.sh [dir]   (default: dist)
+# Verifies the checksum manifest, unpacks both archives, checks structure
+# against the mandatory file list plus the embedded version, and checks that
+# the binary is a regular executable 64-bit x86-64 ELF.
+# A non-root x86_64 caller also runs `abx version` from the unpacked binary
+# archive. A root caller skips that, since abx refuses to run as root; a
+# non-root caller on another host architecture skips only with --skip-exec.
+# usage: bash scripts/package-smoke.sh [--skip-exec] [dir]   (default: dist)
 set -euo pipefail
 script=$(readlink -f -- "${BASH_SOURCE[0]}")
 root=$(cd -- "$(dirname -- "$script")/.." && pwd -P)
 cd -- "$root"
-dir=${1:-dist}
+skip_exec=0
+dir=dist
+dir_set=0
+for arg in "$@"; do
+    case "$arg" in
+    --skip-exec) skip_exec=1 ;;
+    -*)
+        printf 'error: unknown option %s\nusage: bash scripts/package-smoke.sh [--skip-exec] [dir]\n' "$arg" >&2
+        exit 2
+        ;;
+    *)
+        if [ "$dir_set" -eq 1 ]; then
+            printf 'error: more than one archive directory\n' >&2
+            exit 2
+        fi
+        dir=$arg
+        dir_set=1
+        ;;
+    esac
+done
 version=$(<internal/app/VERSION)
+
+check_amd64_elf() {
+    local file=$1 header machine
+    local -a bytes
+    header=$(od -An -v -t u1 -N 20 "$file" | LC_ALL=C tr -s '[:space:]' ' ')
+    read -r -a bytes <<< "$header"
+    if [ "${#bytes[@]}" -ne 20 ] ||
+        [ "${bytes[0]}" -ne 127 ] || [ "${bytes[1]}" -ne 69 ] ||
+        [ "${bytes[2]}" -ne 76 ] || [ "${bytes[3]}" -ne 70 ] ||
+        [ "${bytes[4]}" -ne 2 ] || [ "${bytes[5]}" -ne 1 ] ||
+        [ "${bytes[6]}" -ne 1 ]; then
+        printf 'error: %s is not a 64-bit little-endian ELF file\n' "$file" >&2
+        exit 1
+    fi
+    machine=$((bytes[18] + 256 * bytes[19]))
+    if [ "$machine" -ne 62 ]; then
+        printf 'error: %s is ELF machine %d, want x86-64 (62)\n' "$file" "$machine" >&2
+        exit 1
+    fi
+}
 for f in "abx-$version-linux-amd64.tar.gz" "abx-$version-source.tar.gz" "abx-$version-SHA256SUMS"; do
     test -f "$dir/$f" || {
         printf "error: %s is missing; run 'make package' first\n" "$dir/$f" >&2
@@ -30,14 +71,20 @@ if [ "$got" != "$want" ]; then
     exit 1
 fi
 tar -xzf "$dir/abx-$version-linux-amd64.tar.gz" -C "$work"
-test -x "$work/abx-$version-linux-amd64/abx"
-if [ "$(id -u)" -eq 0 ]; then
+binary="$work/abx-$version-linux-amd64/abx"
+test -f "$binary"
+test -x "$binary"
+check_amd64_elf "$binary"
+if [ "$skip_exec" -eq 1 ]; then
+    echo "note: execution skipped by --skip-exec; structure and ELF checks still ran"
+elif [ "$(id -u)" -eq 0 ]; then
     echo "note: built as root, so the archive was not executed: abx refuses to run as root, which is the correct behaviour, not a broken archive"
 elif [ "$(uname -m)" = "x86_64" ]; then
-    "$work/abx-$version-linux-amd64/abx" version > "$work/version.out"
+    "$binary" version > "$work/version.out"
     printf 'abx %s\n' "$version" | cmp -s - "$work/version.out"
 else
-    echo "note: archive is linux-amd64 and host is $(uname -m); execution skipped, structure checks still ran"
+    printf 'error: archive is linux-amd64 and host is %s; pass --skip-exec to skip execution explicitly\n' "$(uname -m)" >&2
+    exit 1
 fi
 test -f "$work/abx-$version-linux-amd64/LICENSE"
 test -f "$work/abx-$version-linux-amd64/THIRD_PARTY_LICENSES"

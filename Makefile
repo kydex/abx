@@ -1,6 +1,9 @@
 .PHONY: test check lint shellcheck actionlint python-check links-check local-diff-check security build-check licenses-check coverage-check build package package-smoke package-check clean live
 
 COVERAGE_MIN ?= 74.0
+# The smoke script requires an explicit flag to skip execution on a host that
+# is not x86_64. Pass it here so make check still checks the ELF header there.
+SMOKE_FLAGS := $(if $(filter x86_64,$(shell uname -m)),,--skip-exec)
 
 test:
 	go test -count=1 ./...
@@ -80,12 +83,14 @@ package:
 	test -n "$$version" || { echo "error: cannot read version from internal/app/VERSION" >&2; exit 1; }; \
 	bash scripts/package.sh "v$$version"
 
-# Verifies the checksum manifest, unpacks both archives and checks structure
-# against the mandatory file list plus the embedded version.
-# A non-root caller also runs `abx version` from the unpacked binary archive;
-# a root caller skips that, since abx refuses to run as root.
+# Verifies the checksum manifest, unpacks both archives, checks structure
+# against the mandatory file list plus the embedded version, and checks the
+# binary's ELF class and architecture.
+# A non-root x86_64 caller also runs `abx version`; a root caller skips that,
+# since abx refuses to run as root, and a non-root caller on another host
+# architecture skips only through SMOKE_FLAGS.
 package-smoke:
-	@bash scripts/package-smoke.sh dist
+	@bash scripts/package-smoke.sh $(SMOKE_FLAGS) dist
 
 # Rehearses release packaging on any branch: builds both archives into a
 # throwaway directory without a release tag or cleanliness gate and runs the
@@ -96,7 +101,7 @@ package-check:
 	work=$$(mktemp -d); \
 	trap 'rm -rf "$$work"' EXIT HUP INT TERM; \
 	bash scripts/package.sh --check "$$work"; \
-	bash scripts/package-smoke.sh "$$work"
+	bash scripts/package-smoke.sh $(SMOKE_FLAGS) "$$work"
 
 clean:
 	rm -rf ./abx dist coverage.out

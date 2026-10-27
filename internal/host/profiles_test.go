@@ -440,4 +440,10 @@ func TestFinishProfileCreationKeepsOutcomesDistinct(t *testing.T) {
 		!errors.Is(got, closeErr) || strings.Contains(got.Error(), "incomplete") {
 		t.Fatalf("close failure without created directories misreported: %v", got)
 	}
+	// A user-controlled path containing the phrase must not suppress the hint.
+	pathErr := errors.New(`prepare profile directory "/tmp/profile was created/demo": permission denied`)
+	if got := finishProfileCreation(pathErr, true, true, nil); !errors.Is(got, pathErr) ||
+		!strings.Contains(got.Error(), "remove the profile directory before retrying") {
+		t.Fatalf("path text suppressed the remove-profile hint: %v", got)
+	}
 }

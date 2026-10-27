@@ -41,6 +41,9 @@ func runVerify(
 		return 1, cancellationError(ctx, phase, err)
 	}
 	defer finishClose(&status, &result, tool.Close)
+	if err := checkDeadline(ctx, phase); err != nil {
+		return 1, err
+	}
 	phase = "host observation"
 	// /proc/self/exe denotes this running binary, even after its installed path is replaced.
 	// O_PATH keeps verify working when the binary is executable but not readable.
@@ -58,7 +61,13 @@ func runVerify(
 	if err != nil {
 		return 1, cancellationError(ctx, phase, err)
 	}
+	if err := checkDeadline(ctx, phase); err != nil {
+		return 1, err
+	}
 	phase = "probe preparation"
+	if err := checkDeadline(ctx, phase); err != nil {
+		return 1, err
+	}
 	files := &probeFiles{}
 	defer finishClose(&status, &result, files.Close)
 	expected.Sentinel, err = files.create(home)
@@ -69,11 +78,17 @@ func runVerify(
 	if err != nil {
 		return 1, cancellationError(ctx, phase, err)
 	}
+	if err := checkDeadline(ctx, phase); err != nil {
+		return 1, err
+	}
 	phase = "sandbox preparation"
 	input.Command[2] = string(raw)
 	plan, err := sandbox.BuildVerification(input)
 	if err != nil {
 		return 1, cancellationError(ctx, phase, err)
+	}
+	if err := checkDeadline(ctx, phase); err != nil {
+		return 1, err
 	}
 	if err = in.Prepare(); err != nil {
 		return 1, cancellationError(ctx, phase, err)
@@ -81,13 +96,15 @@ func runVerify(
 	if err = in.Revalidate(); err != nil {
 		return 1, cancellationError(ctx, phase, err)
 	}
-	// The host-side phases above are not interruptible, so the deadline may
-	// already have expired when execute is about to start; its own context
-	// check would return the raw context error. Report the timeout here with
-	// the same text the guide names.
+	// The host-side phases above are not interruptible, so the deadline is
+	// checked after each one; the final check before execute keeps the
+	// promised phase even if the deadline expires between them.
+	if err := checkDeadline(ctx, phase); err != nil {
+		return 1, err
+	}
 	phase = "starting the sandbox"
-	if err := ctx.Err(); err != nil {
-		return 1, fmt.Errorf("execution cancelled during %s: %w", phase, err)
+	if err := checkDeadline(ctx, phase); err != nil {
+		return 1, err
 	}
 	phase = "running the sandbox"
 	status, err = execute(ctx, tool, plan, func(path string) (*os.File, error) {
@@ -111,6 +128,13 @@ func runVerify(
 	}
 	// Final success is printed only after outer resource and temporary-file cleanup.
 	return 0, nil
+}
+
+func checkDeadline(ctx context.Context, phase string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("execution cancelled during %s: %w", phase, err)
+	}
+	return nil
 }
 
 func cancellationError(ctx context.Context, phase string, err error) error {

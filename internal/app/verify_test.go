@@ -237,8 +237,24 @@ func TestVerifyExpiredDeadlineReportsCancellation(t *testing.T) {
 		return 0, nil
 	}
 	status, err := runVerify(ctx, in, home, nil, bwrap.Stdio{Out: io.Discard, Err: io.Discard}, openStubTool(t), mustNotExecute)
-	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled during starting the sandbox") || !errors.Is(err, context.DeadlineExceeded) {
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "execution cancelled during opening the tool") || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expired deadline = status %d, %v", status, err)
+	}
+	entries, readErr := os.ReadDir(home)
+	if readErr != nil || len(entries) != 0 {
+		t.Fatalf("probe residue after expired deadline: %v, %v", entries, readErr)
+	}
+	if _, err := os.Lstat(filepath.Join(in.Home(), ".agents")); !os.IsNotExist(err) {
+		t.Fatalf("skills target prepared after expired deadline: %v", err)
+	}
+}
+
+func TestCheckDeadlineNamesPhase(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := checkDeadline(ctx, "host observation")
+	if err == nil || !strings.Contains(err.Error(), "execution cancelled during host observation") || !errors.Is(err, context.Canceled) {
+		t.Fatalf("deadline error = %v", err)
 	}
 }
 

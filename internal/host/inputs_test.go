@@ -69,6 +69,17 @@ func TestSourcesRemainBoundToOpenedObject(t *testing.T) {
 	}
 }
 
+func TestRevalidateNamesMissingSourceRole(t *testing.T) {
+	in := fixture(t)
+	if err := os.Remove(in.home); err != nil {
+		t.Fatal(err)
+	}
+	err := in.Revalidate()
+	if err == nil || !strings.Contains(err.Error(), "profile home") || !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("missing profile home = %v, want its role and the original error", err)
+	}
+}
+
 func TestRevalidateNamesSortedFirstChangeWithRole(t *testing.T) {
 	in := fixture(t)
 	// Replace every object; the report must always name the same one -- the

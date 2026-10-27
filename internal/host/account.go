@@ -33,9 +33,23 @@ var (
 	ErrProfileExists = errors.New("profile already exists")
 )
 
-// ResolveAccount reads the current non-root account from the passwd database.
+// ResolveAccount reads the current non-root account from the passwd database
+// after checking the database file mode.
 func ResolveAccount() (Account, error) {
-	return resolveAccount(os.Getuid(), user.LookupId)
+	return resolveAccountFrom(os.Getuid(), user.LookupId, passwdPath)
+}
+
+// resolveAccountFrom is the deterministic passwd-file test seam. Every command
+// reaches the account through it, so profile commands cannot skip the mode
+// check that session commands perform.
+func resolveAccountFrom(uid int, lookup func(string) (*user.User, error), passwdFile string) (Account, error) {
+	if uid == 0 {
+		return Account{}, errors.New("abx must not run as root")
+	}
+	if err := checkPasswdFile(passwdFile); err != nil {
+		return Account{}, err
+	}
+	return resolveAccount(uid, lookup)
 }
 
 func resolveAccount(uid int, lookup func(string) (*user.User, error)) (Account, error) {

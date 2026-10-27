@@ -34,6 +34,9 @@ func Session(username, shell, workingDirectory string, host []string) ([]Entry, 
 	if !CleanPath(shell) {
 		return nil, fmt.Errorf("sandbox shell %q is not a clean absolute path", shell)
 	}
+	if strings.ContainsRune(shell, '\n') {
+		return nil, fmt.Errorf("sandbox shell %q contains newline", shell)
+	}
 	if workingDirectory != "/workspace" && workingDirectory != "/home/agent" {
 		return nil, fmt.Errorf("unsupported sandbox working directory %q", workingDirectory)
 	}

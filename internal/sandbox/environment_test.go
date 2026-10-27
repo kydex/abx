@@ -67,6 +67,7 @@ func TestSessionRejectsInvalidStructure(t *testing.T) {
 		{"tester", "/bin//bash", "/workspace"},
 		{"tester", "/bin/bash", "/tmp"},
 		{"test\ner", "/bin/bash", "/workspace"},
+		{"tester", "/bin/bash\n", "/workspace"},
 	} {
 		if _, err := Session(tc.username, tc.shell, tc.cwd, nil); err == nil {
 			t.Errorf("accepted %#v", tc)

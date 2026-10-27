@@ -26,6 +26,38 @@ func TestResolveAccountUsesProductionDependencies(t *testing.T) {
 	}
 }
 
+func TestResolveAccountChecksPasswdDatabaseMode(t *testing.T) {
+	uid := os.Getuid()
+	if uid == 0 {
+		t.Skip("account lookup refuses root")
+	}
+	home := t.TempDir()
+	passwd := filepath.Join(t.TempDir(), "passwd")
+	if err := os.WriteFile(passwd, []byte("tester:x:"+strconv.Itoa(uid)+":"+strconv.Itoa(uid)+"::"+home+":/bin/sh\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	lookup := func(id string) (*user.User, error) {
+		return &user.User{Uid: id, Username: "tester", HomeDir: home}, nil
+	}
+	if _, err := resolveAccountFrom(uid, lookup, passwd); err != nil {
+		t.Fatalf("valid passwd database refused: %v", err)
+	}
+	if err := os.Chmod(passwd, 0o666); err != nil {
+		t.Fatal(err)
+	}
+	called := false
+	_, err := resolveAccountFrom(uid, func(string) (*user.User, error) {
+		called = true
+		return lookup(strconv.Itoa(uid))
+	}, passwd)
+	if err == nil || !strings.Contains(err.Error(), "passwd database") {
+		t.Fatalf("writable passwd database accepted: %v", err)
+	}
+	if called {
+		t.Fatal("account lookup ran before the passwd database mode check")
+	}
+}
+
 func TestAccountFromPasswd(t *testing.T) {
 	home := t.TempDir()
 	link := filepath.Join(filepath.Dir(home), "home-link")

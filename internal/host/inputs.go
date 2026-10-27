@@ -369,7 +369,7 @@ func (in *Inputs) Revalidate() error {
 		o := in.objects[path]
 		info, err := os.Lstat(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("revalidate %s %q: %w", in.role(path), path, err)
 		}
 		if !os.SameFile(info, o.info) {
 			return fmt.Errorf("selected source changed: %q (%s)", path, in.role(path))

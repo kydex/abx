@@ -95,7 +95,7 @@ func Parse(args []string) (Command, error) {
 			}
 			return Command{Kind: k, Profile: args[2]}, nil
 		default:
-			return Command{}, fmt.Errorf("unknown profile command %s", quoteToken(args[1]))
+			return Command{}, fmt.Errorf("unknown profile command %s; run \"abx --help\"", quoteToken(args[1]))
 		}
 	case Help, Version:
 		if len(args) != 1 {
@@ -121,13 +121,13 @@ func Parse(args []string) (Command, error) {
 					"abx run <profile> -- <argument> [additional arguments]")
 			}
 			if k != Run {
-				return Command{}, fmt.Errorf("unexpected arguments to %s", k)
+				return Command{}, fmt.Errorf("unexpected arguments to %s; run \"abx --help\"", k)
 			}
 			c.Args = slices.Clone(args[3:])
 		}
 		return c, nil
 	default:
-		return Command{}, fmt.Errorf("unknown command %s", quoteToken(args[0]))
+		return Command{}, fmt.Errorf("unknown command %s; run \"abx --help\"", quoteToken(args[0]))
 	}
 }
 

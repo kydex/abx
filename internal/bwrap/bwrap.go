@@ -95,7 +95,10 @@ func unsafeModeReason(mode os.FileMode) string {
 	}
 }
 
+// Open returns a checked tool with its retained descriptor. On error it returns
+// a nil tool; callers must not close a tool that was not opened.
 func Open(ctx context.Context) (*Tool, error) { return open(ctx, Path, true) }
+
 func open(ctx context.Context, path string, system bool) (tool *Tool, err error) {
 	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {

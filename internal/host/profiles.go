@@ -198,14 +198,16 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 // after making some directories. Before the last directory exists, the
 // caller must not be told that a profile was created.
 func finishProfileCreation(result error, created, profileCreated bool, closeErr error) error {
+	creationNamed := false
 	if closeErr != nil {
 		if profileCreated {
 			result = errors.Join(result, fmt.Errorf("profile was created, but its directory descriptor could not be closed: %w", closeErr))
+			creationNamed = true
 		} else {
 			result = errors.Join(result, closeErr)
 		}
 	}
-	if profileCreated && result != nil && !strings.Contains(result.Error(), "profile was created") {
+	if profileCreated && result != nil && !creationNamed {
 		result = fmt.Errorf("profile was created, but setup failed; remove the profile directory before retrying: %w", result)
 	}
 	if created && !profileCreated && result != nil {

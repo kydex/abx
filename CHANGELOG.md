@@ -25,6 +25,7 @@
 - The security guide now names the whole-tree `/etc/ssl` and `/etc/pki` mounts and preserved supplementary groups, the visibility of forwarded environment values in the monitor's argv, the retained-FD limit for intermediate project symlinks, the environment checks in `Plan.Validate`, the close-on-exec sweep's skipped descriptors, and unchecked file capabilities on `bwrap`. (English and Russian.)
 - The development guide now records the coverage measured on `ac6ec98` (92.1% aggregate; `internal/app` 326/367, 88.8%) and the corrected threshold conclusion; it drops the deleted `canonicalSensitiveTreeSeen`, says ten functions exceed 60 lines, and lists `PrivateMountTargets` among the seventeen accepted exports. (English and Russian.)
 - The architecture guide now says `--clearenv` is absent from `inspect`, and the usage guide says a signal exit reports the Bubblewrap monitor's status rather than the payload's; the manual `Ctrl+\` check and the `bwrap`/`quoteToken` comments now match the signal and name-limit behavior. (English and Russian.)
+- Fixed: profile commands now apply the passwd database mode check before using the account home; `verify` checks its deadline after each host-side phase and names the phase where it expired; revalidation errors name the missing source; `profile create` keeps the remove-profile hint when the path contains `profile was created`; unknown commands and extra arguments point to `abx --help`; and the sandbox environment rejects a newline in the shell path. (English and Russian.)
 
 ## 0.8.29
 

@@ -92,6 +92,22 @@ func TestOptionLikeProfileNameGetsAHint(t *testing.T) {
 	}
 }
 
+func TestUnknownAndExtraArgumentsPointToHelp(t *testing.T) {
+	for _, tc := range []struct {
+		argv []string
+		want string
+	}{
+		{[]string{"nope"}, `unknown command "nope"; run "abx --help"`},
+		{[]string{"profile", "nope"}, `unknown profile command "nope"; run "abx --help"`},
+		{[]string{"shell", "demo", "extra"}, `unexpected arguments to shell; run "abx --help"`},
+	} {
+		_, err := Parse(tc.argv)
+		if err == nil || err.Error() != tc.want {
+			t.Fatalf("%q: %v, want %q", tc.argv, err, tc.want)
+		}
+	}
+}
+
 // A bare dash is not an option: the message names the missing profile instead
 // of reciting option syntax.
 func TestBareDashesAreNotOptions(t *testing.T) {

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: the argument-count errors for `profile list`, `profile create`, `profile show`, `help`, and `version` now point to `abx --help`, like the other syntax errors already did.
 - Fixed: `profile create` no longer calls a profile whose parent directory descriptor failed to close a failed setup that should be removed; descriptor close failures during cleanup are reported in path order instead of map order.
 - Fixed: a sensitive home path is now resolved component by component, so a project reached by an intermediate symlink is rejected even when the final target lies outside it; comparing only the final `EvalSymlinks` result missed `~/.gem -> project/gem -> outside/credentials`.
 - Fixed: a sensitive home symlink whose target contains `..` after another symlink component is now resolved against the physical path; a project or data base at the real target was missed because lexical cleaning collapsed the two components first.

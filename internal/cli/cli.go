@@ -80,12 +80,12 @@ func Parse(args []string) (Command, error) {
 		switch k {
 		case ProfileList:
 			if len(args) != 2 {
-				return Command{}, errors.New("profile list takes no arguments")
+				return Command{}, errors.New("profile list takes no arguments; run \"abx --help\"")
 			}
 			return Command{Kind: k}, nil
 		case ProfileCreate, ProfileShow:
 			if len(args) != 3 {
-				return Command{}, errors.New(string(k) + " requires exactly one name")
+				return Command{}, fmt.Errorf("%s requires exactly one name; run \"abx --help\"", k)
 			}
 			if strings.HasPrefix(args[2], "-") {
 				return Command{}, namePositionError(args[2], k)
@@ -99,7 +99,7 @@ func Parse(args []string) (Command, error) {
 		}
 	case Help, Version:
 		if len(args) != 1 {
-			return Command{}, fmt.Errorf("%s takes no arguments", args[0])
+			return Command{}, fmt.Errorf("%s takes no arguments; run \"abx --help\"", args[0])
 		}
 		return Command{Kind: k}, nil
 	case Run, Shell, Work, Inspect, Verify:

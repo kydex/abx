@@ -87,7 +87,7 @@ func TestOptionLikeProfileNameGetsAHint(t *testing.T) {
 		t.Fatalf("option-like profile subcommand: %v", err)
 	}
 	_, err = Parse([]string{"-h", "extra"})
-	if err == nil || err.Error() != "-h takes no arguments" {
+	if err == nil || err.Error() != `-h takes no arguments; run "abx --help"` {
 		t.Fatalf("-h with an argument: %v", err)
 	}
 }
@@ -100,6 +100,10 @@ func TestUnknownAndExtraArgumentsPointToHelp(t *testing.T) {
 		{[]string{"nope"}, `unknown command "nope"; run "abx --help"`},
 		{[]string{"profile", "nope"}, `unknown profile command "nope"; run "abx --help"`},
 		{[]string{"shell", "demo", "extra"}, `unexpected arguments to shell; run "abx --help"`},
+		{[]string{"profile", "list", "extra"}, `profile list takes no arguments; run "abx --help"`},
+		{[]string{"profile", "create"}, `profile create requires exactly one name; run "abx --help"`},
+		{[]string{"profile", "show", "a", "b"}, `profile show requires exactly one name; run "abx --help"`},
+		{[]string{"help", "extra"}, `help takes no arguments; run "abx --help"`},
 	} {
 		_, err := Parse(tc.argv)
 		if err == nil || err.Error() != tc.want {

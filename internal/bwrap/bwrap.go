@@ -393,8 +393,10 @@ func execute(ctx context.Context, cmd *exec.Cmd, stdio Stdio) (int, error) {
 	// Ctrl+C instead of dumping the launcher's goroutines and exiting 2, a
 	// status docs/usage.md documents as a CLI syntax error. A forwarded signal
 	// terminates the Bubblewrap monitor by the default action; its parent-death
-	// signal then kills the payload with SIGKILL. Unhandled, SIGQUIT would leave
-	// the sandbox running: the agent would never learn the session is over.
+	// signal then kills the payload with SIGKILL. The sandbox does not outlive
+	// an unhandled SIGQUIT either: a terminal Ctrl+\ reaches the monitor
+	// directly, and --die-with-parent covers a launcher that dies alone. What
+	// forwarding buys is a clean status instead of a dump.
 	// Buffer of 4 holds one of each subscribed signal; a burst of repeats
 	// while a previous one is still being forwarded can drop a duplicate,
 	// since os/signal discards into a full buffer instead of blocking.

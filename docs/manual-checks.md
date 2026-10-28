@@ -405,7 +405,7 @@ The command waits without output. After a couple of seconds, press **Ctrl+\\** â
 printf 'exit=%s\n' "$?"
 ```
 
-Expected: `exit=131`, and **no goroutine dump** above the prompt. The monitor dies from the forwarded `SIGQUIT`; its parent-death signal then kills the payload with `SIGKILL`, so this check does not prove that a shutdown handler inside the sandbox ran. A dump means ABX itself took the signal by the default action, which is exactly what this check exists to catch: the launcher then dies with status `2` and the agent inside the sandbox is never told the session ended.
+Expected: `exit=131`, and **no goroutine dump** above the prompt. At a terminal the monitor receives the same `SIGQUIT` directly; its parent-death signal then kills the payload with `SIGKILL`, so this check does not prove that a shutdown handler inside the sandbox ran, nor that ABX's forwarded copy reached the monitor. A dump means ABX itself took the signal by the default action, which is exactly what this check exists to catch: the launcher then exits with status `2`, the status this guide documents for a CLI syntax error, instead of reporting the interrupted session. The sandbox still goes away -- a terminal `Ctrl+\` reaches the monitor directly, and `--die-with-parent` kills the sandbox when the launcher exits -- so the defect is the dump and the misleading status, not a session left running.
 
 ### 5.5 Ctrl+C inside `abx shell`
 

@@ -251,7 +251,7 @@ The read-only checks inspect mount flags at the selected mountpoints; they do no
 
 Verification temporarily creates probe files in the real home, the selected profile's home directory, and the selected project, and removes them before reporting final success. A forced process kill or host crash can leave such temporary files behind.
 
-The `__probe` entry point is private: it runs only inside the sandbox as `/abx-probe` and host-side invocations are rejected.
+The `__probe` entry point is private: it runs only when `/proc/self/exe` and `/abx-probe` identify the same object and `/abx-probe` is mounted read-only, as it is inside the sandbox. This checks the mode the probe runs under, not the origin of the call.
 
 ## Shared skills
 

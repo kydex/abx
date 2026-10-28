@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Verifies the checksum manifest, unpacks both archives, checks structure
 # against the mandatory file list plus the embedded version, and checks that
-# the binary is a regular executable 64-bit x86-64 ELF.
+# the binary is a regular executable 64-bit x86-64 ELF with no dynamic
+# interpreter.
 # A non-root x86_64 caller also runs `abx version` from the unpacked binary
 # archive. A root caller skips that, since abx refuses to run as root; a
 # non-root caller on another host architecture skips only with --skip-exec.
@@ -33,7 +34,7 @@ done
 version=$(<internal/app/VERSION)
 
 check_amd64_elf() {
-    local file=$1 header machine
+    local file=$1 header machine type
     local -a bytes
     header=$(od -An -v -t u1 -N 20 "$file" | LC_ALL=C tr -s '[:space:]' ' ')
     read -r -a bytes <<< "$header"
@@ -45,11 +46,40 @@ check_amd64_elf() {
         printf 'error: %s is not a 64-bit little-endian ELF file\n' "$file" >&2
         exit 1
     fi
+    type=$((bytes[16] + 256 * bytes[17]))
+    if [ "$type" -ne 2 ] && [ "$type" -ne 3 ]; then
+        printf 'error: %s is ELF type %d, want an executable (2) or PIE (3)\n' "$file" "$type" >&2
+        exit 1
+    fi
     machine=$((bytes[18] + 256 * bytes[19]))
     if [ "$machine" -ne 62 ]; then
         printf 'error: %s is ELF machine %d, want x86-64 (62)\n' "$file" "$machine" >&2
         exit 1
     fi
+}
+
+# A static binary must not request a dynamic interpreter. Parse the program
+# header table with od: no readelf or objdump dependency on a release host.
+check_no_interp() {
+    local file=$1 phoff phentsize phnum i type
+    phoff=$(od -An -v -t u8 -j 32 -N 8 "$file" | LC_ALL=C tr -d '[:space:]')
+    phentsize=$(od -An -v -t u2 -j 54 -N 2 "$file" | LC_ALL=C tr -d '[:space:]')
+    phnum=$(od -An -v -t u2 -j 56 -N 2 "$file" | LC_ALL=C tr -d '[:space:]')
+    if [ -z "$phoff" ] || [ -z "$phentsize" ] || [ -z "$phnum" ] || [ "$phentsize" -lt 4 ]; then
+        printf 'error: %s has an invalid ELF program header table\n' "$file" >&2
+        exit 1
+    fi
+    for ((i = 0; i < phnum; i++)); do
+        type=$(od -An -v -t u4 -j $((phoff + i * phentsize)) -N 4 "$file" | LC_ALL=C tr -d '[:space:]')
+        if [ -z "$type" ]; then
+            printf 'error: %s has a truncated ELF program header table\n' "$file" >&2
+            exit 1
+        fi
+        if [ "$type" -eq 3 ]; then
+            printf 'error: %s requests a dynamic interpreter (PT_INTERP); expected a static binary\n' "$file" >&2
+            exit 1
+        fi
+    done
 }
 for f in "abx-$version-linux-amd64.tar.gz" "abx-$version-source.tar.gz" "abx-$version-SHA256SUMS"; do
     test -f "$dir/$f" || {
@@ -72,9 +102,14 @@ if [ "$got" != "$want" ]; then
 fi
 tar -xzf "$dir/abx-$version-linux-amd64.tar.gz" -C "$work"
 binary="$work/abx-$version-linux-amd64/abx"
+if [ -L "$binary" ]; then
+    printf 'error: %s is a symlink, want a regular file\n' "$binary" >&2
+    exit 1
+fi
 test -f "$binary"
 test -x "$binary"
 check_amd64_elf "$binary"
+check_no_interp "$binary"
 if [ "$skip_exec" -eq 1 ]; then
     echo "note: execution skipped by --skip-exec; structure and ELF checks still ran"
 elif [ "$(id -u)" -eq 0 ]; then

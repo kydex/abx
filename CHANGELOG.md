@@ -33,7 +33,7 @@
 - The development guide now records the coverage measured on `ac6ec98` (92.1% aggregate; `internal/app` 326/367, 88.8%) and the corrected threshold conclusion; it drops the deleted `canonicalSensitiveTreeSeen`, says eleven functions exceed 60 lines, and lists `PrivateMountTargets` and `AllKinds` among the eighteen accepted exports. (English and Russian.)
 - The architecture guide now says `--clearenv` is absent from `inspect`, and the usage guide says a signal exit reports the Bubblewrap monitor's status rather than the payload's; the manual `Ctrl+\` check and the `bwrap`/`quoteToken` comments now match the signal and name-limit behavior. (English and Russian.)
 - Fixed: profile commands now apply the passwd database mode check before using the account home; `verify` checks its deadline after each host-side phase and names the phase where it expired; revalidation errors name the missing source; `profile create` keeps the remove-profile hint when the path contains `profile was created`; unknown commands and extra arguments point to `abx --help`; and the sandbox environment rejects a newline in the shell path. (English and Russian.)
-- Fixed: package smoke checks that the unpacked `abx` is a regular executable 64-bit x86-64 ELF and requires `--skip-exec` for a non-root caller on another host architecture; the Make targets pass that flag automatically. (English and Russian.)
+- Fixed: package smoke checks that the unpacked `abx` is a regular (not symlink) executable 64-bit x86-64 ELF with no `PT_INTERP` and requires `--skip-exec` for a non-root caller on another host architecture; the Make targets pass that flag automatically. (English and Russian.)
 
 ## 0.8.29
 

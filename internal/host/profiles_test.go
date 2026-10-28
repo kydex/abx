@@ -2,6 +2,7 @@ package host
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -435,6 +436,12 @@ func TestFinishProfileCreationKeepsOutcomesDistinct(t *testing.T) {
 		!strings.Contains(got.Error(), "profile was created, but setup failed") ||
 		strings.Contains(got.Error(), "incomplete") {
 		t.Fatalf("created profile with a later failure misreported: %v", got)
+	}
+	parentClose := fmt.Errorf("%w: close profile directory %q: %w", errProfileParentClose, "/tmp/abx/profiles", closeErr)
+	if got := finishProfileCreation(parentClose, true, true, nil); !errors.Is(got, closeErr) ||
+		!strings.Contains(got.Error(), "parent directory descriptor") ||
+		strings.Contains(got.Error(), "remove the profile directory") {
+		t.Fatalf("parent close misreported as a setup failure: %v", got)
 	}
 	if got := finishProfileCreation(base, false, false, closeErr); !errors.Is(got, base) ||
 		!errors.Is(got, closeErr) || strings.Contains(got.Error(), "incomplete") {

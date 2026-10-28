@@ -71,9 +71,16 @@ func (in *Inputs) SourceFile(path string) (*os.File, error) {
 }
 
 func (in *Inputs) Close() error {
+	// Sorted keys make the joined error deterministic when several descriptors
+	// fail to close; Revalidate already sorts for the same reason.
+	paths := make([]string, 0, len(in.objects))
+	for path := range in.objects {
+		paths = append(paths, path)
+	}
+	slices.Sort(paths)
 	var result error
-	for path, o := range in.objects {
-		result = errors.Join(result, o.file.Close())
+	for _, path := range paths {
+		result = errors.Join(result, in.objects[path].file.Close())
 		delete(in.objects, path)
 	}
 	return result

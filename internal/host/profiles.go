@@ -187,11 +187,20 @@ func CreateProfile(account Account, paths Paths, name string) (home string, resu
 		parent = next
 		parentPath = current
 		if closeErr != nil {
-			return "", fmt.Errorf("close profile directory %q: %w", filepath.Dir(current), closeErr)
+			closeErr = fmt.Errorf("close profile directory %q: %w", filepath.Dir(current), closeErr)
+			if profileCreated {
+				closeErr = fmt.Errorf("%w: %w", errProfileParentClose, closeErr)
+			}
+			return "", closeErr
 		}
 	}
 	return filepath.Join(paths.Profiles, name), nil
 }
+
+// errProfileParentClose marks a close failure of the descriptor that led to the
+// profile home. The profile itself exists; only the parent descriptor failed,
+// so the remove-profile hint would be wrong.
+var errProfileParentClose = errors.New("profile was created, but a parent directory descriptor could not be closed")
 
 // finishProfileCreation keeps the two outcomes distinct: a profile that
 // exists but whose descriptor fails to close, and a creation that stopped
@@ -206,6 +215,9 @@ func finishProfileCreation(result error, created, profileCreated bool, closeErr 
 		} else {
 			result = errors.Join(result, closeErr)
 		}
+	}
+	if errors.Is(result, errProfileParentClose) {
+		creationNamed = true
 	}
 	if profileCreated && result != nil && !creationNamed {
 		result = fmt.Errorf("profile was created, but setup failed; remove the profile directory before retrying: %w", result)

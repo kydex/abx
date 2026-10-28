@@ -611,6 +611,35 @@ func TestCloseReportsDescriptorFailureAndReleasesOwnership(t *testing.T) {
 	}
 }
 
+func TestCloseReportsDescriptorFailuresInPathOrder(t *testing.T) {
+	in := fixture(t)
+	paths := make([]string, 0, len(in.objects))
+	for path := range in.objects {
+		paths = append(paths, path)
+	}
+	if len(paths) < 2 {
+		t.Fatalf("fixture retained %d descriptors, want at least 2", len(paths))
+	}
+	slices.Sort(paths)
+	first, second := paths[0], paths[1]
+	for _, path := range []string{first, second} {
+		if err := in.objects[path].file.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	err := in.Close()
+	if err == nil {
+		t.Fatal("descriptor close failures were lost")
+	}
+	text := err.Error()
+	if !strings.Contains(text, first) || !strings.Contains(text, second) {
+		t.Fatalf("joined error does not name both paths: %v", err)
+	}
+	if strings.Index(text, first) > strings.Index(text, second) {
+		t.Fatalf("joined error is not in path order: %v", err)
+	}
+}
+
 func TestWorkResolvesProjectWithoutAgentAndRetainsSource(t *testing.T) {
 	in := fixture(t)
 	project := filepath.Join(in.account.Home, "project")

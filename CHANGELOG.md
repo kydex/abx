@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.30
 
 - Corrected the security, usage, and manual-check guides: a terminal `Ctrl+\` reaches the monitor and payload directly and `--die-with-parent` still tears the sandbox down, so an unforwarded `SIGQUIT` meant a goroutine dump and status `2`, not a session left running; `__probe` is guarded by the read-only `/abx-probe` identity check, not by the origin of the call; the four account-database accesses belong to login-shell resolution, while profile commands make two; optional `/etc` candidates are also skipped on a symlink cycle or a non-directory component; and the Russian manual check again requires stdin and stderr attached. (English and Russian.)
 - Fixed: the argument-count errors for `profile list`, `profile create`, `profile show`, `help`, and `version` now point to `abx --help`, like the other syntax errors already did.

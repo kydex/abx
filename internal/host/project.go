@@ -199,7 +199,7 @@ func canonicalSensitiveTreePaths(path string) ([]string, error) {
 // itself contains ".." after a symlink component; filepath.Clean would collapse
 // the two before the symlink is followed and could make a sensitive path look
 // unrelated to its real target.
-func resolveSensitiveComponents(path string, seen map[string]bool, targets *[]string) (string, error) {
+func resolveSensitiveComponents(path string, stack map[string]bool, targets *[]string) (string, error) {
 	if path == string(filepath.Separator) {
 		*targets = append(*targets, path)
 		return path, nil
@@ -235,21 +235,25 @@ func resolveSensitiveComponents(path string, seen map[string]bool, targets *[]st
 				return "", fmt.Errorf("read sensitive tree link %q: %w", candidate, err)
 			}
 			targetPath := appendSensitiveTarget(candidate, target)
-			if seen[candidate] {
+			if stack[candidate] {
 				next := appendSensitivePath(targetPath, parts[i+1:])
 				*targets = append(*targets, next)
 				return next, nil
 			}
-			seen[candidate] = true
+			// Track only the links on the current chain: a repeated link in a
+			// different branch is not a cycle. The same link twice on one chain
+			// is, and the branch above keeps that refusal.
+			stack[candidate] = true
+			defer delete(stack, candidate)
 			// Resolve the target by itself first, so the target path compared
 			// against a project is the path the kernel reaches, not a lexical
 			// string that still contains ".." after a symlink component.
-			resolvedTarget, err := resolveSensitiveComponents(targetPath, seen, targets)
+			resolvedTarget, err := resolveSensitiveComponents(targetPath, stack, targets)
 			if err != nil {
 				return "", err
 			}
 			next := appendSensitivePath(resolvedTarget, parts[i+1:])
-			return resolveSensitiveComponents(next, seen, targets)
+			return resolveSensitiveComponents(next, stack, targets)
 		}
 		if !info.IsDir() && i < len(parts)-1 {
 			final := joinSensitiveRemaining(candidate, parts[i+1:])

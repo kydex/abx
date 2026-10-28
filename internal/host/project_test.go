@@ -388,6 +388,43 @@ func TestResolveRejectsProjectThroughIntermediateSensitiveLink(t *testing.T) {
 	}
 }
 
+func TestResolveRejectsRepeatedSensitiveSymlinkTarget(t *testing.T) {
+	home := t.TempDir()
+	share := filepath.Join(home, "share")
+	if err := os.Mkdir(share, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(home, "keyrings"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("share/share", filepath.Join(home, ".local")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../share", filepath.Join(share, "share")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../share/../keyrings", filepath.Join(share, "keyrings")); err != nil {
+		t.Fatal(err)
+	}
+	// The same link appears twice while resolving ~/.local/share/keyrings, but
+	// the second visit is not a cycle: the kernel target is ~/keyrings. A
+	// global seen map stopped at the repeat and hid that target from both
+	// overlap checks.
+	t.Run("data base", func(t *testing.T) {
+		account := Account{UID: os.Getuid(), Username: "tester", Home: home}
+		if _, err := ResolvePaths(account, filepath.Join(home, "keyrings")); err == nil ||
+			!strings.Contains(err.Error(), "sensitive home tree") {
+			t.Fatalf("data base at the real keyrings target: %v", err)
+		}
+	})
+	t.Run("project", func(t *testing.T) {
+		if _, err := ResolveProject(filepath.Join(home, "keyrings"), home, filepath.Join(home, "data", "abx")); err == nil ||
+			!strings.Contains(err.Error(), "sensitive home tree") {
+			t.Fatalf("project at the real keyrings target: %v", err)
+		}
+	})
+}
+
 func TestResolveRejectsSensitiveCycleThroughProject(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")

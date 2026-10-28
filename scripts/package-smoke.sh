@@ -47,8 +47,11 @@ check_amd64_elf() {
         exit 1
     fi
     type=$((bytes[16] + 256 * bytes[17]))
-    if [ "$type" -ne 2 ] && [ "$type" -ne 3 ]; then
-        printf 'error: %s is ELF type %d, want an executable (2) or PIE (3)\n' "$file" "$type" >&2
+    # The shipped build is a static non-PIE executable. ET_DYN also covers
+    # shared objects, and a shared object with no PT_INTERP would otherwise
+    # pass when execution is skipped (root or a non-x86_64 host).
+    if [ "$type" -ne 2 ]; then
+        printf 'error: %s is ELF type %d, want an executable (2)\n' "$file" "$type" >&2
         exit 1
     fi
     machine=$((bytes[18] + 256 * bytes[19]))

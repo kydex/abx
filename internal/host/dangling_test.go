@@ -98,6 +98,58 @@ func TestResolveProjectToleratesDanglingSymlink(t *testing.T) {
 	}
 }
 
+// A ".." after a missing component used to be applied lexically: the target
+// collapsed to its parent and the data-base overlap check refused every
+// command. The kernel cannot take the parent of a directory that does not
+// exist, so the path shelters nothing until the component appears. Once it
+// does, the same link must be checked again and refuse the overlap.
+func TestSensitiveDotDotAfterMissingComponentDoesNotCollapse(t *testing.T) {
+	home := t.TempDir()
+	dataBase := filepath.Join(home, "data")
+	dataRoot := filepath.Join(dataBase, "abx")
+	project := filepath.Join(dataBase, "project")
+	if err := os.MkdirAll(project, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	// Build the target without filepath.Join: Join would clean the ".." away
+	// before the link is created.
+	if err := os.Symlink(home+"/missing/../data", filepath.Join(home, ".gem")); err != nil {
+		t.Fatal(err)
+	}
+	account := accountWithHome(Account{UID: os.Getuid(), Username: "tester"}, home)
+	if _, err := ResolvePaths(account, dataBase); err != nil {
+		t.Fatalf("dangling dot-dot target blocked the data base: %v", err)
+	}
+	if got, err := ResolveProject(project, home, dataRoot); err != nil || got != project {
+		t.Fatalf("dangling dot-dot target blocked an unrelated project: %q, %v", got, err)
+	}
+
+	// The component now exists, so the link really reaches home/data and the
+	// overlap must be refused again.
+	if err := os.Mkdir(filepath.Join(home, "missing"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolvePaths(account, dataBase); err == nil {
+		t.Fatal("resolved dot-dot target accepted as the data base")
+	}
+	if _, err := ResolveProject(project, home, dataRoot); err == nil {
+		t.Fatal("resolved dot-dot target accepted for an unrelated project")
+	}
+}
+
+// Stopping at ".." must not discard ordinary descendants: a missing target
+// still names the future path that the overlap check has to compare.
+func TestSensitiveMissingTargetKeepsFutureDescendants(t *testing.T) {
+	home := t.TempDir()
+	if err := os.Symlink(home+"/missing/future", filepath.Join(home, ".gem")); err != nil {
+		t.Fatal(err)
+	}
+	account := accountWithHome(Account{UID: os.Getuid(), Username: "tester"}, home)
+	if _, err := ResolvePaths(account, filepath.Join(home, "missing", "future")); err == nil {
+		t.Fatal("future descendant of a missing sensitive target was accepted")
+	}
+}
+
 func accountWithHome(a Account, home string) Account {
 	a.Home = home
 	return a

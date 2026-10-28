@@ -284,8 +284,20 @@ func appendSensitivePath(path string, remaining []string) string {
 }
 
 // joinSensitiveRemaining rebuilds the part of the path that does not exist yet
-// or cannot be reached because a component is not a directory.
+// or cannot be reached because a component is not a directory. Normal
+// descendants are kept: they name the path the link would reach once the
+// missing component appears. A ".." after that component is different: the
+// kernel cannot take the parent of a directory that does not exist, and
+// applying it lexically can collapse the target onto an unrelated parent,
+// blocking every project through the data-base overlap check. Stop at the
+// first ".." instead. The check runs again on the next command, so once the
+// component exists the full target is resolved and compared.
 func joinSensitiveRemaining(path string, remaining []string) string {
-	parts := append([]string{path}, remaining...)
-	return filepath.Clean(filepath.Join(parts...))
+	for _, part := range remaining {
+		if part == ".." {
+			break
+		}
+		path = filepath.Join(path, part)
+	}
+	return filepath.Clean(path)
 }

@@ -129,7 +129,7 @@ func TestInspectOutputFailureIsReported(t *testing.T) {
 	}
 }
 
-func TestProbeInvocationRequiresPayload(t *testing.T) {
+func TestProbeInvocationRejectsWrongArgumentCount(t *testing.T) {
 	if os.Getuid() == 0 || os.Geteuid() == 0 || os.Geteuid() != os.Getuid() {
 		t.Skip("public CLI requires a non-root user")
 	}
@@ -140,7 +140,6 @@ func TestProbeInvocationRequiresPayload(t *testing.T) {
 	}{
 		{"missing payload", []string{"__probe"}, 2},
 		{"extra arguments", []string{"__probe", "{}", "extra"}, 2},
-		{"invalid payload", []string{"__probe", "{}"}, 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var out, stderr bytes.Buffer

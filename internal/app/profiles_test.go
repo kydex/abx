@@ -72,6 +72,37 @@ func TestProfileCommandsReportWithoutRuntime(t *testing.T) {
 	}
 }
 
+// ListProfiles fails closed on an unsafe profile layout. The host package
+// covers the predicate; this pins the command-level contract: status 1, no
+// partial table on stdout, and the profile named in the error.
+func TestProfileListUnsafeLayoutFailsWithoutOutput(t *testing.T) {
+	base := t.TempDir()
+	a := host.Account{UID: os.Getuid(), Username: "tester", Home: base}
+	paths, err := host.ResolvePaths(a, filepath.Join(base, "data"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, err := host.CreateProfile(a, paths, "demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(home, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	code, err := runProfiles(cli.Command{Kind: cli.ProfileList}, a, paths, &out)
+	if code != 1 || err == nil {
+		t.Fatalf("unsafe profile list = status %d, error %v", code, err)
+	}
+	if out.Len() != 0 {
+		t.Fatalf("unsafe profile list wrote a partial table: %q", out.String())
+	}
+	if !strings.Contains(err.Error(), `profile entry "demo"`) ||
+		!strings.Contains(err.Error(), "must have exact mode 0700") {
+		t.Fatalf("unsafe profile list error does not name the entry and reason: %v", err)
+	}
+}
+
 type brokenWriter struct{}
 
 func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("output failed") }

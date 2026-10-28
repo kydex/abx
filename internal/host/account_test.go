@@ -136,6 +136,18 @@ func TestAccountFromPasswd(t *testing.T) {
 	}
 }
 
+func TestAccountFromPasswdNamesSymlinkLoop(t *testing.T) {
+	home := t.TempDir()
+	loop := filepath.Join(home, "loop")
+	if err := os.Symlink("loop", loop); err != nil {
+		t.Fatal(err)
+	}
+	_, err := accountFromPasswd(1000, "tester", loop)
+	if err == nil || !strings.Contains(err.Error(), "symlink loop") {
+		t.Fatalf("passwd home loop error = %v", err)
+	}
+}
+
 func TestResolveAccountLookupPaths(t *testing.T) {
 	uid := os.Getuid()
 	if uid == 0 {

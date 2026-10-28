@@ -90,9 +90,12 @@ func accountFromPasswd(uid int, username, home string) (Account, error) {
 			return Account{}, fmt.Errorf("passwd home %q does not exist; it must be an existing directory owned by uid %d (see docs/installation.md): %w", home, uid, err)
 		case errors.Is(err, fs.ErrPermission):
 			return Account{}, fmt.Errorf("passwd home %q is not accessible; it must be an existing directory owned by uid %d (see docs/installation.md): %w", home, uid, err)
-		case errors.Is(err, syscall.ELOOP):
-			return Account{}, fmt.Errorf("passwd home %q is a symlink loop; it must be an existing directory owned by uid %d (see docs/installation.md): %w", home, uid, err)
 		default:
+			// EvalSymlinks reports a loop as a plain "too many links" error,
+			// not syscall.ELOOP; Stat on the same path does return ELOOP.
+			if _, statErr := os.Stat(home); errors.Is(statErr, syscall.ELOOP) {
+				return Account{}, fmt.Errorf("passwd home %q is a symlink loop; it must be an existing directory owned by uid %d (see docs/installation.md): %w", home, uid, err)
+			}
 			return Account{}, fmt.Errorf("canonicalize passwd home %q: %w", home, err)
 		}
 	}
